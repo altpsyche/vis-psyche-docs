@@ -1,6 +1,5 @@
 # VizPsyche Book Metadata
 # Pandoc configuration for PDF/HTML/EPUB generation
-# Future: This will map to BobReview report_systems/*.json
 
 # Book info
 title: "VizPsyche Engine"
@@ -8,7 +7,7 @@ subtitle: "Building a 3D Rendering Engine from Scratch"
 author: "Siva Vadlamani"
 date: "2025"
 lang: en
-rights: "© 2025 Siva Vadlamani"
+rights: "(c) 2025 Siva Vadlamani"
 
 # Title page (Eisvogel template)
 titlepage: true
@@ -16,24 +15,34 @@ titlepage-color: "1a1a2e"
 titlepage-text-color: "eaeaea"
 titlepage-rule-color: "e94560"
 titlepage-rule-height: 2
-# titlepage-background: "templates/cover.png"
 
 # Table of contents
 toc: true
 toc-depth: 2
 toc-own-page: true
 
-# Typography & colors
+# Typography
 colorlinks: true
 linkcolor: red
 urlcolor: cyan
 geometry: margin=1in
 fontsize: 11pt
+linestretch: 1.15
 book: true
+
+# Section numbering
+numbersections: true
+secnumdepth: 3
+
+# Chapter layout
+classoption:
+  - openany
 
 # Code blocks
 code-block-font-size: \scriptsize
 listings: true
+listings-no-page-break: true
 
-# Note: Eisvogel template handles headers/footers automatically
-
+# Headers and footers (Eisvogel)
+header-left: "VizPsyche Engine"
+footer-center: "\\thepage"
