@@ -1,3 +1,5 @@
+\newpage
+
 # Chapter 10: Multiple Objects & Scene Management
 
 ## The Problem
@@ -638,5 +640,6 @@ For now, our simple approach gets us rendering multiple objects. That's the foun
 > **Next:** [Chapter 11: Lighting](11_Lighting.md) - Making objects look 3D with Blinn-Phong lighting.
 
 > **Reference:** For implementation details, class diagrams, and debugging tips, see [Appendix A: Code Reference](A_Reference.md).
+
 
 

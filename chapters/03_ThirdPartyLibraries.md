@@ -1,3 +1,5 @@
+\newpage
+
 # Chapter 3: Third-Party Libraries
 
 Before we dive into graphics programming, let's understand the building blocks we're standing on. VizPsyche uses several third-party libraries, each solving a specific problem so we don't have to reinvent the wheel.
@@ -408,5 +410,6 @@ It's important to know what versions we're using:
 ---
 
 > **Next:** [Chapter 4: Window & Context](04_WindowAndContext.md) - How GLFWManager wraps GLFW for our engine.
+
 
 

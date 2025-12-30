@@ -1,3 +1,5 @@
+\newpage
+
 # Chapter 8: Textures
 
 A 3D model without textures is like a coloring book without colors. Textures are images wrapped onto geometry, adding detail that would be impossible with just vertices.
@@ -410,5 +412,6 @@ glDrawElements(GL_TRIANGLES, mesh.GetIndexCount(), GL_UNSIGNED_INT, nullptr);
 ---
 
 > **Next:** [Chapter 9: Engine Architecture](09_EngineArchitecture.md) - How all the pieces fit together.
+
 
 

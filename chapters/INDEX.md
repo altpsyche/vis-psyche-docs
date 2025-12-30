@@ -1,3 +1,5 @@
+\newpage
+
 # VizPsyche Engine Technical Book
 
 A hands-on guide to building a 3D rendering engine from scratch.
@@ -96,3 +98,4 @@ This is a **living document**. As the engine grows, new chapters will be added:
 - [ ] Audio
 - [ ] Physics
 - [ ] Entity Component System
+

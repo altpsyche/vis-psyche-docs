@@ -1,3 +1,5 @@
+\newpage
+
 # Appendix A: Code Reference
 
 ## What We've Built
@@ -350,4 +352,5 @@ cmake --build build --config Debug
 6. **Material class** - Bundle Shader + Texture together
 7. **Point light** - Implement a point light with attenuation
 8. **Multiple lights** - Support an array of lights in the shader
+
 

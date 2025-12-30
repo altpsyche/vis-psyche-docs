@@ -1,3 +1,5 @@
+\newpage
+
 # Chapter 7: OpenGL Abstractions
 
 ## Why Abstract OpenGL?
@@ -429,5 +431,6 @@ renderer.Draw(vao, ibo, shader);
 > **Next:** [Chapter 8: Textures](08_Textures.md) - Loading and using images on the GPU.
 
 > **Reference:** For the full class diagram showing all abstractions, see [Appendix A: Code Reference](A_Reference.md#class-diagram).
+
 
 

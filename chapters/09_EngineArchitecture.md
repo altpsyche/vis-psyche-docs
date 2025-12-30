@@ -1,3 +1,5 @@
+\newpage
+
 # Chapter 9: Engine Architecture
 
 ## The Problem: Monolithic Code
@@ -439,5 +441,6 @@ The current architecture is good for learning. A production engine would add:
 > **Next:** [Chapter 10: Multiple Objects & Scene](10_MultipleObjects.md) - Managing multiple objects in a scene.
 
 > **Reference:** For a complete file reference and memory ownership table, see [Appendix A: Code Reference](A_Reference.md).
+
 
 

@@ -1,3 +1,5 @@
+\newpage
+
 # Chapter 4: Window & Context
 
 Every graphical application needs a window to display in and an OpenGL context to render with. Our `GLFWManager` class wraps GLFW to handle both, plus input handling.
@@ -380,5 +382,6 @@ This macro is for DLL export/import. When building VizEngine.dll, it expands to 
 ---
 
 > **Next:** [Chapter 5: Logging System](05_LoggingSystem.md) - How we track what's happening in the engine.
+
 
 

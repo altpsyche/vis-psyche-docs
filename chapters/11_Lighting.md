@@ -1,3 +1,5 @@
+\newpage
+
 # Chapter 11: Lighting (Blinn-Phong)
 
 ## The Problem: Flat Objects
@@ -311,5 +313,6 @@ This is basic lighting. Production engines add:
 ---
 
 > **Reference:** For class diagrams and file locations, see [Appendix A: Code Reference](A_Reference.md).
+
 
 

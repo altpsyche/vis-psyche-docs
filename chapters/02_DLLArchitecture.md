@@ -1,3 +1,5 @@
+\newpage
+
 # Chapter 2: DLL Architecture
 
 ## What is a DLL?
@@ -269,3 +271,4 @@ build/lib/Debug/
 ---
 
 > **Next:** [Chapter 3: Third-Party Libraries](03_ThirdPartyLibraries.md) - The libraries we use and why.
+

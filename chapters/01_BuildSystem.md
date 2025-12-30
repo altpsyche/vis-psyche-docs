@@ -1,3 +1,5 @@
+\newpage
+
 # Chapter 1: The Build System
 
 ## Why CMake?

@@ -1,3 +1,5 @@
+\newpage
+
 # Chapter 6: OpenGL Fundamentals
 
 ## What is OpenGL?
@@ -339,5 +341,6 @@ gl_Position = u_MVP * aPos;
 > **Next:** [Chapter 7: Abstractions](07_Abstractions.md) - Wrapping OpenGL in clean C++ classes.
 
 > **Reference:** For a complete list of all OpenGL wrapper classes and their methods, see [Appendix A: Code Reference](A_Reference.md#opengl).
+
 
 
