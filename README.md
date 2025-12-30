@@ -1,114 +1,96 @@
-# VizPsyche Engine Technical Book
+# VizPsyche Book
 
-A hands-on guide to building a 3D rendering engine from scratch.
+Documentation for the VizPsyche 3D rendering engine - a hands-on guide to building a graphics engine from scratch.
 
-## Table of Contents
+## Reading the Book
 
-### Part 1: Foundation
-1. **[Introduction](00_Introduction.md)** - What we're building and why
-2. **[Build System](01_BuildSystem.md)** - CMake, project structure, building
-3. **[DLL Architecture](02_DLLArchitecture.md)** - Exports, namespaces, entry points
-4. **[Third-Party Libraries](03_ThirdPartyLibraries.md)** - GLFW, GLAD, GLM, ImGui, spdlog, stb_image
+The book chapters are in the `chapters/` folder. Start with:
+- **[Chapter Index](chapters/INDEX.md)** - Table of contents and reading order
 
-### Part 2: Infrastructure
-5. **[Window & Context](04_WindowAndContext.md)** - GLFWManager, OpenGL context, input
-6. **[Logging System](05_LoggingSystem.md)** - spdlog wrapper, log levels, macros
+## Building the Book
 
-### Part 3: Graphics
-7. **[OpenGL Fundamentals](06_OpenGLFundamentals.md)** - Pipeline, buffers, shaders, coordinates
-8. **[Abstractions](07_Abstractions.md)** - RAII wrappers, Rule of 5, clean APIs
-9. **[Textures](08_Textures.md)** - Image loading, GPU textures, UV mapping
+This repository includes a build system that generates the book in multiple formats.
 
-### Part 4: Engine
-10. **[Engine Architecture](09_EngineArchitecture.md)** - Camera, Transform, Mesh, separation of concerns
-11. **[Multiple Objects](10_MultipleObjects.md)** - Scene management, shared resources, object selection
+### Prerequisites
 
-### Part 5: Graphics II
-12. **[Lighting](11_Lighting.md)** - Blinn-Phong model, normals, directional lights
+| Tool | Installation | Purpose |
+|------|-------------|---------|
+| Python 3.8+ | [python.org](https://python.org) | Build script |
+| Pandoc 3.0+ | `scoop install pandoc` | Document conversion |
+| MiKTeX | `scoop install miktex` | PDF generation (LaTeX) |
 
-### Appendices
-- **[Appendix A: Code Reference](A_Reference.md)** - Class diagrams, file reference, debugging tips
-
----
-
-## Reading Order
-
-Read chapters in order. Each builds on the previous:
-
-```
-00 Introduction
-      ↓
-01 Build System ←── Understand how we compile
-      ↓
-02 DLL Architecture ←── Understand how engine/app interact
-      ↓
-03 Third-Party Libraries ←── Know our building blocks
-      ↓
-04 Window & Context ←── Create window, OpenGL context
-      ↓
-05 Logging System ←── Track what's happening
-      ↓
-06 OpenGL Fundamentals ←── Understand graphics basics
-      ↓
-07 Abstractions ←── Understand our C++ patterns
-      ↓
-08 Textures ←── Add images to geometry
-      ↓
-09 Engine Architecture ←── Understand how it all fits
-      ↓
-10 Multiple Objects ←── Manage complex scenes
-      ↓
-11 Lighting ←── Make it look 3D
-      ↓
-Appendix A ←── Reference material
-```
-
----
-
-## How to Use This Book
-
-### While Coding
-Keep the book open alongside the code. When you see a class, find its section.
-
-### To Learn
-Work through exercises at the end of each chapter.
-
-### To Review
-Use [Appendix A](A_Reference.md) as a quick reference for class diagrams and file locations.
-
----
-
-## Updates
-
-This is a **living document**. As the engine grows, new chapters will be added:
-
-- [ ] Model Loading
-- [ ] Input System
-- [ ] Audio
-- [ ] Physics
-- [ ] Entity Component System
-
----
-
-## Prerequisites
-
-- Basic C++ (classes, templates, pointers)
-- Basic linear algebra (vectors, matrices)
-- Visual Studio 2022 or later
-- CMake 3.16+
-
----
-
-## Quick Start
+### Quick Start
 
 ```bash
-# Clone and build
-git clone <repo>
-cd vis-psyche
-cmake -B build
-cmake --build build --config Debug
-./build/bin/Debug/Sandbox.exe
+# Install Python dependencies
+pip install -r build/requirements.txt
+
+# Build all formats
+python build/build.py all
 ```
 
-Then start reading from [Chapter 0](00_Introduction.md)!
+### Build Commands
 
+| Command | Output |
+|---------|--------|
+| `python build/build.py pdf` | `dist/vizpsyche-book.pdf` |
+| `python build/build.py html` | `dist/html/index.html` |
+| `python build/build.py epub` | `dist/vizpsyche-book.epub` |
+| `python build/build.py all` | All formats |
+| `python build/build.py clean` | Remove `dist/` |
+
+### Output
+
+Generated files are saved to `dist/`:
+
+```
+dist/
+├── vizpsyche-book.pdf    # Professional PDF with Eisvogel template
+├── vizpsyche-book.epub   # eBook format
+└── html/
+    └── index.html        # Standalone HTML with dark theme
+```
+
+## Project Structure
+
+```
+vis-psyche-docs/
+├── chapters/              # Markdown source files (13 chapters)
+│   ├── 00_Introduction.md
+│   ├── 01_BuildSystem.md
+│   └── ...
+├── images/                # Diagrams and figures (PNG)
+├── build/                 # Build system
+│   ├── build.py           # Main build script
+│   ├── chapters.yaml      # Chapter order manifest
+│   ├── metadata.yaml      # Book metadata (title, author, styling)
+│   ├── requirements.txt   # Python dependencies
+│   └── templates/
+│       ├── style.css      # Dark theme for HTML/EPUB
+│       └── pandoc-latex-template/  # Eisvogel template (submodule)
+├── dist/                  # Generated output (gitignored)
+└── README.md              # This file
+```
+
+## Customization
+
+### Book Metadata
+
+Edit `build/metadata.yaml` to change:
+- Title, author, date
+- Title page colors
+- Link colors
+- Font size
+
+### Chapter Order
+
+Edit `build/chapters.yaml` to add/remove/reorder chapters.
+
+### Styling
+
+- **PDF**: Uses [Eisvogel](https://github.com/Wandmalfarbe/pandoc-latex-template) template
+- **HTML/EPUB**: Edit `build/templates/style.css`
+
+## License
+
+© 2025 Siva Vadlamani. All rights reserved.

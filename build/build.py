@@ -17,6 +17,7 @@ import argparse
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import yaml
@@ -71,16 +72,17 @@ def check_pandoc():
             check=True
         )
         version = result.stdout.split("\n")[0]
-        print(f"✓ Found {version}")
+        print(f"[OK] Found {version}")
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
-        print("✗ Pandoc not found. Please install: https://pandoc.org/installing.html")
+        print("[ERROR] Pandoc not found. Please install: https://pandoc.org/installing.html")
         return False
 
 
 def build_pdf(chapters: list[Path]) -> bool:
     """Build PDF using Pandoc with Eisvogel template."""
-    print("\n📄 Building PDF...")
+    print("\n[PDF] Building...")
+    start_time = time.time()
     
     output = DIST_DIR / "vizpsyche-book.pdf"
     
@@ -103,19 +105,21 @@ def build_pdf(chapters: list[Path]) -> bool:
     
     try:
         subprocess.run(cmd, check=True, cwd=DOCS_DIR)
-        print(f"✓ PDF generated: {output}")
+        elapsed = time.time() - start_time
+        print(f"[OK] PDF generated: {output} ({elapsed:.1f}s)")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"✗ PDF build failed: {e}")
+        print(f"[ERROR] PDF build failed: {e}")
         return False
     except FileNotFoundError:
-        print("✗ xelatex not found. Please install TeX Live or MiKTeX.")
+        print("[ERROR] xelatex not found. Please install TeX Live or MiKTeX.")
         return False
 
 
 def build_html(chapters: list[Path]) -> bool:
     """Build standalone HTML with custom CSS."""
-    print("\n🌐 Building HTML...")
+    print("\n[HTML] Building...")
+    start_time = time.time()
     
     html_dir = DIST_DIR / "html"
     html_dir.mkdir(exist_ok=True)
@@ -147,16 +151,18 @@ def build_html(chapters: list[Path]) -> bool:
     
     try:
         subprocess.run(cmd, check=True, cwd=DOCS_DIR)
-        print(f"✓ HTML generated: {output}")
+        elapsed = time.time() - start_time
+        print(f"[OK] HTML generated: {output} ({elapsed:.1f}s)")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"✗ HTML build failed: {e}")
+        print(f"[ERROR] HTML build failed: {e}")
         return False
 
 
 def build_epub(chapters: list[Path]) -> bool:
     """Build EPUB eBook format."""
-    print("\n📚 Building EPUB...")
+    print("\n[EPUB] Building...")
+    start_time = time.time()
     
     output = DIST_DIR / "vizpsyche-book.epub"
     
@@ -176,21 +182,22 @@ def build_epub(chapters: list[Path]) -> bool:
     
     try:
         subprocess.run(cmd, check=True, cwd=DOCS_DIR)
-        print(f"✓ EPUB generated: {output}")
+        elapsed = time.time() - start_time
+        print(f"[OK] EPUB generated: {output} ({elapsed:.1f}s)")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"✗ EPUB build failed: {e}")
+        print(f"[ERROR] EPUB build failed: {e}")
         return False
 
 
 def clean():
     """Remove dist directory."""
-    print("🧹 Cleaning dist/...")
+    print("[CLEAN] Cleaning dist/...")
     if DIST_DIR.exists():
         shutil.rmtree(DIST_DIR)
-        print("✓ Removed dist/")
+        print("[OK] Removed dist/")
     else:
-        print("✓ dist/ already clean")
+        print("[OK] dist/ already clean")
 
 
 def main():
@@ -228,11 +235,11 @@ Examples:
     
     # Load chapters
     chapters_list = load_chapters()
-    print(f"✓ Found {len(chapters_list)} chapters")
+    print(f"[OK] Found {len(chapters_list)} chapters")
     
     chapter_paths = get_chapter_paths(chapters_list)
     if not chapter_paths:
-        print("✗ No chapters found!")
+        print("[ERROR] No chapters found!")
         sys.exit(1)
     
     ensure_dist_dir()
@@ -251,12 +258,13 @@ Examples:
     
     print("\n" + "=" * 50)
     if success:
-        print("✓ Build complete!")
+        print("[OK] Build complete!")
         print(f"  Output: {DIST_DIR}")
     else:
-        print("✗ Build completed with errors")
+        print("[ERROR] Build completed with errors")
         sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
+
