@@ -1,0 +1,353 @@
+# Appendix A: Code Reference
+
+## What We've Built
+
+As of now, VizPsyche has:
+
+### Core Systems
+- CMake build system (cross-platform ready)
+- DLL architecture with proper exports
+- Logging system (spdlog wrapper)
+- Entry point abstraction
+- Window and context management (GLFWManager)
+
+### Third-Party Libraries {#libraries}
+- **GLFW** - Window creation, input, OpenGL context
+- **GLAD** - OpenGL function loading
+- **GLM** - Math library (vectors, matrices, transforms)
+- **Dear ImGui** - Immediate mode GUI
+- **spdlog** - Fast, formatted logging
+- **stb_image** - Image loading
+
+### OpenGL Abstractions {#opengl}
+- VertexBuffer (VBO wrapper)
+- IndexBuffer (IBO wrapper)
+- VertexArray (VAO wrapper)
+- VertexBufferLayout (attribute configuration)
+- Shader (compile, link, uniforms, caching)
+- Texture (load images, bind to slots)
+- Renderer (clear, draw)
+- GLFWManager (window, context, input)
+- ErrorHandling (OpenGL debug callbacks)
+
+### Engine Core
+- Camera (view/projection matrices)
+- Transform (position, rotation, scale)
+- Mesh (geometry with factory methods)
+- Scene (object collection management)
+- SceneObject (mesh + transform + color bundle)
+
+### Lighting
+- DirectionalLight (sun-like parallel rays)
+- Material properties (shininess)
+
+### GUI
+- UIManager (ImGui integration)
+
+---
+
+## File Reference
+
+### Build Files
+
+| File | Purpose |
+|------|---------|
+| `CMakeLists.txt` | Root build config |
+| `VizEngine/CMakeLists.txt` | Engine library config |
+| `Sandbox/CMakeLists.txt` | Test app config |
+
+### Public API
+
+| File | Purpose |
+|------|---------|
+| `VizEngine.h` | Single include for users |
+| `Core.h` | Export macros, platform detection |
+| `EntryPoint.h` | Defines main(), calls CreateApplication |
+| `Application.h` | Base class for applications |
+| `Log.h` | Logging macros |
+
+### Core
+
+| File | Purpose |
+|------|---------|
+| `Core/Camera.h` | View/projection matrix management |
+| `Core/Transform.h` | Position, rotation, scale struct |
+| `Core/Mesh.h` | Geometry abstraction with factories |
+| `Core/Scene.h` | Scene object collection manager |
+| `Core/SceneObject.h` | Mesh + Transform + Color bundle |
+| `Core/Light.h` | DirectionalLight, PointLight, Material |
+
+### OpenGL
+
+| File | Purpose |
+|------|---------|
+| `OpenGL/VertexBuffer.h` | VBO wrapper |
+| `OpenGL/IndexBuffer.h` | IBO wrapper |
+| `OpenGL/VertexArray.h` | VAO wrapper |
+| `OpenGL/VertexBufferLayout.h` | Vertex attribute configuration |
+| `OpenGL/Shader.h` | Shader program wrapper |
+| `OpenGL/Texture.h` | Texture wrapper |
+| `OpenGL/Renderer.h` | High-level render commands |
+| `OpenGL/GLFWManager.h` | Window and context |
+| `OpenGL/ErrorHandling.h` | Debug output handling |
+| `OpenGL/Commons.h` | Shared OpenGL includes |
+
+### GUI
+
+| File | Purpose |
+|------|---------|
+| `GUI/UIManager.h` | ImGui wrapper |
+
+### Resources
+
+| File | Purpose |
+|------|---------|
+| `resources/shaders/unlit.shader` | Unlit shader (no lighting) |
+| `resources/shaders/lit.shader` | Blinn-Phong lighting shader |
+| `resources/textures/uvchecker.png` | Test texture |
+
+---
+
+## Class Diagram {#class-diagram}
+
+```
+VizEngine (namespace)
+│
+├── Application (base class, virtual destructor)
+│   └── Run() → Main loop
+│
+├── Log (static)
+│   ├── Init()
+│   ├── SetCoreLogLevel(), SetClientLogLevel()
+│   ├── GetCoreLogger()
+│   └── GetClientLogger()
+│
+├── Camera
+│   ├── SetPosition(), SetRotation()
+│   ├── GetViewMatrix(), GetProjectionMatrix()
+│   ├── GetViewProjectionMatrix()
+│   └── Move*() helpers
+│
+├── Transform (struct)
+│   ├── Position, Rotation, Scale
+│   └── GetModelMatrix()
+│
+├── Mesh
+│   ├── Bind(), Unbind()
+│   ├── GetVertexArray(), GetIndexBuffer()
+│   └── CreatePyramid(), CreateCube(), CreatePlane() [static factories]
+│
+├── Scene
+│   ├── AddObject(), RemoveObject(), Clear()
+│   ├── Update(), Render()
+│   └── GetObjects(), GetObjectCount()
+│
+├── SceneObject (struct)
+│   ├── MeshPtr, ObjectTransform, Color, Active, Name
+│   └── Bundles mesh + transform for rendering
+│
+├── DirectionalLight (struct)
+│   ├── Direction, Ambient, Diffuse, Specular
+│   └── GetDirection() → normalized
+│
+├── OpenGL Wrappers
+│   ├── VertexBuffer: Bind(), Unbind(), GetID()
+│   ├── IndexBuffer: Bind(), Unbind(), GetCount()
+│   ├── VertexArray: LinkVertexBuffer(), Bind(), Unbind()
+│   ├── Shader: Bind(), Unbind(), Set*() uniforms
+│   ├── Texture: Bind(), Unbind(), GetWidth(), GetHeight()
+│   └── Renderer: Clear(), Draw()
+│
+├── GLFWManager
+│   ├── ProcessInput()
+│   ├── WindowShouldClose()
+│   ├── SwapBuffersAndPollEvents()
+│   └── GetWindow()
+│
+├── UIManager
+│   ├── BeginFrame(), EndFrame()
+│   ├── StartWindow(), EndWindow()
+│   └── Render()
+│
+└── ErrorHandling (static)
+    └── HandleErrors() → Sets up debug callback
+```
+
+---
+
+## Key Design Patterns Used
+
+### RAII (Resource Acquisition Is Initialization)
+All OpenGL wrappers acquire resources in constructor, release in destructor.
+
+### Factory Method
+`Mesh::CreatePyramid()`, `Mesh::CreateCube()` create preconfigured objects.
+
+### Singleton-ish
+`Log` uses static methods and static logger instances.
+
+### State Machine Wrapper
+All OpenGL wrappers have `Bind()`/`Unbind()` to manage OpenGL's state machine.
+
+### Rule of 5
+Resource-owning classes delete copy operations and implement move operations.
+
+---
+
+## Memory Management {#memory}
+
+### Ownership Rules
+
+| Object | Owned By | Lifetime |
+|--------|----------|----------|
+| VertexBuffer | Mesh | Until Mesh destroyed |
+| IndexBuffer | Mesh | Until Mesh destroyed |
+| VertexArray | Mesh | Until Mesh destroyed |
+| Shader | Application | Until scope ends |
+| Texture | Application | Until scope ends |
+| Mesh (shared_ptr) | Scene/Application | Until last reference gone |
+| Camera | Application stack | Until function returns |
+| Transform | SceneObject | Until SceneObject destroyed |
+
+### No Raw `new`/`delete`
+
+We use:
+- Stack allocation for small objects
+- `std::unique_ptr` for owned heap objects
+- `std::shared_ptr` for shared resources (Mesh)
+- RAII classes that clean up in destructors
+
+---
+
+## Logging Quick Reference
+
+### Core Logger (Engine)
+
+```cpp
+VP_CORE_TRACE("Detailed debug info");
+VP_CORE_INFO("General info");
+VP_CORE_WARN("Something unexpected");
+VP_CORE_ERROR("Error occurred");
+VP_CORE_CRITICAL("Fatal error");
+```
+
+### Client Logger (Application)
+
+```cpp
+VP_TRACE("Detailed debug info");
+VP_INFO("General info");
+VP_WARN("Something unexpected");
+VP_ERROR("Error occurred");
+VP_CRITICAL("Fatal error");
+```
+
+### Format Strings
+
+```cpp
+VP_INFO("Value: {}", 42);
+VP_INFO("{} + {} = {}", 1, 2, 3);
+VP_INFO("Float: {:.2f}", 3.14159);
+```
+
+---
+
+## Performance Notes
+
+### Current Optimizations
+- Uniform location caching in Shader
+- Move semantics prevent unnecessary copies
+- Index buffers reduce vertex duplication
+- Shared mesh geometry via shared_ptr
+
+### Current Limitations (OK for learning)
+- Single draw call per mesh
+- No batching
+- No frustum culling
+- No LOD
+- No instancing
+
+---
+
+## Debugging Tips {#debugging}
+
+### OpenGL Errors
+Debug output is enabled. Check console for messages like:
+```
+OpenGL Debug Message:
+  Source:   API
+  Type:     Error
+  Severity: HIGH
+  Message:  ...
+```
+
+### Shader Errors
+Compilation errors print to console:
+```
+SHADER ERROR::COMPILATION ERROR: VERTEX
+error: ...
+```
+
+### Logging
+Use the logging macros:
+```cpp
+VP_CORE_INFO("Engine message");
+VP_INFO("Application message");
+VP_CORE_ERROR("Something went wrong!");
+```
+
+### Common Issues
+
+| Symptom | Likely Cause |
+|---------|--------------|
+| Black screen | Shader not bound, or MVP wrong |
+| Black texture | Texture not loaded, wrong path |
+| Upside-down texture | Missing `stbi_set_flip_vertically_on_load(1)` |
+| Nothing renders | Forgot to call Draw(), or indices wrong |
+| Crash on exit | Double-delete (check Rule of 5) |
+
+---
+
+## Building & Running
+
+```bash
+# Generate project (first time)
+cmake -B build -G "Visual Studio 17 2022"
+
+# Build
+cmake --build build --config Debug
+
+# Run
+./build/bin/Debug/Sandbox.exe
+```
+
+---
+
+## Chapter Cross-Reference
+
+| Topic | Chapter |
+|-------|---------|
+| CMake, build system | [01 Build System](01_BuildSystem.md) |
+| DLL exports, __declspec | [02 DLL Architecture](02_DLLArchitecture.md) |
+| GLFW, GLAD, GLM, ImGui, spdlog | [03 Third-Party Libraries](03_ThirdPartyLibraries.md) |
+| GLFWManager, context | [04 Window & Context](04_WindowAndContext.md) |
+| Log class, VP_* macros | [05 Logging System](05_LoggingSystem.md) |
+| Buffers, shaders, pipeline | [06 OpenGL Fundamentals](06_OpenGLFundamentals.md) |
+| RAII, Rule of 5, wrappers | [07 Abstractions](07_Abstractions.md) |
+| Texture class, stb_image | [08 Textures](08_Textures.md) |
+| Camera, Transform, Mesh | [09 Engine Architecture](09_EngineArchitecture.md) |
+| Scene, SceneObject | [10 Multiple Objects](10_MultipleObjects.md) |
+| DirectionalLight, Blinn-Phong | [11 Lighting](11_Lighting.md) |
+
+---
+
+## Exercises for Practice
+
+1. **Add a second object** - Create another Mesh and Transform, draw both
+2. **Keyboard camera** - Move camera with WASD
+3. **Mouse look** - Rotate camera with mouse
+4. **New shader** - Create a wireframe shader
+5. **New mesh** - Implement `Mesh::CreateSphere()`
+6. **Material class** - Bundle Shader + Texture together
+7. **Point light** - Implement a point light with attenuation
+8. **Multiple lights** - Support an array of lights in the shader
+
