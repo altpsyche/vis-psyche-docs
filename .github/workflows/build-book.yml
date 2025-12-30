@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '**.md'
+      - 'chapters/**'
       - 'build/**'
       - 'images/**'
   workflow_dispatch:
