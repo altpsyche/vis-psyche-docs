@@ -221,29 +221,7 @@ The key difference: we calculate a **new MVP matrix for each object** because ea
 
 Understanding resource ownership is crucial:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         Scene                               │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │SceneObject 1│  │SceneObject 2│  │SceneObject 3│         │
-│  │             │  │             │  │             │         │
-│  │ Transform   │  │ Transform   │  │ Transform   │         │
-│  │ pos: 0,0,0  │  │ pos: 5,0,0  │  │ pos: -5,0,0 │         │
-│  │             │  │             │  │             │         │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘         │
-│         │                │                │                 │
-└─────────┼────────────────┼────────────────┼─────────────────┘
-          │                │                │
-          │ shared_ptr     │ shared_ptr     │ shared_ptr
-          │                │                │
-          ▼                ▼                ▼
-    ┌───────────┐    ┌───────────┐    ┌───────────┐
-    │  Pyramid  │    │   Cube    │    │  Pyramid  │
-    │   Mesh    │    │   Mesh    │    │   Mesh    │
-    │ (shared)  │    │ (shared)  │    │   (same   │
-    └───────────┘    └───────────┘    │  as #1!)  │
-                                      └───────────┘
-```
+![Shared Mesh Architecture](images/10-shared-mesh-diagram.png)
 
 **Shared (via `shared_ptr`):**
 - Mesh geometry (vertices, indices, GPU buffers)
@@ -550,7 +528,7 @@ Production engines optimize with:
 - **Instancing** - GPU draws multiple copies with one call
 - **Frustum Culling** - Skip objects outside camera view
 
-### Memory
+### Memory {#performance-memory}
 
 With `shared_ptr`, we efficiently share mesh data:
 
@@ -579,36 +557,7 @@ Instead of objects owning all their data, ECS separates concerns:
 
 ### Our Approach vs ECS
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        OUR CURRENT APPROACH                         │
-│                                                                     │
-│   SceneObject 1          SceneObject 2          SceneObject 3      │
-│   ┌───────────┐          ┌───────────┐          ┌───────────┐      │
-│   │ Mesh      │          │ Mesh      │          │ Mesh      │      │
-│   │ Transform │          │ Transform │          │ Transform │      │
-│   │ Color     │          │ Color     │          │ Color     │      │
-│   │ Active    │          │ Active    │          │ Active    │      │
-│   └───────────┘          └───────────┘          └───────────┘      │
-│                                                                     │
-│   All objects have the same shape. Want health? Add it to ALL.     │
-└─────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────┐
-│                           ECS APPROACH                              │
-│                                                                     │
-│   Entity 1 (Player)      Entity 2 (Rock)       Entity 3 (Enemy)    │
-│   ┌─────────────────┐    ┌─────────────────┐   ┌─────────────────┐ │
-│   │ + Transform     │    │ + Transform     │   │ + Transform     │ │
-│   │ + Mesh          │    │ + Mesh          │   │ + Mesh          │ │
-│   │ + Health        │    │                 │   │ + Health        │ │
-│   │ + Velocity      │    │                 │   │ + Velocity      │ │
-│   │ + PlayerInput   │    │                 │   │ + AIBehavior    │ │
-│   └─────────────────┘    └─────────────────┘   └─────────────────┘ │
-│                                                                     │
-│   Each entity has only the components it needs. Rock has no health.│
-└─────────────────────────────────────────────────────────────────────┘
-```
+![ECS Comparison](images/10-ecs-comparison.png)
 
 ### Why ECS Wins
 

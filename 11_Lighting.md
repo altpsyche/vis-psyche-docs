@@ -4,18 +4,7 @@
 
 Look at our scene before lighting:
 
-```
-┌─────────────────────────────────────────┐
-│                                         │
-│        ▲           ┌───┐                │
-│       ╱ ╲          │   │                │
-│      ╱   ╲         │   │                │
-│     ╱─────╲        └───┘                │
-│                                         │
-│   Every surface is the same color.      │
-│   No depth. No form. No life.           │
-└─────────────────────────────────────────┘
-```
+![Flat Objects](images/11-flat-objects.png)
 
 Without lighting, a cube looks like a hexagon. A sphere looks like a circle. We lose all sense of 3D form.
 
@@ -37,22 +26,9 @@ We can't simulate every photon (that's ray tracing). Instead, we use mathematica
 
 The Blinn-Phong model breaks lighting into three components:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                                                             │
-│   AMBIENT          DIFFUSE           SPECULAR              │
-│                                                             │
-│   ░░░░░░░         ████░░░░           ░░░●░░░               │
-│   ░░░░░░░         ████░░░░           ░░░░░░░               │
-│   ░░░░░░░         ████░░░░           ░░░░░░░               │
-│                                                             │
-│   Constant        Varies with        Bright                │
-│   base light      surface angle      highlights            │
-│                                                             │
-│   Final Color = Ambient + Diffuse + Specular               │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+![Blinn-Phong Components](images/11-blinn-phong-components.png)
+
+**Final Color = Ambient + Diffuse + Specular**
 
 ### Ambient Light
 
@@ -68,21 +44,7 @@ Without ambient, surfaces facing away from the light would be pure black.
 
 Surfaces facing the light are brighter. This is **Lambert's Cosine Law**:
 
-```
-        Light
-          ↓
-    ┌─────────────┐   ← Surface facing light = bright
-    │█████████████│
-    └─────────────┘
-    
-          Light
-            ↓
-         ╱     
-        ╱ 45°
-    ┌──╱──────────┐   ← Surface at angle = dimmer
-    │░░░░░████████│
-    └─────────────┘
-```
+![Lambert's Diffuse](images/11-lambert-diffuse.png)
 
 The math uses the **dot product** of the surface normal and light direction:
 
@@ -99,17 +61,7 @@ vec3 diffuse = lightDiffuse * diff * objectColor;
 
 Shiny highlights. Blinn-Phong uses a **half vector** between the light and view directions:
 
-```
-        Light       View
-          ↓         ↑
-           ╲       ╱
-            ╲  H  ╱    ← Half vector (between L and V)
-             ╲ ↑ ╱
-    ──────────●●●──────────  Surface
-    
-    Highlight appears when half vector
-    aligns with surface normal.
-```
+![Half Vector](images/11-half-vector.png)
 
 ```glsl
 vec3 viewDir = normalize(cameraPos - fragmentPos);
@@ -133,14 +85,7 @@ The `shininess` exponent controls highlight size:
 
 A **normal** is a vector perpendicular to a surface. Lighting calculations depend entirely on normals.
 
-```
-         ↑ Normal
-         │
-    ─────●─────  Surface
-    
-    Every vertex needs a normal vector.
-    The shader uses it to calculate lighting.
-```
+![Surface Normal](images/11-surface-normal.png)
 
 ### Adding Normals to Vertices
 
@@ -167,28 +112,9 @@ layout.Push<float>(2); // TexCoords
 
 ### Face Normals vs Smooth Normals
 
-For **flat shading** (our current approach), each face has its own normal:
+For **flat shading** (our current approach), each face has its own normal. For **smooth shading**, vertices share averaged normals:
 
-```
-        ↑         ↑
-        │         │
-    ────┼────┼────┼────
-    Face A    Face B
-    
-    Same vertex position, different normals
-    = Sharp edge between faces
-```
-
-For **smooth shading**, vertices share averaged normals:
-
-```
-           ↗
-          ╱
-    ─────●─────
-    
-    One normal per vertex position
-    = Smooth gradient across faces
-```
+![Face vs Smooth Normals](images/11-face-vs-smooth-normals.png)
 
 We use flat shading because it's simpler and works well for hard-edged geometry like cubes.
 

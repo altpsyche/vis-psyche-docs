@@ -1,0 +1,20 @@
+# VizPsyche Book - Chapter Manifest
+# Defines the order of chapters for book compilation
+# Future: This will be the data source for BobReview plugin
+
+chapters:
+  - 00_Introduction.md
+  - 01_BuildSystem.md
+  - 02_DLLArchitecture.md
+  - 03_ThirdPartyLibraries.md
+  - 04_WindowAndContext.md
+  - 05_LoggingSystem.md
+  - 06_OpenGLFundamentals.md
+  - 07_Abstractions.md
+  - 08_Textures.md
+  - 09_EngineArchitecture.md
+  - 10_MultipleObjects.md
+  - 11_Lighting.md
+
+appendices:
+  - A_Reference.md

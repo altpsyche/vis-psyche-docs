@@ -242,11 +242,7 @@ while (!glfwWindowShouldClose(m_Window))
 
 `glfwSwapBuffers()` implements **double buffering**:
 
-```
-Frame 1: [Draw to Back Buffer] → [Swap] → [Back becomes Front]
-Frame 2: [Draw to Back Buffer] → [Swap] → [Back becomes Front]
-...
-```
+![Double Buffering](images/04-double-buffering.png)
 
 We always draw to the "back" buffer (invisible), then swap it with the "front" buffer (visible). This prevents screen tearing.
 

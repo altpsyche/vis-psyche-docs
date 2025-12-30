@@ -6,14 +6,7 @@ A 3D model without textures is like a coloring book without colors. Textures are
 
 A texture is a 2D image that gets mapped onto 3D geometry. Each pixel in the texture is called a **texel** (texture element).
 
-```
-Texture (2D image)          →          3D Object (textured)
-┌───────────────────┐                  ╱╲
-│   🟫🟫🟫🟫🟫🟫    │                 ╱  ╲
-│   🟫  🧱  🟫     │      →         ╱ 🧱 ╲
-│   🟫🟫🟫🟫🟫🟫    │               ╱______╲
-└───────────────────┘               brick pyramid
-```
+![Texture Mapping](images/08-texture-mapping.png)
 
 ---
 
@@ -23,16 +16,7 @@ Every vertex has **texture coordinates** (often called **UV coordinates**) that 
 
 ### The UV Space
 
-```
-V
-↑
-1.0 ┌─────────┐
-    │         │
-    │ Texture │
-    │         │
-0.0 └─────────┘→ U
-   0.0       1.0
-```
+![UV Coordinates](images/08-uv-coordinates.png)
 
 - **U** = horizontal (0.0 = left, 1.0 = right)
 - **V** = vertical (0.0 = bottom, 1.0 = top)

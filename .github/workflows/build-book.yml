@@ -1,0 +1,78 @@
+name: Build Book
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.md'
+      - 'build/**'
+      - 'images/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install -r build/requirements.txt
+
+      - name: Install Pandoc
+        run: |
+          wget https://github.com/jgm/pandoc/releases/download/3.1.11/pandoc-3.1.11-1-amd64.deb
+          sudo dpkg -i pandoc-3.1.11-1-amd64.deb
+
+      - name: Install TinyTeX
+        uses: r-lib/actions/setup-tinytex@v2
+
+      - name: Install LaTeX packages
+        run: |
+          tlmgr install collection-fontsrecommended
+          tlmgr install collection-latexextra
+          tlmgr install xecjk
+          tlmgr install ly1
+          tlmgr install selnolig
+          tlmgr install fontspec
+          tlmgr install unicode-math
+          tlmgr install lualatex-math
+          tlmgr install luatexbase
+          tlmgr install ctablestack
+
+      - name: Build PDF
+        run: python build/build.py pdf
+        continue-on-error: true
+
+      - name: Build HTML
+        run: python build/build.py html
+
+      - name: Build EPUB
+        run: python build/build.py epub
+
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vizpsyche-book-pdf
+          path: dist/vizpsyche-book.pdf
+        if: always()
+
+      - name: Upload HTML artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vizpsyche-book-html
+          path: dist/html/
+
+      - name: Upload EPUB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vizpsyche-book-epub
+          path: dist/vizpsyche-book.epub
