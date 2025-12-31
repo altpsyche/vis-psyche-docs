@@ -401,6 +401,110 @@ glDrawElements(GL_TRIANGLES, mesh.GetIndexCount(), GL_UNSIGNED_INT, nullptr);
 
 ---
 
+## Common Pitfalls
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| Texture appears upside-down | stb_image Y origin | `stbi_set_flip_vertically_on_load(1)` |
+| Texture is black | Wrong texture slot | Verify `shader.SetInt("u_Texture", slot)` |
+| Texture is white | Failed to load file | Check file path and console for errors |
+| Pixelated when close | Wrong min filter | Use `GL_LINEAR` or `GL_LINEAR_MIPMAP_LINEAR` |
+| Blurry when far | No mipmaps | Call `glGenerateMipmap()` |
+
+---
+
+## Checkpoint
+
+This chapter covered textures:
+
+**Key Concepts:**
+- **UV coords** — Map 2D texture to 3D vertices (0,0 = bottom-left)
+- **stb_image** — Loads PNG, JPG, BMP to raw pixel data
+- **Texture slots** — Multiple textures bound simultaneously
+- **Filtering** — `NEAREST` (pixelated) vs `LINEAR` (smooth)
+- **Mipmaps** — Pre-computed smaller versions
+
+**Files:**
+- `VizEngine/OpenGL/Texture.h/cpp`
+
+**Building Along?**
+
+Create the Texture class:
+
+1. Download **stb_image.h** from https://github.com/nothings/stb
+   - Place in `VizEngine/vendor/stb/`
+
+2. Create **`VizEngine/src/VizEngine/OpenGL/Texture.h`**:
+   ```cpp
+   #pragma once
+   #include <glad/glad.h>
+   #include <string>
+
+   namespace VizEngine
+   {
+       class Texture
+       {
+       public:
+           Texture(const std::string& filepath);
+           ~Texture() { glDeleteTextures(1, &m_ID); }
+           
+           void Bind(unsigned int slot = 0) const
+           {
+               glActiveTexture(GL_TEXTURE0 + slot);
+               glBindTexture(GL_TEXTURE_2D, m_ID);
+           }
+           
+       private:
+           unsigned int m_ID = 0;
+           int m_Width = 0, m_Height = 0;
+       };
+   }
+   ```
+
+3. Create **`VizEngine/src/VizEngine/OpenGL/Texture.cpp`**:
+   ```cpp
+   #include "Texture.h"
+   #define STB_IMAGE_IMPLEMENTATION
+   #include <stb_image.h>
+
+   namespace VizEngine
+   {
+       Texture::Texture(const std::string& filepath)
+       {
+           stbi_set_flip_vertically_on_load(1);
+           int channels;
+           unsigned char* data = stbi_load(filepath.c_str(), 
+                                          &m_Width, &m_Height, &channels, 4);
+           
+           glGenTextures(1, &m_ID);
+           glBindTexture(GL_TEXTURE_2D, m_ID);
+           glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+           glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+           glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_Width, m_Height, 
+                       0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+           
+           stbi_image_free(data);
+       }
+   }
+   ```
+
+4. Add a texture image file to `src/resources/textures/` (any PNG)
+
+5. Use in `Application::Run()`:
+   ```cpp
+   Texture myTexture("src/resources/textures/brick.png");
+   
+   // In render loop:
+   myTexture.Bind(0);
+   shader.SetInt("u_Texture", 0);
+   ```
+
+6. Rebuild and run.
+
+**✓ Success:** Your geometry displays the loaded image!
+
+---
+
 ## Exercise
 
 1. Load a different texture format (JPG instead of PNG)

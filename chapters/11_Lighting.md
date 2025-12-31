@@ -91,25 +91,26 @@ A **normal** is a vector perpendicular to a surface. Lighting calculations depen
 
 ### Adding Normals to Vertices
 
-We updated our `Vertex` struct:
+We need to add a `Normal` field to the `Vertex` struct (from [Chapter 10](10_MultipleObjects.md)):
 
 ```cpp
+// Update Vertex in VizEngine/Core/Mesh.h
 struct Vertex
 {
     glm::vec4 Position;
-    glm::vec3 Normal;     // NEW: Surface direction
     glm::vec4 Color;
-    glm::vec2 TexCoords;
+    glm::vec2 TexCoord;
+    glm::vec3 Normal;     // ADD THIS for lighting
 };
 ```
 
-And the vertex buffer layout:
+Update the vertex buffer layout to match:
 
 ```cpp
 layout.Push<float>(4); // Position
-layout.Push<float>(3); // Normal (NEW)
 layout.Push<float>(4); // Color
-layout.Push<float>(2); // TexCoords
+layout.Push<float>(2); // TexCoord
+layout.Push<float>(3); // Normal (NEW)
 ```
 
 ### Face Normals vs Smooth Normals
@@ -299,6 +300,106 @@ This is basic lighting. Production engines add:
 - **PBR** - Physically Based Rendering for realistic materials
 - **HDR** - High Dynamic Range for bright lights
 - **Ambient Occlusion** - Soft shadows in crevices
+
+---
+
+## Common Pitfalls
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| Object completely black | Normals pointing wrong way | Check winding order or flip normals |
+| Lighting doesn't change with rotation | Using model-space normals | Transform normals by Normal Matrix |
+| Specular on back of object | Forgot `max(dot, 0)` | Clamp negative values to 0 |
+| Lighting looks faceted | Shared vertices, averaged normals | Duplicate verts for flat shading |
+
+---
+
+## Checkpoint
+
+This chapter covered Blinn-Phong lighting:
+
+**Formula:** `Final = Ambient + Diffuse + Specular`
+
+**Requirements:**
+- Normals in `Vertex` struct
+- `lit.shader` with lighting calculations  
+- Camera position uniform (`u_ViewPos`)
+
+**Files:**
+- `src/resources/shaders/lit.shader` — Lighting shader
+- `VizEngine/Core/Mesh.cpp` — Updated with normals
+
+**Building Along?**
+
+Create the lighting shader:
+
+1. Create **`src/resources/shaders/lit.shader`**:
+   ```glsl
+   #shader vertex
+   #version 460 core
+   layout (location = 0) in vec4 aPos;
+   layout (location = 1) in vec4 aColor;
+   layout (location = 2) in vec2 aTexCoord;
+   layout (location = 3) in vec3 aNormal;
+
+   uniform mat4 u_MVP;
+   uniform mat4 u_Model;
+
+   out vec3 v_FragPos;
+   out vec3 v_Normal;
+   out vec4 v_Color;
+
+   void main() {
+       gl_Position = u_MVP * aPos;
+       v_FragPos = vec3(u_Model * aPos);
+       v_Normal = mat3(transpose(inverse(u_Model))) * aNormal;
+       v_Color = aColor;
+   }
+
+   #shader fragment
+   #version 460 core
+   out vec4 FragColor;
+
+   in vec3 v_FragPos;
+   in vec3 v_Normal;
+   in vec4 v_Color;
+
+   uniform vec3 u_LightDir;
+   uniform vec3 u_LightColor;
+   uniform vec3 u_ViewPos;
+
+   void main() {
+       // Ambient
+       vec3 ambient = 0.1 * u_LightColor;
+       
+       // Diffuse
+       vec3 norm = normalize(v_Normal);
+       vec3 lightDir = normalize(u_LightDir);
+       float diff = max(dot(norm, lightDir), 0.0);
+       vec3 diffuse = diff * u_LightColor;
+       
+       // Specular (Blinn-Phong)
+       vec3 viewDir = normalize(u_ViewPos - v_FragPos);
+       vec3 halfwayDir = normalize(lightDir + viewDir);
+       float spec = pow(max(dot(norm, halfwayDir), 0.0), 32.0);
+       vec3 specular = spec * u_LightColor;
+       
+       vec3 result = (ambient + diffuse + specular) * v_Color.rgb;
+       FragColor = vec4(result, v_Color.a);
+   }
+   ```
+
+2. Set uniforms in `Application::Run()`:
+   ```cpp
+   shader.SetMat4("u_Model", objectTransform.GetModelMatrix());
+   shader.SetVec3("u_LightDir", glm::normalize(glm::vec3(1, 1, 1)));
+   shader.SetVec3("u_LightColor", glm::vec3(1.0f));
+   shader.SetVec3("u_ViewPos", camera.GetPosition());
+   ```
+
+3. Rebuild and run.
+
+**✓ Success:** Objects show 3D shading with highlights!
 
 ---
 

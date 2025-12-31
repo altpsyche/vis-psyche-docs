@@ -51,9 +51,23 @@ VizPsyche/
 └── build/                  ← Generated build files
 ```
 
-## How to Read This Book
+## How to Use This Book
 
-Each chapter builds on the previous. Don't skip ahead - the concepts stack!
+This book is a **companion**, not a prescription. It explains how VizPsyche works so you *can* build along if you choose.
+
+### Two Paths
+
+**Reading to Understand:**
+Browse the documentation, understand how the engine works, and reference it when modifying the codebase. No need to type anything.
+
+**Building Along:**
+Follow chapter by chapter, implementing each piece. Each chapter ends with a **Checkpoint** section listing the files you should have and what you should see running.
+
+> **Either path is valid.** The book enables; it doesn't demand.
+
+### Reading Order
+
+Each chapter builds on the previous. The concepts stack:
 
 ### Part 1: Foundation
 1. **[Build System](01_BuildSystem.md)** - CMake and project setup
@@ -73,8 +87,9 @@ Each chapter builds on the previous. Don't skip ahead - the concepts stack!
 9. **[Engine Architecture](09_EngineArchitecture.md)** - Proper game engine structure
 10. **[Multiple Objects & Scene](10_MultipleObjects.md)** - Managing complex scenes
 
-### Part 5: Graphics II
+### Part 5: Advanced Graphics
 11. **[Lighting](11_Lighting.md)** - Blinn-Phong lighting model
+12. **[Model Loading](12_ModelLoading.md)** - Loading glTF models with PBR materials
 
 ### Appendices
 - **[Appendix A: Code Reference](A_Reference.md)** - Class diagrams, file reference

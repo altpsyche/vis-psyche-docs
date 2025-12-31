@@ -420,6 +420,145 @@ renderer.Draw(vao, ibo, shader);
 
 ---
 
+## Common Pitfalls
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| "Double free" crash | Missing move semantics | Implement Rule of 5 or delete copy |
+| Shader uniform not working | Uniform name typo | Verify name matches shader exactly |
+| Texture appears black | Forgot to bind texture | Call `texture.Bind(unit)` before draw |
+| VAO state "leaks" | Left VAO bound | Unbind after use (`glBindVertexArray(0)`) |
+
+---
+
+## Checkpoint
+
+This chapter covered wrapping OpenGL in C++ classes:
+
+**Classes Introduced:**
+| Class | Purpose |
+|-------|---------|
+| `VertexBuffer` | VBO wrapper |
+| `IndexBuffer` | IBO wrapper |
+| `VertexArray` | VAO wrapper with layout |
+| `Shader` | Compile + uniform helpers |
+| `Texture` | Image loading + sampling |
+
+**Pattern:** RAII + Rule of 5
+
+**Files:** All in `VizEngine/OpenGL/`
+
+**Building Along?**
+
+Create the OpenGL wrapper classes:
+
+1. Create **`VizEngine/src/VizEngine/OpenGL/VertexBuffer.h`**:
+   ```cpp
+   #pragma once
+   #include <glad/glad.h>
+
+   namespace VizEngine
+   {
+       class VertexBuffer
+       {
+       public:
+           VertexBuffer(const void* data, unsigned int size)
+           {
+               glGenBuffers(1, &m_ID);
+               glBindBuffer(GL_ARRAY_BUFFER, m_ID);
+               glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+           }
+           
+           ~VertexBuffer() { glDeleteBuffers(1, &m_ID); }
+           
+           void Bind() const { glBindBuffer(GL_ARRAY_BUFFER, m_ID); }
+           void Unbind() const { glBindBuffer(GL_ARRAY_BUFFER, 0); }
+           
+           // Delete copy, allow move
+           VertexBuffer(const VertexBuffer&) = delete;
+           VertexBuffer& operator=(const VertexBuffer&) = delete;
+           
+       private:
+           unsigned int m_ID = 0;
+       };
+   }
+   ```
+
+2. Create **`VizEngine/src/VizEngine/OpenGL/IndexBuffer.h`** (similar pattern):
+   ```cpp
+   #pragma once
+   #include <glad/glad.h>
+
+   namespace VizEngine
+   {
+       class IndexBuffer
+       {
+       public:
+           IndexBuffer(const unsigned int* data, unsigned int count)
+               : m_Count(count)
+           {
+               glGenBuffers(1, &m_ID);
+               glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ID);
+               glBufferData(GL_ELEMENT_ARRAY_BUFFER, 
+                           count * sizeof(unsigned int), data, GL_STATIC_DRAW);
+           }
+           
+           ~IndexBuffer() { glDeleteBuffers(1, &m_ID); }
+           void Bind() const { glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ID); }
+           unsigned int GetCount() const { return m_Count; }
+           
+       private:
+           unsigned int m_ID = 0;
+           unsigned int m_Count = 0;
+       };
+   }
+   ```
+
+3. Create **`VizEngine/src/VizEngine/OpenGL/VertexArray.h`**:
+   ```cpp
+   #pragma once
+   #include <glad/glad.h>
+
+   namespace VizEngine
+   {
+       class VertexArray
+       {
+       public:
+           VertexArray() { glGenVertexArrays(1, &m_ID); }
+           ~VertexArray() { glDeleteVertexArrays(1, &m_ID); }
+           
+           void Bind() const { glBindVertexArray(m_ID); }
+           void Unbind() const { glBindVertexArray(0); }
+           
+       private:
+           unsigned int m_ID = 0;
+       };
+   }
+   ```
+
+4. Refactor `Application::Run()` to use wrappers:
+   ```cpp
+   VertexArray vao;
+   vao.Bind();
+   
+   VertexBuffer vbo(vertices, sizeof(vertices));
+   IndexBuffer ibo(indices, indexCount);
+   
+   // Set up vertex attributes...
+   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, ...);
+   glEnableVertexAttribArray(0);
+   
+   // In render loop:
+   vao.Bind();
+   glDrawElements(GL_TRIANGLES, ibo.GetCount(), GL_UNSIGNED_INT, 0);
+   ```
+
+5. Rebuild and run.
+
+**✓ Success:** Same triangle, but code uses RAII wrappers. No manual `glDelete*` needed!
+
+---
+
 ## Exercise
 
 1. Add a `SetVec3` method to the Shader class

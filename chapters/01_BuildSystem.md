@@ -206,6 +206,85 @@ The executable is at: `build/bin/Debug/Sandbox.exe`
 
 ---
 
+## Common Pitfalls
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| "CMake Error: Could not find compiler" | Visual Studio not installed | Install VS 2022 with C++ workload |
+| "Cannot find -lglfw" | Submodules not initialized | Run `git submodule update --init --recursive` |
+| Build succeeds but .exe crashes | Resources not copied | Ensure `add_custom_command` copies `resources/` |
+
+---
+
+## Checkpoint
+
+This chapter covered the build system that compiles VizPsyche:
+
+**Files:**
+- `CMakeLists.txt` (root) — Project setup, C++17, output directories
+- `VizEngine/CMakeLists.txt` — Engine library with all sources
+- `Sandbox/CMakeLists.txt` — Test application
+
+**Building Along?**
+
+Create the project structure from scratch:
+
+1. Create the folder structure:
+   ```
+   VizPsyche/
+   ├── CMakeLists.txt
+   ├── VizEngine/
+   │   ├── CMakeLists.txt
+   │   └── src/
+   │       └── VizEngine/
+   │           └── (empty for now)
+   └── Sandbox/
+       ├── CMakeLists.txt
+       └── src/
+           └── SandboxApp.cpp
+   ```
+
+2. Create **root `CMakeLists.txt`**:
+   ```cmake
+   cmake_minimum_required(VERSION 3.16)
+   project(VizPsyche VERSION 1.0.0 LANGUAGES C CXX)
+
+   set(CMAKE_CXX_STANDARD 17)
+   set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+   add_subdirectory(VizEngine)
+   add_subdirectory(Sandbox)
+   ```
+
+3. Create **`VizEngine/CMakeLists.txt`** (minimal for now):
+   ```cmake
+   add_library(VizEngine SHARED)
+   ```
+
+4. Create **`Sandbox/CMakeLists.txt`**:
+   ```cmake
+   add_executable(Sandbox src/SandboxApp.cpp)
+   target_link_libraries(Sandbox PRIVATE VizEngine)
+   ```
+
+5. Create **`Sandbox/src/SandboxApp.cpp`**:
+   ```cpp
+   int main()
+   {
+       return 0;
+   }
+   ```
+
+6. Generate and build:
+   ```bash
+   cmake -B build -G "Visual Studio 17 2022"
+   cmake --build build --config Debug
+   ```
+
+**✓ Success:** Build completes. `Sandbox.exe` exists (does nothing yet).
+
+---
+
 ## Exercise
 
 Try modifying CMakeLists.txt:

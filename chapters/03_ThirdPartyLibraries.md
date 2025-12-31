@@ -606,6 +606,88 @@ It's important to know what versions we're using:
 
 ---
 
+## Checkpoint
+
+This chapter introduced the third-party libraries in VizPsyche:
+
+**Library Summary:**
+| Library | Purpose | Location |
+|---------|---------|----------|
+| GLFW | Window, input, context | `vendor/glfw/` |
+| GLAD | OpenGL function loading | `vendor/glad/` |
+| GLM | Math (vectors, matrices) | `vendor/glm/` |
+| Dear ImGui | Immediate-mode GUI | `vendor/imgui/` |
+| spdlog | Logging | `vendor/spdlog/` |
+| stb_image | Image loading | `vendor/stb/` |
+| tinygltf | glTF/GLB model loading | `vendor/tinygltf/` |
+
+**Building Along?**
+
+Add the third-party libraries to your project:
+
+1. Create `VizEngine/vendor/` folder
+
+2. Add GLFW as a Git submodule:
+   ```bash
+   cd VizEngine/vendor
+   git submodule add https://github.com/glfw/glfw.git
+   cd ../..
+   ```
+
+3. Add GLM (header-only, just clone):
+   ```bash
+   cd VizEngine/vendor
+   git submodule add https://github.com/g-truc/glm.git
+   cd ../..
+   ```
+
+4. Add spdlog:
+   ```bash
+   cd VizEngine/vendor
+   git submodule add https://github.com/gabime/spdlog.git
+   cd ../..
+   ```
+
+5. Download GLAD from https://glad.dav1d.de/:
+   - Language: C/C++
+   - Specification: OpenGL
+   - API gl: 4.6
+   - Profile: Core
+   - Generate a loader: ✓
+   - Place `glad.c` in `VizEngine/src/VizEngine/OpenGL/`
+   - Place `glad/` and `KHR/` folders in `VizEngine/include/`
+
+6. Update **`root CMakeLists.txt`** to include GLFW:
+   ```cmake
+   add_subdirectory(VizEngine/vendor/glfw)
+   add_subdirectory(VizEngine)
+   add_subdirectory(Sandbox)
+   ```
+
+7. Update **`VizEngine/CMakeLists.txt`** to link libraries:
+   ```cmake
+   target_link_libraries(VizEngine
+       PRIVATE glfw
+       PRIVATE opengl32
+   )
+   target_include_directories(VizEngine
+       PUBLIC src
+       PUBLIC vendor/glm
+       PUBLIC vendor/spdlog/include
+       PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+   )
+   ```
+
+8. Rebuild:
+   ```bash
+   cmake -B build -G "Visual Studio 17 2022"
+   cmake --build build --config Debug
+   ```
+
+**✓ Success:** Build links GLFW and includes GLM/spdlog headers.
+
+---
+
 ## Exercise
 
 1. Look at `VizEngine/vendor/` and find the license file for each library

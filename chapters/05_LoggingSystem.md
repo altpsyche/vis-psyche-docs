@@ -414,6 +414,113 @@ VP_CRITICAL("Out of memory! Shutting down.");
 
 ---
 
+## Checkpoint
+
+This chapter covered our logging system:
+
+**Key Class:** `Log` — Static wrapper around spdlog
+
+**Pattern:** Two loggers, two macro sets
+- `VP_CORE_*` — Engine messages (internal)
+- `VP_*` — Game messages (your code)
+
+**Log Levels:** `Trace < Debug < Info < Warn < Error < Critical`
+
+**Files:**
+- `VizEngine/Log.h` — Declaration + macros
+- `VizEngine/Log.cpp` — Logger initialization
+
+**Building Along?**
+
+Create the logging system:
+
+1. Create **`VizEngine/src/VizEngine/Log.h`**:
+   ```cpp
+   #pragma once
+   #include "Core.h"
+   #include <spdlog/spdlog.h>
+   #include <memory>
+
+   namespace VizEngine
+   {
+       class VizEngine_API Log
+       {
+       public:
+           static void Init();
+           static std::shared_ptr<spdlog::logger>& GetCoreLogger() 
+               { return s_CoreLogger; }
+           static std::shared_ptr<spdlog::logger>& GetClientLogger() 
+               { return s_ClientLogger; }
+       private:
+           static std::shared_ptr<spdlog::logger> s_CoreLogger;
+           static std::shared_ptr<spdlog::logger> s_ClientLogger;
+       };
+   }
+
+   // Core logging macros
+   #define VP_CORE_INFO(...)  VizEngine::Log::GetCoreLogger()->info(__VA_ARGS__)
+   #define VP_CORE_WARN(...)  VizEngine::Log::GetCoreLogger()->warn(__VA_ARGS__)
+   #define VP_CORE_ERROR(...) VizEngine::Log::GetCoreLogger()->error(__VA_ARGS__)
+
+   // Client logging macros
+   #define VP_INFO(...)  VizEngine::Log::GetClientLogger()->info(__VA_ARGS__)
+   #define VP_WARN(...)  VizEngine::Log::GetClientLogger()->warn(__VA_ARGS__)
+   #define VP_ERROR(...) VizEngine::Log::GetClientLogger()->error(__VA_ARGS__)
+   ```
+
+2. Create **`VizEngine/src/VizEngine/Log.cpp`**:
+   ```cpp
+   #include "Log.h"
+   #include <spdlog/sinks/stdout_color_sinks.h>
+
+   namespace VizEngine
+   {
+       std::shared_ptr<spdlog::logger> Log::s_CoreLogger;
+       std::shared_ptr<spdlog::logger> Log::s_ClientLogger;
+
+       void Log::Init()
+       {
+           spdlog::set_pattern("%^[%T] %n: %v%$");
+           s_CoreLogger = spdlog::stdout_color_mt("VIZENGINE");
+           s_CoreLogger->set_level(spdlog::level::trace);
+           s_ClientLogger = spdlog::stdout_color_mt("APP");
+           s_ClientLogger->set_level(spdlog::level::trace);
+       }
+   }
+   ```
+
+3. Add to **`VizEngine/CMakeLists.txt`**:
+   ```cmake
+   add_library(VizEngine SHARED
+       src/VizEngine/Log.cpp
+       # ... other files
+   )
+   ```
+
+4. Call `Log::Init()` in **`EntryPoint.h`**:
+   ```cpp
+   int main(int argc, char** argv)
+   {
+       VizEngine::Log::Init();  // Add this line
+       auto app = VizEngine::CreateApplication();
+       // ...
+   }
+   ```
+
+5. Use logging in Sandbox:
+   ```cpp
+   Sandbox()
+   {
+       VP_INFO("Sandbox created!");
+   }
+   ```
+
+6. Rebuild and run.
+
+**✓ Success:** Colored log output appears in the console.
+
+---
+
 ## Exercise
 
 1. Add a new log level macro `VP_CORE_DEBUG` that's removed in release builds

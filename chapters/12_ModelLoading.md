@@ -508,14 +508,14 @@ void Model::ModelLoader::LoadMeshes(const tinygltf::Model& gltfModel)
                 // Texture coordinates (default to 0,0 if missing)
                 if (texCoords)
                 {
-                    v.TexCoords = glm::vec2(
+                    v.TexCoord = glm::vec2(
                         texCoords[i * 2 + 0],
                         texCoords[i * 2 + 1]
                     );
                 }
                 else
                 {
-                    v.TexCoords = glm::vec2(0.0f);
+                    v.TexCoord = glm::vec2(0.0f);
                 }
 
                 // Vertex colors (default to white if missing)
@@ -1084,6 +1084,108 @@ VP_CORE_INFO("Loading texture: {} ({}x{})",
 7. **Cache textures by index** - Works for both embedded and external textures
 8. **Alpha modes** - Opaque (default), Mask (cutoff), Blend (transparency)
 9. **Test with sample models** - Khronos provides official test assets
+
+---
+
+## Common Pitfalls
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| Model is all white | Materials not applied | Materials are parsed but rendering requires PBR shader |
+| "Failed to load" | Wrong file path | Use absolute path or verify relative path |
+| Crash on load | Missing accessor/buffer | Check tinygltf error string |
+| Model upside-down | Y-axis convention | Some tools export with Y-up, some Z-up |
+
+---
+
+## Checkpoint
+
+This chapter covered loading external 3D models:
+
+**Key Files:**
+| File | Purpose |
+|------|---------|
+| `Model.h` | Public API (`LoadFromFile`, `GetMeshes`) |
+| `Model.cpp` | Internal loader using tinygltf |
+| `Material.h` | `PBRMaterial` struct |
+| `TinyGLTF.cpp` | tinygltf implementation compilation |
+
+**What's Loaded:**
+- Meshes (geometry + normals + UVs)
+- Materials (PBR properties, stored but not yet rendered)
+- Textures (cached by index)
+
+**Building Along?**
+
+Create the Model class and load glTF:
+
+1. Add **tinygltf** as submodule:
+   ```bash
+   cd VizEngine/vendor
+   git submodule add https://github.com/syoyo/tinygltf.git
+   cd ../..
+   ```
+
+2. Create **`VizEngine/src/VizEngine/Core/TinyGLTF.cpp`** (one-time impl):
+   ```cpp
+   #define TINYGLTF_IMPLEMENTATION
+   #define TINYGLTF_NO_INCLUDE_STB_IMAGE
+   #define TINYGLTF_NO_STB_IMAGE_WRITE
+   #include <stb_image.h>
+   #include <tinygltf/tiny_gltf.h>
+   ```
+
+3. Create **`VizEngine/src/VizEngine/Core/Model.h`**:
+   ```cpp
+   #pragma once
+   #include "Mesh.h"
+   #include <string>
+   #include <vector>
+   #include <memory>
+
+   namespace VizEngine
+   {
+       class Model
+       {
+       public:
+           bool LoadFromFile(const std::string& filepath);
+           const std::vector<std::shared_ptr<Mesh>>& GetMeshes() const 
+               { return m_Meshes; }
+           
+       private:
+           std::vector<std::shared_ptr<Mesh>> m_Meshes;
+       };
+   }
+   ```
+
+4. Implement `LoadFromFile` in `Model.cpp` using tinygltf:
+   - Parse glTF/GLB file
+   - Extract vertex positions, normals, UVs
+   - Create Mesh objects from primitives
+   - *(See chapter prose for full implementation)*
+
+5. Download a test model:
+   ```bash
+   # From https://github.com/KhronosGroup/glTF-Sample-Assets
+   # Place Box.glb in src/resources/models/
+   ```
+
+6. Use in `Application::Run()`:
+   ```cpp
+   Model model;
+   model.LoadFromFile("src/resources/models/Box.glb");
+   
+   // In render loop:
+   for (const auto& mesh : model.GetMeshes()) {
+       mesh->Bind();
+       glDrawElements(GL_TRIANGLES, mesh->GetIndexCount(), 
+                     GL_UNSIGNED_INT, nullptr);
+   }
+   ```
+
+7. Rebuild and run.
+
+**✓ Success:** External 3D model renders!
 
 ---
 

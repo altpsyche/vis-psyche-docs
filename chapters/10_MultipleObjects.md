@@ -578,41 +578,13 @@ Real engines using ECS or similar patterns:
 - **EnTT** - Popular C++ ECS library (header-only, fast)
 - **Flecs** - Another excellent C++ ECS library
 
-### Future Direction
+### Beyond Simple Scenes
 
-In a future chapter, we'll implement a basic ECS:
+For more complex games, consider libraries like:
+- **EnTT** - Popular C++ ECS library (header-only, fast)
+- **Flecs** - Another excellent C++ ECS library
 
-```cpp
-// Future API preview
-class World
-{
-public:
-    Entity CreateEntity();
-    
-    template<typename T>
-    T& AddComponent(Entity e);
-    
-    template<typename T>
-    T& GetComponent(Entity e);
-    
-    template<typename... Components>
-    View<Components...> Query();  // Get all entities with these components
-};
-
-// Usage
-Entity player = world.CreateEntity();
-world.AddComponent<Transform>(player);
-world.AddComponent<Health>(player);
-world.AddComponent<Velocity>(player);
-
-// Systems iterate efficiently
-for (auto [entity, transform, velocity] : world.Query<Transform, Velocity>())
-{
-    transform.Position += velocity.Direction * velocity.Speed * deltaTime;
-}
-```
-
-For now, our simple approach gets us rendering multiple objects. That's the foundation we need before adding complexity.
+Our simple `std::vector<SceneObject>` approach works well for learning and prototyping.
 
 ---
 
@@ -624,6 +596,122 @@ For now, our simple approach gets us rendering multiple objects. That's the foun
 4. **MVP per object** - Each object needs its own Model-View-Projection matrix
 5. **UI enables editing** - Select, modify, delete objects at runtime
 6. **This is a stepping stone** - Simple and effective for learning, but ECS is the production-grade solution
+
+---
+
+## Common Pitfalls
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| All objects drawn same place | Using same transform | Each `SceneObject` needs its own `Transform` |
+| Object disappears when moved | Wrong index after deletion | Update indices after `erase()` |
+| Memory leak | Not using `shared_ptr` correctly | Ensure proper ownership semantics |
+| Crash when iterating + deleting | Iterator invalidation | Use index-based loop or `erase-remove` idiom |
+
+---
+
+## Checkpoint
+
+This chapter covered managing multiple objects in a scene:
+
+**Key Classes:**
+| Class | Purpose |
+|-------|---------|
+| `SceneObject` | Mesh (shared) + Transform (owned) + Color |
+| Scene (vector) | Collection of `SceneObject`s |
+
+**Memory Pattern:**
+- `shared_ptr<Mesh>` — Geometry shared across instances
+- `Transform` — Unique per object (position, rotation, scale)
+
+**Building Along?**
+
+Create the scene management classes:
+
+1. Create **`VizEngine/src/VizEngine/Core/Mesh.h`**:
+   ```cpp
+   #pragma once
+   #include "../OpenGL/VertexArray.h"
+   #include "../OpenGL/VertexBuffer.h"
+   #include "../OpenGL/IndexBuffer.h"
+   #include <memory>
+
+   namespace VizEngine
+   {
+       struct Vertex {
+           glm::vec4 Position;
+           glm::vec4 Color;
+           glm::vec2 TexCoord;
+       };
+
+       class Mesh
+       {
+       public:
+           Mesh(const std::vector<Vertex>& vertices, 
+                const std::vector<unsigned int>& indices);
+           
+           void Bind() const { m_VAO.Bind(); }
+           unsigned int GetIndexCount() const { return m_IndexCount; }
+           
+           static std::shared_ptr<Mesh> CreateCube();
+           static std::shared_ptr<Mesh> CreatePyramid();
+           
+       private:
+           VertexArray m_VAO;
+           VertexBuffer m_VBO;
+           IndexBuffer m_IBO;
+           unsigned int m_IndexCount;
+       };
+   }
+   ```
+
+2. Create **`VizEngine/src/VizEngine/Core/SceneObject.h`**:
+   ```cpp
+   #pragma once
+   #include "Mesh.h"
+   #include "Transform.h"
+   #include <memory>
+
+   namespace VizEngine
+   {
+       struct SceneObject
+       {
+           std::shared_ptr<Mesh> MeshPtr;
+           Transform ObjectTransform;
+           glm::vec4 Color{1.0f};
+           bool IsActive = true;
+       };
+   }
+   ```
+
+3. Use in `Application::Run()`:
+   ```cpp
+   std::vector<SceneObject> scene;
+   auto cubeMesh = Mesh::CreateCube();  // Create once
+   
+   for (int i = 0; i < 5; i++) {
+       SceneObject obj;
+       obj.MeshPtr = cubeMesh;  // Share geometry
+       obj.ObjectTransform.Position = glm::vec3(i * 2.0f, 0, 0);
+       obj.Color = glm::vec4(0.2f * i, 0.5f, 1.0f - 0.2f * i, 1.0f);
+       scene.push_back(obj);
+   }
+   
+   // In render loop:
+   for (auto& obj : scene) {
+       if (!obj.IsActive) continue;
+       glm::mat4 mvp = vp * obj.ObjectTransform.GetModelMatrix();
+       shader.SetMat4("u_MVP", mvp);
+       shader.SetVec4("u_Color", obj.Color);
+       obj.MeshPtr->Bind();
+       glDrawElements(GL_TRIANGLES, obj.MeshPtr->GetIndexCount(), 
+                     GL_UNSIGNED_INT, nullptr);
+   }
+   ```
+
+4. Rebuild and run.
+
+**✓ Success:** Multiple colored objects at different positions!
 
 ---
 

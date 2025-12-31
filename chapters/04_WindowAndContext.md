@@ -372,6 +372,136 @@ This macro is for DLL export/import. When building VizEngine.dll, it expands to 
 
 ---
 
+## Common Pitfalls
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| Black window | OpenGL context not current | Call `glfwMakeContextCurrent(window)` |
+| `glfwInit()` returns false | GLFW already initialized or lib missing | Check console for error messages |
+| Window opens then crashes | GLAD not initialized | Call `gladLoadGLLoader(...)` after context |
+| Nothing appears (but no crash) | VSync + slow code = no frame | Check `glfwSwapInterval()` setting |
+
+---
+
+## Checkpoint
+
+This chapter covered window and context creation:
+
+**Key Class:** `GLFWManager` wraps GLFW (create, poll, swap, cleanup)
+
+**Files:**
+- `VizEngine/Core/GLFWManager.h` — Class declaration
+- `VizEngine/Core/GLFWManager.cpp` — Implementation
+
+**Init Order:**
+1. `glfwInit()` → 2. Window hints → 3. `glfwCreateWindow()` → 4. Make context current → 5. Load GLAD
+
+**Building Along?**
+
+Create the GLFWManager class:
+
+1. Create **`VizEngine/src/VizEngine/OpenGL/GLFWManager.h`**:
+   ```cpp
+   #pragma once
+   #include <string>
+   struct GLFWwindow;
+
+   namespace VizEngine
+   {
+       class GLFWManager
+       {
+       public:
+           GLFWManager(unsigned int width, unsigned int height, 
+                       const std::string& title);
+           ~GLFWManager();
+
+           bool WindowShouldClose();
+           void SwapBuffersAndPollEvents();
+           GLFWwindow* GetWindow() const { return m_Window; }
+
+       private:
+           GLFWwindow* m_Window = nullptr;
+       };
+   }
+   ```
+
+2. Create **`VizEngine/src/VizEngine/OpenGL/GLFWManager.cpp`**:
+   ```cpp
+   #include "GLFWManager.h"
+   #include <glad/glad.h>
+   #include <GLFW/glfw3.h>
+   #include <iostream>
+
+   namespace VizEngine
+   {
+       GLFWManager::GLFWManager(unsigned int width, unsigned int height,
+                                const std::string& title)
+       {
+           if (!glfwInit()) {
+               std::cerr << "Failed to initialize GLFW\n";
+               return;
+           }
+           
+           glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+           glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+           glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+           
+           m_Window = glfwCreateWindow(width, height, title.c_str(), 
+                                       nullptr, nullptr);
+           glfwMakeContextCurrent(m_Window);
+           gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+       }
+
+       GLFWManager::~GLFWManager()
+       {
+           glfwDestroyWindow(m_Window);
+           glfwTerminate();
+       }
+
+       bool GLFWManager::WindowShouldClose()
+       {
+           return glfwWindowShouldClose(m_Window);
+       }
+
+       void GLFWManager::SwapBuffersAndPollEvents()
+       {
+           glfwSwapBuffers(m_Window);
+           glfwPollEvents();
+       }
+   }
+   ```
+
+3. Add files to **`VizEngine/CMakeLists.txt`**:
+   ```cmake
+   add_library(VizEngine SHARED
+       src/VizEngine/OpenGL/GLFWManager.cpp
+       src/VizEngine/OpenGL/glad.c
+       # ... other files
+   )
+   ```
+
+4. Update **`Application::Run()`** to create a window:
+   ```cpp
+   int Application::Run()
+   {
+       GLFWManager window(1280, 720, "VizPsyche");
+       
+       while (!window.WindowShouldClose())
+       {
+           glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
+           glClear(GL_COLOR_BUFFER_BIT);
+           window.SwapBuffersAndPollEvents();
+       }
+       return 0;
+   }
+   ```
+
+5. Rebuild and run.
+
+**✓ Success:** A dark blue window appears and stays open.
+
+---
+
 ## Exercise
 
 1. Modify `GLFWManager` to support fullscreen mode (pass a monitor to `glfwCreateWindow`)
