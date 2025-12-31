@@ -39,8 +39,8 @@ As of now, VizPsyche has:
 - Mesh (geometry with factory methods)
 - Scene (object collection management)
 - SceneObject (mesh + transform + color bundle)
-- Model (glTF model container with meshes and materials)
-- Material (PBR material properties)
+- Model (glTF/GLB model loader with ModelLoader inner class)
+- PBRMaterial (full PBR properties: baseColor, metallic, roughness, emissive, alpha, textures)
 
 ### Lighting
 - DirectionalLight (sun-like parallel rays)
@@ -81,7 +81,8 @@ As of now, VizPsyche has:
 | `Core/SceneObject.h` | Mesh + Transform + Color bundle |
 | `Core/Light.h` | DirectionalLight, PointLight |
 | `Core/Model.h` | glTF model loader (meshes + materials) |
-| `Core/Material.h` | PBR material properties (baseColor, metallic, roughness) |
+| `Core/Material.h` | PBRMaterial struct (baseColor, metallic, roughness, emissive, alpha, textures) |
+| `Core/TinyGLTF.cpp` | tinygltf implementation (defines TINYGLTF_IMPLEMENTATION) |
 
 ### OpenGL
 
@@ -155,13 +156,17 @@ VizEngine (namespace)
 ├── Model
 │   ├── LoadFromFile() [static factory]
 │   ├── GetMeshes(), GetMaterials()
-│   ├── GetMaterialForMesh()
-│   └── Loads glTF/GLB files via tinygltf
+│   ├── GetMaterialIndexForMesh(), GetMaterialForMesh()
+│   ├── GetName(), GetFilePath(), GetMeshCount(), GetMaterialCount()
+│   ├── IsValid()
+│   └── Loads glTF/GLB files via tinygltf (ModelLoader inner class)
 │
-├── Material (struct)
+├── PBRMaterial (struct)
 │   ├── BaseColor, Metallic, Roughness
-│   ├── BaseColorTexture, NormalTexture
-│   └── PBR material properties
+│   ├── EmissiveFactor, AlphaMode, AlphaCutoff, DoubleSided
+│   ├── BaseColorTexture, MetallicRoughnessTexture, NormalTexture
+│   ├── OcclusionTexture, EmissiveTexture
+│   └── Has*Texture() helpers
 │
 ├── DirectionalLight (struct)
 │   ├── Direction, Ambient, Diffuse, Specular
@@ -226,7 +231,8 @@ Resource-owning classes delete copy operations and implement move operations.
 | Camera | Application stack | Until function returns |
 | Transform | SceneObject | Until SceneObject destroyed |
 | Model (unique_ptr) | Application | Until scope ends |
-| Material | Model | Until Model destroyed |
+| PBRMaterial | Model | Until Model destroyed |
+| Texture (in Model) | Model's TextureCache | Until Model destroyed |
 
 ### No Raw `new`/`delete`
 
@@ -371,6 +377,6 @@ cmake --build build --config Debug
 7. **Multiple lights** - Support an array of lights in the shader
 8. **Load a glTF model** - Use `Model::LoadFromFile()` with a sample model
 9. **Model browser** - Add ImGui file picker to load models at runtime
-10. **PBR rendering** - Upgrade shader to use full metallic-roughness workflow
+10. **PBR rendering** - Upgrade shader to use full PBRMaterial properties (emissive, occlusion, alpha)
 
 

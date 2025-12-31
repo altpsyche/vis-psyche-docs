@@ -332,18 +332,49 @@ glTF is designed for real-time rendering with:
 
 ### Single-Header Library
 
-Like stb_image, tinygltf is a single-header library:
+Like stb_image, tinygltf is a single-header library. However, since we already have stb_image implemented elsewhere, we need to tell tinygltf not to redefine it:
 
 ```cpp
-// In ONE .cpp file:
+// In TinyGLTF.cpp (the ONE file with the implementation):
+
+// Silence MSVC warnings in vendor code
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4018)  // signed/unsigned mismatch
+#pragma warning(disable: 4267)  // conversion from size_t
+#pragma warning(disable: 4244)  // conversion from double to float
+#pragma warning(disable: 4706)  // assignment within conditional
+#endif
+
 #define TINYGLTF_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION      // tinygltf uses stb_image internally
-#define STB_IMAGE_WRITE_IMPLEMENTATION
+
+// We already have stb_image implemented in vendor/stb_image/stb_image.cpp
+// So we tell tinygltf to NOT define STB_IMAGE_IMPLEMENTATION again
+// but still use stb_image functions (which are already available)
+#define TINYGLTF_NO_INCLUDE_STB_IMAGE
+#define TINYGLTF_NO_STB_IMAGE_WRITE
+#define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE
+
+// Include our stb_image header (which has the function declarations)
+#include "stb_image.h"
+
 #include "tiny_gltf.h"
 
-// In other files, just:
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+```
+
+```cpp
+// In other files that need tinygltf (e.g., Model.cpp):
+// Must match the defines used in TinyGLTF.cpp
+#define TINYGLTF_NO_INCLUDE_STB_IMAGE
+#define TINYGLTF_NO_STB_IMAGE_WRITE
+#define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE
 #include "tiny_gltf.h"
 ```
+
+> **Important:** The `TINYGLTF_NO_*` defines prevent duplicate symbol errors when stb_image is already compiled elsewhere in your project.
 
 ### Loading a Model
 
@@ -359,13 +390,15 @@ bool success = loader.LoadBinaryFromFile(&model, &err, &warn, "model.glb");
 // bool success = loader.LoadASCIIFromFile(&model, &err, &warn, "model.gltf");
 
 if (!warn.empty())
-    std::cout << "Warning: " << warn << std::endl;
+    VP_CORE_WARN("glTF warning: {}", warn);
 
 if (!err.empty())
-    std::cerr << "Error: " << err << std::endl;
+    VP_CORE_ERROR("glTF error: {}", err);
 
-if (!success)
-    return false;
+if (!success) {
+    VP_CORE_ERROR("Failed to load model");
+    return nullptr;
+}
 ```
 
 ### glTF Structure
@@ -379,6 +412,13 @@ model
 ├── meshes[]          ← Geometry data
 │   └── primitives[]  ← Actual vertex/index data
 ├── materials[]       ← PBR material properties
+│   ├── pbrMetallicRoughness
+│   ├── normalTexture
+│   ├── occlusionTexture
+│   ├── emissiveTexture
+│   ├── emissiveFactor
+│   ├── alphaMode
+│   └── doubleSided
 ├── textures[]        ← Texture references
 ├── images[]          ← Embedded or external images
 ├── accessors[]       ← How to read buffer data
@@ -404,7 +444,7 @@ for (const auto& mesh : model.meshes)
         );
         
         // Now 'positions' points to vertex position data
-        // Similar process for NORMAL, TEXCOORD_0, indices...
+        // Similar process for NORMAL, TEXCOORD_0, COLOR_0, indices...
     }
 }
 ```
@@ -412,29 +452,42 @@ for (const auto& mesh : model.meshes)
 ### Accessing Materials
 
 ```cpp
-for (const auto& material : model.materials)
+for (const auto& gltfMat : model.materials)
 {
     // PBR Metallic-Roughness workflow
-    auto& pbr = material.pbrMetallicRoughness;
+    const auto& pbr = gltfMat.pbrMetallicRoughness;
     
     glm::vec4 baseColor(
-        pbr.baseColorFactor[0],
-        pbr.baseColorFactor[1],
-        pbr.baseColorFactor[2],
-        pbr.baseColorFactor[3]
+        static_cast<float>(pbr.baseColorFactor[0]),
+        static_cast<float>(pbr.baseColorFactor[1]),
+        static_cast<float>(pbr.baseColorFactor[2]),
+        static_cast<float>(pbr.baseColorFactor[3])
     );
     
-    float metallic = pbr.metallicFactor;
-    float roughness = pbr.roughnessFactor;
+    float metallic = static_cast<float>(pbr.metallicFactor);
+    float roughness = static_cast<float>(pbr.roughnessFactor);
     
-    // Base color texture (if any)
-    if (pbr.baseColorTexture.index >= 0)
-    {
-        int texIndex = pbr.baseColorTexture.index;
-        int imageIndex = model.textures[texIndex].source;
-        const auto& image = model.images[imageIndex];
-        // image.image contains pixel data, image.width/height for dimensions
+    // Emissive factor
+    glm::vec3 emissive(
+        static_cast<float>(gltfMat.emissiveFactor[0]),
+        static_cast<float>(gltfMat.emissiveFactor[1]),
+        static_cast<float>(gltfMat.emissiveFactor[2])
+    );
+    
+    // Alpha mode: "OPAQUE", "MASK", or "BLEND"
+    if (gltfMat.alphaMode == "MASK") {
+        float alphaCutoff = static_cast<float>(gltfMat.alphaCutoff);
     }
+    
+    // Double-sided rendering
+    bool doubleSided = gltfMat.doubleSided;
+    
+    // Textures (check index >= 0 before accessing)
+    if (pbr.baseColorTexture.index >= 0) { /* load texture */ }
+    if (pbr.metallicRoughnessTexture.index >= 0) { /* load texture */ }
+    if (gltfMat.normalTexture.index >= 0) { /* load texture */ }
+    if (gltfMat.occlusionTexture.index >= 0) { /* load texture */ }
+    if (gltfMat.emissiveTexture.index >= 0) { /* load texture */ }
 }
 ```
 
@@ -454,6 +507,8 @@ tinygltf fits our engine because:
 - Battle-tested in production
 
 > **Location:** `VizEngine/vendor/tinygltf/`
+> 
+> **Implementation:** `VizEngine/src/VizEngine/Core/TinyGLTF.cpp`
 
 ---
 

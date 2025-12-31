@@ -168,29 +168,61 @@ if (!success) {
 
 ---
 
-## The Material Struct
+## The PBRMaterial Struct
 
-Before loading models, we need a way to represent materials:
+Before loading models, we need a way to represent materials. glTF uses the PBR metallic-roughness workflow:
 
 ```cpp
 // VizEngine/Core/Material.h
 
-struct VizEngine_API Material
+struct VizEngine_API PBRMaterial
 {
     std::string Name = "Unnamed";
-    
-    // PBR properties
-    glm::vec4 BaseColor = glm::vec4(1.0f);    // RGBA
-    float Metallic = 0.0f;                     // 0 = dielectric, 1 = metal
-    float Roughness = 0.5f;                    // 0 = smooth, 1 = rough
-    
+
+    // PBR base properties
+    glm::vec4 BaseColor = glm::vec4(1.0f);  // RGBA albedo color
+    float Metallic = 0.0f;                   // 0 = dielectric, 1 = metal
+    float Roughness = 0.5f;                  // 0 = smooth/mirror, 1 = rough
+
     // Textures (nullptr if not present)
     std::shared_ptr<Texture> BaseColorTexture = nullptr;
-    std::shared_ptr<Texture> MetallicRoughnessTexture = nullptr;
+    std::shared_ptr<Texture> MetallicRoughnessTexture = nullptr;  // G=roughness, B=metallic
     std::shared_ptr<Texture> NormalTexture = nullptr;
-    
-    // Helper to check if material has textures
+    std::shared_ptr<Texture> OcclusionTexture = nullptr;
+    std::shared_ptr<Texture> EmissiveTexture = nullptr;
+
+    // Emissive
+    glm::vec3 EmissiveFactor = glm::vec3(0.0f);
+
+    // Alpha mode
+    enum class AlphaMode { Opaque, Mask, Blend };
+    AlphaMode Alpha = AlphaMode::Opaque;
+    float AlphaCutoff = 0.5f;
+
+    // Double-sided rendering
+    bool DoubleSided = false;
+
+    PBRMaterial() = default;
+
+    // Simple constructor with just color
+    explicit PBRMaterial(const glm::vec4& baseColor)
+        : BaseColor(baseColor) {}
+
+    // Constructor with color and metallic/roughness
+    PBRMaterial(const glm::vec4& baseColor, float metallic, float roughness)
+        : BaseColor(baseColor), Metallic(metallic), Roughness(roughness) {}
+
+    // Helper methods
     bool HasBaseColorTexture() const { return BaseColorTexture != nullptr; }
+    bool HasMetallicRoughnessTexture() const { return MetallicRoughnessTexture != nullptr; }
+    bool HasNormalTexture() const { return NormalTexture != nullptr; }
+    bool HasOcclusionTexture() const { return OcclusionTexture != nullptr; }
+    bool HasEmissiveTexture() const { return EmissiveTexture != nullptr; }
+    bool HasAnyTexture() const 
+    { 
+        return HasBaseColorTexture() || HasMetallicRoughnessTexture() || 
+               HasNormalTexture() || HasOcclusionTexture() || HasEmissiveTexture(); 
+    }
 };
 ```
 
@@ -203,6 +235,10 @@ glTF uses the **metallic-roughness** PBR workflow:
 | **Base Color** | RGBA | Albedo/diffuse color |
 | **Metallic** | 0-1 | 0 = plastic/wood, 1 = metal |
 | **Roughness** | 0-1 | 0 = mirror-smooth, 1 = completely rough |
+| **Emissive** | RGB | Self-illumination color |
+| **Alpha Mode** | Opaque/Mask/Blend | How transparency is handled |
+| **Alpha Cutoff** | 0-1 | Threshold for Mask mode |
+| **Double Sided** | bool | Render back faces? |
 
 Why PBR?
 - **Physically accurate** - Materials look correct under any lighting
@@ -223,68 +259,160 @@ class VizEngine_API Model
 public:
     // Factory method - the main way to create models
     static std::unique_ptr<Model> LoadFromFile(const std::string& filepath);
-    
+
+    ~Model() = default;
+
+    // Prevent copying (models can be large)
+    Model(const Model&) = delete;
+    Model& operator=(const Model&) = delete;
+
+    // Allow moving
+    Model(Model&&) noexcept = default;
+    Model& operator=(Model&&) noexcept = default;
+
     // Access loaded data
     const std::vector<std::shared_ptr<Mesh>>& GetMeshes() const { return m_Meshes; }
-    const std::vector<Material>& GetMaterials() const { return m_Materials; }
+    const std::vector<PBRMaterial>& GetMaterials() const { return m_Materials; }
+
+    // Get the material index for a specific mesh
+    size_t GetMaterialIndexForMesh(size_t meshIndex) const;
     
-    // Get material for a specific mesh
-    const Material& GetMaterialForMesh(size_t meshIndex) const;
-    
+    // Get the material for a specific mesh (convenience)
+    const PBRMaterial& GetMaterialForMesh(size_t meshIndex) const;
+
     // Model info
     const std::string& GetName() const { return m_Name; }
+    const std::string& GetFilePath() const { return m_FilePath; }
     size_t GetMeshCount() const { return m_Meshes.size(); }
-    
+    size_t GetMaterialCount() const { return m_Materials.size(); }
+
+    // Check if model loaded successfully
+    bool IsValid() const { return !m_Meshes.empty(); }
+
 private:
-    Model() = default;  // Only LoadFromFile can create
-    
+    // Only LoadFromFile can create Models
+    Model() = default;
+
+    // Internal loading implementation (keeps tinygltf out of header)
+    class ModelLoader;
+    friend class ModelLoader;
+
     std::string m_Name;
+    std::string m_FilePath;
     std::string m_Directory;  // For resolving relative texture paths
-    
+
     std::vector<std::shared_ptr<Mesh>> m_Meshes;
-    std::vector<Material> m_Materials;
-    std::vector<size_t> m_MeshMaterialIndices;  // Which material for each mesh
-    
-    // Texture cache to avoid reloading
-    std::unordered_map<std::string, std::shared_ptr<Texture>> m_TextureCache;
+    std::vector<PBRMaterial> m_Materials;
+    std::vector<size_t> m_MeshMaterialIndices;  // Material index for each mesh
+
+    // Texture cache to avoid reloading same texture (keyed by texture index)
+    std::unordered_map<int, std::shared_ptr<Texture>> m_TextureCache;
+
+    // Default material for meshes without one
+    static PBRMaterial s_DefaultMaterial;
 };
 ```
+
+### Design Notes
+
+- **Rule of 5**: Copy is deleted (models are large), move is allowed
+- **Pimpl-like pattern**: `ModelLoader` inner class keeps tinygltf out of the header
+- **Texture caching**: Uses texture index as key to avoid reloading embedded textures
+- **Default material**: Static fallback for meshes without materials
 
 ---
 
 ## Loading Geometry
 
-The core of model loading - extracting vertex data from glTF:
+The core of model loading - extracting vertex data from glTF. We use a helper class `ModelLoader` to keep tinygltf internals out of the header:
 
 ```cpp
-std::unique_ptr<Model> Model::LoadFromFile(const std::string& filepath)
+// Helper functions
+static std::string GetDirectory(const std::string& filepath)
 {
+    std::filesystem::path path(filepath);
+    return path.parent_path().string();
+}
+
+static std::string GetFilename(const std::string& filepath)
+{
+    std::filesystem::path path(filepath);
+    return path.filename().string();
+}
+
+static bool EndsWith(const std::string& str, const std::string& suffix)
+{
+    if (suffix.size() > str.size()) return false;
+    return str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+template<typename T>
+static const T* GetBufferData(const tinygltf::Model& model, const tinygltf::Accessor& accessor)
+{
+    const auto& bufferView = model.bufferViews[accessor.bufferView];
+    const auto& buffer = model.buffers[bufferView.buffer];
+    return reinterpret_cast<const T*>(
+        buffer.data.data() + bufferView.byteOffset + accessor.byteOffset
+    );
+}
+```
+
+### LoadFromFile Implementation
+
+```cpp
+std::unique_ptr<Model> Model::ModelLoader::Load(const std::string& filepath)
+{
+    VP_CORE_INFO("Loading model: {}", filepath);
+
     tinygltf::Model gltfModel;
     tinygltf::TinyGLTF loader;
     std::string err, warn;
 
-    // Determine file type and load
+    // Load based on file extension
     bool success = false;
-    if (filepath.ends_with(".glb")) {
+    if (EndsWith(filepath, ".glb"))
+    {
         success = loader.LoadBinaryFromFile(&gltfModel, &err, &warn, filepath);
-    } else {
+    }
+    else if (EndsWith(filepath, ".gltf"))
+    {
         success = loader.LoadASCIIFromFile(&gltfModel, &err, &warn, filepath);
     }
+    else
+    {
+        VP_CORE_ERROR("Unsupported model format: {}", filepath);
+        return nullptr;
+    }
 
-    if (!success) {
+    if (!warn.empty())
+    {
+        VP_CORE_WARN("glTF warning: {}", warn);
+    }
+
+    if (!err.empty())
+    {
+        VP_CORE_ERROR("glTF error: {}", err);
+    }
+
+    if (!success)
+    {
         VP_CORE_ERROR("Failed to load model: {}", filepath);
         return nullptr;
     }
 
+    // Create model instance
     auto model = std::unique_ptr<Model>(new Model());
-    model->m_Name = filepath;
-    model->m_Directory = GetDirectoryFromPath(filepath);
+    model->m_FilePath = filepath;
+    model->m_Name = GetFilename(filepath);
+    model->m_Directory = GetDirectory(filepath);
 
-    // Load all materials first
-    model->LoadMaterials(gltfModel);
+    // Use ModelLoader to do the actual loading
+    ModelLoader modelLoader(model.get(), filepath);
+    modelLoader.LoadMaterials(gltfModel);
+    modelLoader.LoadMeshes(gltfModel);
 
-    // Load all meshes
-    model->LoadMeshes(gltfModel);
+    VP_CORE_INFO("Loaded model '{}': {} meshes, {} materials",
+        model->m_Name, model->m_Meshes.size(), model->m_Materials.size());
 
     return model;
 }
@@ -293,48 +421,68 @@ std::unique_ptr<Model> Model::LoadFromFile(const std::string& filepath)
 ### Extracting Vertex Data
 
 ```cpp
-void Model::LoadMeshes(const tinygltf::Model& gltfModel)
+void Model::ModelLoader::LoadMeshes(const tinygltf::Model& gltfModel)
 {
     for (const auto& gltfMesh : gltfModel.meshes)
     {
         for (const auto& primitive : gltfMesh.primitives)
         {
+            // Only support triangle primitives
+            if (primitive.mode != TINYGLTF_MODE_TRIANGLES && primitive.mode != -1)
+            {
+                VP_CORE_WARN("Skipping non-triangle primitive in mesh '{}'", gltfMesh.name);
+                continue;
+            }
+
             std::vector<Vertex> vertices;
             std::vector<unsigned int> indices;
 
-            // Get accessors
-            const auto& posAccessor = gltfModel.accessors[
-                primitive.attributes.at("POSITION")
-            ];
-            
-            // Position data
-            const float* positions = GetBufferData<float>(
-                gltfModel, posAccessor
-            );
+            // POSITION is required
+            if (primitive.attributes.find("POSITION") == primitive.attributes.end())
+            {
+                VP_CORE_ERROR("Mesh primitive missing POSITION attribute");
+                continue;
+            }
 
-            // Normal data (may not exist)
+            const auto& posAccessor = gltfModel.accessors[primitive.attributes.at("POSITION")];
+            const float* positions = GetBufferData<float>(gltfModel, posAccessor);
+            size_t vertexCount = posAccessor.count;
+
+            // Normal data (optional)
             const float* normals = nullptr;
-            if (primitive.attributes.count("NORMAL")) {
-                const auto& normAccessor = gltfModel.accessors[
-                    primitive.attributes.at("NORMAL")
-                ];
+            if (primitive.attributes.find("NORMAL") != primitive.attributes.end())
+            {
+                const auto& normAccessor = gltfModel.accessors[primitive.attributes.at("NORMAL")];
                 normals = GetBufferData<float>(gltfModel, normAccessor);
             }
 
-            // Texture coordinates (may not exist)
+            // Texture coordinates (optional)
             const float* texCoords = nullptr;
-            if (primitive.attributes.count("TEXCOORD_0")) {
-                const auto& uvAccessor = gltfModel.accessors[
-                    primitive.attributes.at("TEXCOORD_0")
-                ];
+            if (primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end())
+            {
+                const auto& uvAccessor = gltfModel.accessors[primitive.attributes.at("TEXCOORD_0")];
                 texCoords = GetBufferData<float>(gltfModel, uvAccessor);
             }
 
+            // Vertex colors (optional)
+            const float* colors = nullptr;
+            int colorComponents = 0;
+            if (primitive.attributes.find("COLOR_0") != primitive.attributes.end())
+            {
+                const auto& colorAccessor = gltfModel.accessors[primitive.attributes.at("COLOR_0")];
+                colorComponents = (colorAccessor.type == TINYGLTF_TYPE_VEC4) ? 4 : 3;
+                if (colorAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
+                {
+                    colors = GetBufferData<float>(gltfModel, colorAccessor);
+                }
+            }
+
             // Build vertices
-            for (size_t i = 0; i < posAccessor.count; i++)
+            vertices.reserve(vertexCount);
+            for (size_t i = 0; i < vertexCount; i++)
             {
                 Vertex v;
-                
+
                 // Position (always present)
                 v.Position = glm::vec4(
                     positions[i * 3 + 0],
@@ -344,89 +492,109 @@ void Model::LoadMeshes(const tinygltf::Model& gltfModel)
                 );
 
                 // Normal (default to up if missing)
-                if (normals) {
+                if (normals)
+                {
                     v.Normal = glm::vec3(
                         normals[i * 3 + 0],
                         normals[i * 3 + 1],
                         normals[i * 3 + 2]
                     );
-                } else {
+                }
+                else
+                {
                     v.Normal = glm::vec3(0.0f, 1.0f, 0.0f);
                 }
 
                 // Texture coordinates (default to 0,0 if missing)
-                if (texCoords) {
+                if (texCoords)
+                {
                     v.TexCoords = glm::vec2(
                         texCoords[i * 2 + 0],
                         texCoords[i * 2 + 1]
                     );
-                } else {
+                }
+                else
+                {
                     v.TexCoords = glm::vec2(0.0f);
                 }
 
-                // Color (white by default)
-                v.Color = glm::vec4(1.0f);
+                // Vertex colors (default to white if missing)
+                if (colors)
+                {
+                    v.Color = glm::vec4(
+                        colors[i * colorComponents + 0],
+                        colors[i * colorComponents + 1],
+                        colors[i * colorComponents + 2],
+                        colorComponents == 4 ? colors[i * colorComponents + 3] : 1.0f
+                    );
+                }
+                else
+                {
+                    v.Color = glm::vec4(1.0f);
+                }
 
                 vertices.push_back(v);
             }
 
-            // Load indices
-            if (primitive.indices >= 0) {
+            // Load indices (or generate sequential indices if none)
+            if (primitive.indices >= 0)
+            {
                 const auto& indexAccessor = gltfModel.accessors[primitive.indices];
                 LoadIndices(gltfModel, indexAccessor, indices);
+            }
+            else
+            {
+                // Non-indexed mesh: generate sequential indices
+                indices.reserve(vertexCount);
+                for (size_t i = 0; i < vertexCount; i++)
+                {
+                    indices.push_back(static_cast<unsigned int>(i));
+                }
             }
 
             // Create mesh and store
             auto mesh = std::make_shared<Mesh>(vertices, indices);
-            m_Meshes.push_back(mesh);
-            m_MeshMaterialIndices.push_back(
-                primitive.material >= 0 ? primitive.material : 0
-            );
+            m_Model->m_Meshes.push_back(mesh);
+
+            // Track which material this mesh uses
+            size_t materialIndex = (primitive.material >= 0)
+                ? static_cast<size_t>(primitive.material)
+                : 0;
+            m_Model->m_MeshMaterialIndices.push_back(materialIndex);
         }
     }
 }
 ```
 
-### Helper: Getting Buffer Data
-
-```cpp
-template<typename T>
-const T* Model::GetBufferData(
-    const tinygltf::Model& model, 
-    const tinygltf::Accessor& accessor)
-{
-    const auto& bufferView = model.bufferViews[accessor.bufferView];
-    const auto& buffer = model.buffers[bufferView.buffer];
-    
-    return reinterpret_cast<const T*>(
-        buffer.data.data() + bufferView.byteOffset + accessor.byteOffset
-    );
-}
-```
-
 ### Handling Different Index Types
 
-glTF can use different integer types for indices:
+glTF can use different integer types for indices (byte, short, or int):
 
 ```cpp
-void Model::LoadIndices(
-    const tinygltf::Model& model,
+void Model::ModelLoader::LoadIndices(const tinygltf::Model& gltfModel,
     const tinygltf::Accessor& accessor,
     std::vector<unsigned int>& indices)
 {
-    const auto& bufferView = model.bufferViews[accessor.bufferView];
-    const auto& buffer = model.buffers[bufferView.buffer];
+    const auto& bufferView = gltfModel.bufferViews[accessor.bufferView];
+    const auto& buffer = gltfModel.buffers[bufferView.buffer];
     const void* dataPtr = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
 
     indices.reserve(accessor.count);
 
     switch (accessor.componentType)
     {
+        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+        {
+            const uint8_t* buf = static_cast<const uint8_t*>(dataPtr);
+            for (size_t i = 0; i < accessor.count; i++)
+                indices.push_back(static_cast<unsigned int>(buf[i]));
+            break;
+        }
         case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
         {
             const uint16_t* buf = static_cast<const uint16_t*>(dataPtr);
             for (size_t i = 0; i < accessor.count; i++)
-                indices.push_back(buf[i]);
+                indices.push_back(static_cast<unsigned int>(buf[i]));
             break;
         }
         case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
@@ -436,16 +604,14 @@ void Model::LoadIndices(
                 indices.push_back(buf[i]);
             break;
         }
-        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-        {
-            const uint8_t* buf = static_cast<const uint8_t*>(dataPtr);
-            for (size_t i = 0; i < accessor.count; i++)
-                indices.push_back(buf[i]);
+        default:
+            VP_CORE_ERROR("Unsupported index component type: {}", accessor.componentType);
             break;
-        }
     }
 }
 ```
+
+> **Note:** We always convert to `unsigned int` since that's what OpenGL expects for `glDrawElements`.
 
 ---
 
@@ -454,105 +620,152 @@ void Model::LoadIndices(
 ### Extracting Material Properties
 
 ```cpp
-void Model::LoadMaterials(const tinygltf::Model& gltfModel)
+void Model::ModelLoader::LoadMaterials(const tinygltf::Model& gltfModel)
 {
     for (const auto& gltfMat : gltfModel.materials)
     {
-        Material material;
-        material.Name = gltfMat.name;
+        PBRMaterial material;
+        material.Name = gltfMat.name.empty() ? "Material" : gltfMat.name;
 
-        // PBR Metallic-Roughness
+        // PBR Metallic-Roughness core properties
         const auto& pbr = gltfMat.pbrMetallicRoughness;
-        
+
         material.BaseColor = glm::vec4(
-            pbr.baseColorFactor[0],
-            pbr.baseColorFactor[1],
-            pbr.baseColorFactor[2],
-            pbr.baseColorFactor[3]
+            static_cast<float>(pbr.baseColorFactor[0]),
+            static_cast<float>(pbr.baseColorFactor[1]),
+            static_cast<float>(pbr.baseColorFactor[2]),
+            static_cast<float>(pbr.baseColorFactor[3])
         );
-        
+
         material.Metallic = static_cast<float>(pbr.metallicFactor);
         material.Roughness = static_cast<float>(pbr.roughnessFactor);
 
         // Base color texture
         if (pbr.baseColorTexture.index >= 0)
         {
-            material.BaseColorTexture = LoadTexture(
-                gltfModel, 
-                pbr.baseColorTexture.index
-            );
+            material.BaseColorTexture = LoadTexture(gltfModel, pbr.baseColorTexture.index);
         }
 
-        // Metallic-roughness texture (R=unused, G=roughness, B=metallic)
+        // Metallic-roughness texture (G=roughness, B=metallic)
         if (pbr.metallicRoughnessTexture.index >= 0)
         {
-            material.MetallicRoughnessTexture = LoadTexture(
-                gltfModel,
-                pbr.metallicRoughnessTexture.index
-            );
+            material.MetallicRoughnessTexture = LoadTexture(gltfModel, pbr.metallicRoughnessTexture.index);
         }
 
         // Normal map
         if (gltfMat.normalTexture.index >= 0)
         {
-            material.NormalTexture = LoadTexture(
-                gltfModel,
-                gltfMat.normalTexture.index
-            );
+            material.NormalTexture = LoadTexture(gltfModel, gltfMat.normalTexture.index);
         }
 
-        m_Materials.push_back(material);
+        // Occlusion texture (ambient occlusion)
+        if (gltfMat.occlusionTexture.index >= 0)
+        {
+            material.OcclusionTexture = LoadTexture(gltfModel, gltfMat.occlusionTexture.index);
+        }
+
+        // Emissive texture and factor
+        if (gltfMat.emissiveTexture.index >= 0)
+        {
+            material.EmissiveTexture = LoadTexture(gltfModel, gltfMat.emissiveTexture.index);
+        }
+        material.EmissiveFactor = glm::vec3(
+            static_cast<float>(gltfMat.emissiveFactor[0]),
+            static_cast<float>(gltfMat.emissiveFactor[1]),
+            static_cast<float>(gltfMat.emissiveFactor[2])
+        );
+
+        // Alpha mode: OPAQUE (default), MASK, or BLEND
+        if (gltfMat.alphaMode == "MASK")
+        {
+            material.Alpha = PBRMaterial::AlphaMode::Mask;
+            material.AlphaCutoff = static_cast<float>(gltfMat.alphaCutoff);
+        }
+        else if (gltfMat.alphaMode == "BLEND")
+        {
+            material.Alpha = PBRMaterial::AlphaMode::Blend;
+        }
+        else
+        {
+            material.Alpha = PBRMaterial::AlphaMode::Opaque;
+        }
+
+        // Double-sided rendering
+        material.DoubleSided = gltfMat.doubleSided;
+
+        m_Model->m_Materials.push_back(std::move(material));
     }
 
     // Ensure at least one default material
-    if (m_Materials.empty())
+    if (m_Model->m_Materials.empty())
     {
-        m_Materials.push_back(Material{});
+        m_Model->m_Materials.push_back(Model::s_DefaultMaterial);
     }
 }
 ```
 
 ### Loading Textures
 
-glTF textures can be embedded in the file or referenced externally:
+glTF textures can be embedded in the file or referenced externally. We cache by texture index to handle both cases:
 
 ```cpp
-std::shared_ptr<Texture> Model::LoadTexture(
-    const tinygltf::Model& gltfModel,
-    int textureIndex)
+std::shared_ptr<Texture> Model::ModelLoader::LoadTexture(const tinygltf::Model& gltfModel, int textureIndex)
 {
-    const auto& texture = gltfModel.textures[textureIndex];
-    const auto& image = gltfModel.images[texture.source];
-
-    // Check cache first
-    if (!image.uri.empty() && m_TextureCache.count(image.uri))
+    // Bounds check
+    if (textureIndex < 0 || textureIndex >= static_cast<int>(gltfModel.textures.size()))
     {
-        return m_TextureCache[image.uri];
+        return nullptr;
     }
 
+    // Check cache first (keyed by texture index)
+    if (m_TextureCache.find(textureIndex) != m_TextureCache.end())
+    {
+        return m_TextureCache[textureIndex];
+    }
+
+    const auto& texture = gltfModel.textures[textureIndex];
+
+    // Validate image source
+    if (texture.source < 0 || texture.source >= static_cast<int>(gltfModel.images.size()))
+    {
+        return nullptr;
+    }
+
+    const auto& image = gltfModel.images[texture.source];
     std::shared_ptr<Texture> tex;
 
     if (!image.image.empty())
     {
-        // Embedded texture - data is already loaded
+        // Embedded texture - data is already loaded by tinygltf
         tex = std::make_shared<Texture>(
             image.image.data(),
             image.width,
             image.height,
-            image.component  // Number of channels
+            image.component  // Number of channels (3 or 4)
         );
+        VP_CORE_TRACE("Loaded embedded texture: {}x{}", image.width, image.height);
     }
     else if (!image.uri.empty())
     {
         // External texture - load from file
-        std::string fullPath = m_Directory + "/" + image.uri;
+        std::string fullPath = m_Directory.empty()
+            ? image.uri
+            : m_Directory + "/" + image.uri;
         tex = std::make_shared<Texture>(fullPath);
-        m_TextureCache[image.uri] = tex;
+        VP_CORE_TRACE("Loaded external texture: {}", image.uri);
+    }
+
+    // Cache the texture
+    if (tex)
+    {
+        m_TextureCache[textureIndex] = tex;
     }
 
     return tex;
 }
 ```
+
+> **Texture Caching:** We cache by texture index rather than URI because embedded textures don't have URIs. This ensures we don't reload the same texture multiple times.
 
 ---
 
@@ -646,12 +859,25 @@ uniform vec3 u_LightColor;
 // Camera
 uniform vec3 u_ViewPos;
 
-// Material (from glTF)
+// PBR Material (from glTF)
 uniform vec4 u_BaseColor;
 uniform float u_Metallic;
 uniform float u_Roughness;
+uniform vec3 u_EmissiveFactor;
 uniform sampler2D u_BaseColorTex;
+uniform sampler2D u_MetallicRoughnessTex;
+uniform sampler2D u_NormalTex;
+uniform sampler2D u_OcclusionTex;
+uniform sampler2D u_EmissiveTex;
 uniform bool u_HasBaseColorTex;
+uniform bool u_HasMetallicRoughnessTex;
+uniform bool u_HasNormalTex;
+uniform bool u_HasOcclusionTex;
+uniform bool u_HasEmissiveTex;
+
+// Alpha
+uniform int u_AlphaMode;  // 0=Opaque, 1=Mask, 2=Blend
+uniform float u_AlphaCutoff;
 
 void main()
 {
@@ -661,27 +887,51 @@ void main()
         baseColor *= texture(u_BaseColorTex, v_TexCoord);
     }
     
+    // Alpha cutoff for MASK mode
+    if (u_AlphaMode == 1 && baseColor.a < u_AlphaCutoff) {
+        discard;
+    }
+    
+    // Get metallic/roughness
+    float metallic = u_Metallic;
+    float roughness = u_Roughness;
+    if (u_HasMetallicRoughnessTex) {
+        vec4 mr = texture(u_MetallicRoughnessTex, v_TexCoord);
+        roughness *= mr.g;  // Green channel
+        metallic *= mr.b;   // Blue channel
+    }
+    
     // Simple Blinn-Phong (could upgrade to full PBR later)
     vec3 norm = normalize(v_Normal);
     vec3 lightDir = normalize(-u_LightDirection);
     vec3 viewDir = normalize(u_ViewPos - v_FragPos);
     vec3 halfDir = normalize(lightDir + viewDir);
     
-    // Ambient
-    vec3 ambient = 0.1 * baseColor.rgb;
+    // Ambient (with occlusion if available)
+    float ao = 1.0;
+    if (u_HasOcclusionTex) {
+        ao = texture(u_OcclusionTex, v_TexCoord).r;
+    }
+    vec3 ambient = 0.1 * baseColor.rgb * ao;
     
     // Diffuse
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * baseColor.rgb * u_LightColor;
     
     // Specular (roughness affects shininess)
-    float shininess = mix(256.0, 8.0, u_Roughness);
+    float shininess = mix(256.0, 8.0, roughness);
     float spec = pow(max(dot(norm, halfDir), 0.0), shininess);
     // Metals have colored specular, dielectrics have white
-    vec3 specColor = mix(vec3(0.04), baseColor.rgb, u_Metallic);
+    vec3 specColor = mix(vec3(0.04), baseColor.rgb, metallic);
     vec3 specular = spec * specColor * u_LightColor;
     
-    vec3 result = ambient + diffuse + specular;
+    // Emissive
+    vec3 emissive = u_EmissiveFactor;
+    if (u_HasEmissiveTex) {
+        emissive *= texture(u_EmissiveTex, v_TexCoord).rgb;
+    }
+    
+    vec3 result = ambient + diffuse + specular + emissive;
     FragColor = vec4(result, baseColor.a);
 }
 ```
@@ -689,18 +939,66 @@ void main()
 ### Setting Material Uniforms
 
 ```cpp
-void RenderWithMaterial(Shader& shader, const Material& mat)
+void RenderWithMaterial(Shader& shader, const PBRMaterial& mat)
 {
+    // Core PBR properties
     shader.SetVec4("u_BaseColor", mat.BaseColor);
     shader.SetFloat("u_Metallic", mat.Metallic);
     shader.SetFloat("u_Roughness", mat.Roughness);
+    shader.SetVec3("u_EmissiveFactor", mat.EmissiveFactor);
     
+    // Alpha mode
+    shader.SetInt("u_AlphaMode", static_cast<int>(mat.Alpha));
+    shader.SetFloat("u_AlphaCutoff", mat.AlphaCutoff);
+    
+    // Textures - bind each to its own slot
+    int texSlot = 0;
+    
+    // Base color texture
     bool hasBaseTex = mat.HasBaseColorTexture();
     shader.SetBool("u_HasBaseColorTex", hasBaseTex);
-    
     if (hasBaseTex) {
-        mat.BaseColorTexture->Bind(0);
-        shader.SetInt("u_BaseColorTex", 0);
+        mat.BaseColorTexture->Bind(texSlot);
+        shader.SetInt("u_BaseColorTex", texSlot++);
+    }
+    
+    // Metallic-roughness texture
+    bool hasMRTex = mat.HasMetallicRoughnessTexture();
+    shader.SetBool("u_HasMetallicRoughnessTex", hasMRTex);
+    if (hasMRTex) {
+        mat.MetallicRoughnessTexture->Bind(texSlot);
+        shader.SetInt("u_MetallicRoughnessTex", texSlot++);
+    }
+    
+    // Normal texture
+    bool hasNormalTex = mat.HasNormalTexture();
+    shader.SetBool("u_HasNormalTex", hasNormalTex);
+    if (hasNormalTex) {
+        mat.NormalTexture->Bind(texSlot);
+        shader.SetInt("u_NormalTex", texSlot++);
+    }
+    
+    // Occlusion texture
+    bool hasOcclusionTex = mat.HasOcclusionTexture();
+    shader.SetBool("u_HasOcclusionTex", hasOcclusionTex);
+    if (hasOcclusionTex) {
+        mat.OcclusionTexture->Bind(texSlot);
+        shader.SetInt("u_OcclusionTex", texSlot++);
+    }
+    
+    // Emissive texture
+    bool hasEmissiveTex = mat.HasEmissiveTexture();
+    shader.SetBool("u_HasEmissiveTex", hasEmissiveTex);
+    if (hasEmissiveTex) {
+        mat.EmissiveTexture->Bind(texSlot);
+        shader.SetInt("u_EmissiveTex", texSlot++);
+    }
+    
+    // Double-sided: disable backface culling if needed
+    if (mat.DoubleSided) {
+        glDisable(GL_CULL_FACE);
+    } else {
+        glEnable(GL_CULL_FACE);
     }
 }
 ```
@@ -779,11 +1077,13 @@ VP_CORE_INFO("Loading texture: {} ({}x{})",
 
 1. **glTF is the modern standard** - PBR materials, compact, well-supported
 2. **Accessors → BufferViews → Buffers** - The data access chain
-3. **Materials are PBR** - BaseColor, Metallic, Roughness
-4. **tinygltf makes it easy** - Header-only, handles both .gltf and .glb
-5. **Handle missing data gracefully** - Not all models have normals, textures, etc.
-6. **Cache textures** - Avoid reloading the same texture multiple times
-7. **Test with sample models** - Khronos provides official test assets
+3. **PBRMaterial struct** - BaseColor, Metallic, Roughness, Emissive, Alpha, DoubleSided
+4. **tinygltf integration** - Use `TINYGLTF_NO_INCLUDE_STB_IMAGE` when stb_image is already compiled
+5. **Handle all optional data** - POSITION is required, but NORMAL, TEXCOORD_0, COLOR_0 are optional
+6. **Support non-indexed meshes** - Generate sequential indices when `primitive.indices < 0`
+7. **Cache textures by index** - Works for both embedded and external textures
+8. **Alpha modes** - Opaque (default), Mask (cutoff), Blend (transparency)
+9. **Test with sample models** - Khronos provides official test assets
 
 ---
 

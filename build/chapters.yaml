@@ -15,6 +15,7 @@ chapters:
   - chapters/09_EngineArchitecture.md
   - chapters/10_MultipleObjects.md
   - chapters/11_Lighting.md
+  - chapters/12_ModelLoading.md
 
 appendices:
   - chapters/A_Reference.md
