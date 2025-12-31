@@ -2,6 +2,124 @@
 
 # Chapter 6: OpenGL Fundamentals
 
+## Before We Begin: What Actually Happens When You Render?
+
+When you call `glDrawElements()`, a complex dance occurs between your CPU and GPU:
+
+```
+Your C++ Code (CPU)
+      │
+      ▼
+OpenGL Driver (translates commands)
+      │
+      ▼
+GPU Command Queue
+      │
+      ▼
+GPU Reads Vertex Data from Buffers
+      │
+      ▼
+Vertex Shader (runs per vertex)
+      │
+      ▼
+Rasterizer (turns triangles into pixels)
+      │
+      ▼
+Fragment Shader (runs per pixel)
+      │
+      ▼
+Pixels appear on screen!
+```
+
+**Why buffers?** The GPU can't directly read your C++ variables. You must explicitly upload data to GPU memory. That's what buffers are for.
+
+**Why shaders?** The GPU doesn't know how to transform or color your vertices. You write small programs (shaders) that tell it exactly what to do.
+
+This chapter teaches you to set up each piece. By the end, you'll understand the full flow.
+
+---
+
+## Hello Triangle: Your First Pixel on Screen
+
+Before we build abstractions, let's see the **absolute minimum** needed to render pixels. This is the "Hello World" of graphics programming.
+
+> **Note:** This code is intentionally ugly - raw OpenGL with no wrappers. We'll clean it up in [Chapter 7: Abstractions](07_Abstractions.md). The goal here is understanding, not elegance.
+
+### The 3-Vertex Triangle
+
+```cpp
+// Three vertices, position only (x, y, z)
+float vertices[] = {
+    -0.5f, -0.5f, 0.0f,   // bottom-left
+     0.5f, -0.5f, 0.0f,   // bottom-right
+     0.0f,  0.5f, 0.0f    // top-center
+};
+```
+
+### Minimal Shaders (Hardcoded)
+
+```cpp
+const char* vertexShaderSource = R"(
+    #version 460 core
+    layout (location = 0) in vec3 aPos;
+    void main() {
+        gl_Position = vec4(aPos, 1.0);
+    }
+)";
+
+const char* fragmentShaderSource = R"(
+    #version 460 core
+    out vec4 FragColor;
+    void main() {
+        FragColor = vec4(1.0, 0.4, 0.7, 1.0);  // Pink!
+    }
+)";
+```
+
+### The Minimal Setup (Raw OpenGL)
+
+```cpp
+// 1. Create and compile shaders
+unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+glCompileShader(vertexShader);
+
+unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+glCompileShader(fragmentShader);
+
+// 2. Link into a program
+unsigned int shaderProgram = glCreateProgram();
+glAttachShader(shaderProgram, vertexShader);
+glAttachShader(shaderProgram, fragmentShader);
+glLinkProgram(shaderProgram);
+glDeleteShader(vertexShader);
+glDeleteShader(fragmentShader);
+
+// 3. Create VAO and VBO
+unsigned int VAO, VBO;
+glGenVertexArrays(1, &VAO);
+glGenBuffers(1, &VBO);
+
+glBindVertexArray(VAO);
+glBindBuffer(GL_ARRAY_BUFFER, VBO);
+glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+glEnableVertexAttribArray(0);
+
+// 4. Draw!
+glUseProgram(shaderProgram);
+glBindVertexArray(VAO);
+glDrawArrays(GL_TRIANGLES, 0, 3);
+```
+
+**If you see a pink triangle, OpenGL is working!**
+
+This is ~30 lines of raw OpenGL. Now let's understand what each piece does, then wrap it all in clean C++ classes.
+
+---
+
 ## What is OpenGL?
 
 OpenGL is a **graphics API** - a set of functions that talk to your GPU. It's:
@@ -289,6 +407,26 @@ This is why we have Bind/Unbind methods in our classes!
 ---
 
 ## Coordinate Systems
+
+Understanding how vertices get from your 3D model to 2D pixels is crucial:
+
+```
+┌──────────────┐   Model   ┌──────────────┐   View   ┌──────────────┐
+│ Object Space │  Matrix   │ World Space  │  Matrix  │  View Space  │
+│   (Local)    │ ───────►  │              │ ───────► │   (Camera)   │
+│ Your vertices│           │ In the world │          │ Relative to  │
+│ around origin│           │              │          │   camera     │
+└──────────────┘           └──────────────┘          └──────────────┘
+                                                            │
+                                                            │ Projection
+                                                            │   Matrix
+                                                            ▼
+                           ┌──────────────┐          ┌──────────────┐
+                           │ Screen Space │ ◄─────── │ Clip Space   │
+                           │  (Pixels)    │  OpenGL  │ (-1 to +1)   │
+                           │              │  handles │              │
+                           └──────────────┘          └──────────────┘
+```
 
 ### Object Space (Local)
 - Vertices defined relative to object center

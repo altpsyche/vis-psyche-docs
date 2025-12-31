@@ -18,12 +18,13 @@ VizPsyche is a 3D rendering engine built from scratch using C++17 and OpenGL 4.6
 By the end of this book, you'll understand:
 
 - **Build Systems** - CMake, DLLs, linking, and project organization
-- **Third-Party Libraries** - GLFW, GLAD, GLM, ImGui, spdlog, stb_image
+- **Third-Party Libraries** - GLFW, GLAD, GLM, ImGui, spdlog, stb_image, tinygltf
 - **Graphics Pipeline** - How pixels get from code to screen
 - **OpenGL** - Modern OpenGL 4.6 with VAOs, VBOs, shaders
 - **Engine Architecture** - How professional engines are structured
 - **Memory Management** - RAII, move semantics, resource lifetime
 - **Lighting** - Blinn-Phong lighting model
+- **Model Loading** - Loading 3D assets from glTF files with PBR materials
 
 ## Prerequisites
 

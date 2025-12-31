@@ -210,10 +210,16 @@ Encapsulates geometry data:
 struct Vertex
 {
     glm::vec4 Position;
+    glm::vec3 Normal;      // For lighting calculations
     glm::vec4 Color;
     glm::vec2 TexCoords;
 };
+```
 
+> **Note:** This struct matches our current engine. The `Normal` field is required for lighting (see [Chapter 11: Lighting](11_Lighting.md)). If you're following along and haven't reached lighting yet, you can temporarily omit it, but you'll need to add it back later.
+
+
+```cpp
 class VizEngine_API Mesh
 {
 public:
