@@ -106,25 +106,24 @@ A container that manages our collection of objects:
 class VizEngine_API Scene
 {
 public:
-    // Add an object and return reference for further configuration
-    SceneObject& AddObject(std::shared_ptr<Mesh> mesh);
-    
-    // Remove object by index
-    void RemoveObject(size_t index);
-    
-    // Clear all objects
+    // Modification
+    SceneObject& Add(std::shared_ptr<Mesh> mesh, const std::string& name = "Object");
+    void Remove(size_t index);
     void Clear();
     
-    // Update all objects (for animations, etc.)
+    // Access (container-like)
+    SceneObject& operator[](size_t index);        // scene[0]
+    SceneObject& At(size_t index);                // scene.At(0) - bounds checked
+    size_t Size() const;
+    bool Empty() const;
+    
+    // Iteration (enables range-based for)
+    auto begin();
+    auto end();
+    
+    // Scene operations
     void Update(float deltaTime);
-    
-    // Render all active objects
     void Render(Renderer& renderer, Shader& shader, const Camera& camera);
-    
-    // Access
-    std::vector<SceneObject>& GetObjects();
-    const std::vector<SceneObject>& GetObjects() const;
-    size_t GetObjectCount() const;
     
 private:
     std::vector<SceneObject> m_Objects;
@@ -136,19 +135,20 @@ private:
 ```cpp
 // VizEngine/Core/Scene.cpp
 
-SceneObject& Scene::AddObject(std::shared_ptr<Mesh> mesh)
+SceneObject& Scene::Add(std::shared_ptr<Mesh> mesh, const std::string& name)
 {
     SceneObject obj;
     obj.MeshPtr = mesh;
     obj.ObjectTransform = Transform{};  // Default transform
     obj.Color = glm::vec4(1.0f);        // White (no tint)
     obj.Active = true;
+    obj.Name = name;
     
     m_Objects.push_back(std::move(obj));
     return m_Objects.back();
 }
 
-void Scene::RemoveObject(size_t index)
+void Scene::Remove(size_t index)
 {
     if (index < m_Objects.size())
     {
@@ -197,8 +197,8 @@ renderer.Draw(pyramidMesh->GetVertexArray(), pyramidMesh->GetIndexBuffer(), shad
 ### After: Multiple Objects
 
 ```cpp
-// Many objects, loop through them
-for (auto& obj : scene.GetObjects())
+// Many objects, loop through them (range-based for works!)
+for (auto& obj : scene)
 {
     if (!obj.Active) continue;
     
@@ -261,13 +261,13 @@ int Application::Run()
     // Add a row of pyramids
     for (int i = 0; i < 5; i++)
     {
-        auto& obj = scene.AddObject(pyramidMesh);
+        auto& obj = scene.Add(pyramidMesh);
         obj.ObjectTransform.Position = glm::vec3((i - 2) * 3.0f, 0.0f, 0.0f);
         obj.Color = glm::vec4(1.0f, 0.5f + i * 0.1f, 0.2f, 1.0f);
     }
     
     // Add a cube in the middle
-    auto& cube = scene.AddObject(cubeMesh);
+    auto& cube = scene.Add(cubeMesh);
     cube.ObjectTransform.Position = glm::vec3(0.0f, 2.0f, -5.0f);
     cube.ObjectTransform.Scale = glm::vec3(2.0f);
     
@@ -389,9 +389,8 @@ ui.StartWindow("Scene Objects");
 
 // Object list
 static int selectedObject = 0;
-auto& objects = scene.GetObjects();
 
-for (size_t i = 0; i < objects.size(); i++)
+for (size_t i = 0; i < scene.Size(); i++)
 {
     char label[32];
     snprintf(label, sizeof(label), "Object %zu", i);
@@ -405,9 +404,9 @@ for (size_t i = 0; i < objects.size(); i++)
 ImGui::Separator();
 
 // Edit selected object
-if (selectedObject >= 0 && selectedObject < (int)objects.size())
+if (selectedObject >= 0 && selectedObject < (int)scene.Size())
 {
-    auto& obj = objects[selectedObject];
+    auto& obj = scene[selectedObject];
     
     ImGui::Checkbox("Active", &obj.Active);
     ImGui::DragFloat3("Position", &obj.ObjectTransform.Position.x, 0.1f);
@@ -417,8 +416,8 @@ if (selectedObject >= 0 && selectedObject < (int)objects.size())
     
     if (ImGui::Button("Delete"))
     {
-        scene.RemoveObject(selectedObject);
-        selectedObject = std::min(selectedObject, (int)scene.GetObjectCount() - 1);
+        scene.Remove(selectedObject);
+        selectedObject = std::min(selectedObject, (int)scene.Size() - 1);
     }
 }
 
@@ -427,12 +426,12 @@ ImGui::Separator();
 // Add new objects
 if (ImGui::Button("Add Pyramid"))
 {
-    scene.AddObject(pyramidMesh);
+    scene.Add(pyramidMesh);
 }
 ImGui::SameLine();
 if (ImGui::Button("Add Cube"))
 {
-    scene.AddObject(cubeMesh);
+    scene.Add(cubeMesh);
 }
 
 ui.EndWindow();

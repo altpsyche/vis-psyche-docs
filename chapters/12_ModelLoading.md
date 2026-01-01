@@ -194,7 +194,7 @@ Here's how to load the Duck model:
 
 // After adding scene objects...
 auto duckModel = Model::LoadFromFile(
-    "VizEngine/assets/gltf-samples/Models/Duck/glTF-Binary/Duck.glb"
+    "assets/gltf-samples/Models/Duck/glTF-Binary/Duck.glb"
 );
 
 if (duckModel)
@@ -203,7 +203,7 @@ if (duckModel)
     
     for (size_t i = 0; i < duckModel->GetMeshCount(); i++)
     {
-        auto& duckObj = scene.AddObject(duckModel->GetMeshes()[i], "Duck");
+        auto& duckObj = scene.Add(duckModel->GetMeshes()[i], "Duck");
         duckObj.ObjectTransform.Position = glm::vec3(0.0f, 0.0f, 3.0f);
         duckObj.ObjectTransform.Scale = glm::vec3(0.02f);  // Duck is large!
         duckObj.Color = glm::vec4(1.0f, 0.9f, 0.0f, 1.0f); // Yellow tint
@@ -215,7 +215,7 @@ else
 }
 ```
 
-> **Note:** The Duck model is quite large in world units, so we scale it down to 0.02.
+> **Note:** The path is relative to the executable directory. CMake's post-build step copies resources and assets alongside the exe. The Duck model is quite large in world units, so we scale it down to 0.02.
 
 ---
 

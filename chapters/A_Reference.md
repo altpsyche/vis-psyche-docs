@@ -145,9 +145,10 @@ VizEngine (namespace)
 │   └── CreatePyramid(), CreateCube(), CreatePlane() [static factories]
 │
 ├── Scene
-│   ├── AddObject(), RemoveObject(), Clear()
+│   ├── Add(), Remove(), Clear()
+│   ├── operator[](), At(), Size(), Empty()
+│   ├── begin(), end()  [enables range-based for]
 │   ├── Update(), Render()
-│   └── GetObjects(), GetObjectCount(), GetSceneObject()
 │
 ├── SceneObject (struct)
 │   ├── MeshPtr, ObjectTransform, Color, Active, Name
