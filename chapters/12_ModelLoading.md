@@ -251,6 +251,11 @@ if (obj.TexturePtr)
 {
     obj.TexturePtr->Bind();
 }
+else
+{
+    // Unbind texture to prevent state leak from previous objects
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
 obj.MeshPtr->Bind();
 renderer.Draw(...);
 ```
