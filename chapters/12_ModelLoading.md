@@ -206,7 +206,14 @@ if (duckModel)
         auto& duckObj = scene.Add(duckModel->GetMeshes()[i], "Duck");
         duckObj.ObjectTransform.Position = glm::vec3(0.0f, 0.0f, 3.0f);
         duckObj.ObjectTransform.Scale = glm::vec3(0.02f);  // Duck is large!
-        duckObj.Color = glm::vec4(1.0f, 0.9f, 0.0f, 1.0f); // Yellow tint
+        duckObj.Color = glm::vec4(1.0f);  // Don't tint, use texture colors
+        
+        // Use the model's own texture if available
+        const auto& material = duckModel->GetMaterialForMesh(i);
+        if (material.BaseColorTexture)
+        {
+            duckObj.TexturePtr = material.BaseColorTexture;
+        }
     }
 }
 else
@@ -215,7 +222,74 @@ else
 }
 ```
 
-> **Note:** The path is relative to the executable directory. CMake's post-build step copies resources and assets alongside the exe. The Duck model is quite large in world units, so we scale it down to 0.02.
+> **Note:** We assign the model's embedded `BaseColorTexture` to the SceneObject's `TexturePtr`. This enables per-object textures - objects without a texture use the globally bound default. The path is relative to the executable directory (CMake copies assets alongside the exe).
+
+### Per-Object Textures Pattern
+
+With model loading, we evolve from a single global texture to per-object textures:
+
+```cpp
+// Create a shared default texture
+auto defaultTexture = std::make_shared<Texture>("resources/textures/uvchecker.png");
+defaultTexture->Bind();
+
+// Assign default texture to all existing objects
+for (size_t i = 0; i < scene.Size(); i++)
+{
+    if (!scene[i].TexturePtr)
+    {
+        scene[i].TexturePtr = defaultTexture;
+    }
+}
+```
+
+Now each object explicitly has a texture. Scene::Render binds the object's texture before drawing:
+
+```cpp
+// In Scene::Render()
+if (obj.TexturePtr)
+{
+    obj.TexturePtr->Bind();
+}
+obj.MeshPtr->Bind();
+renderer.Draw(...);
+```
+
+This ensures:
+- **Models** use their embedded textures
+- **Basic objects** use the default texture (uvchecker.png)
+- **No texture bleeding** between objects
+
+### Runtime Model Object Creation
+
+To add more instances of a loaded model at runtime, store the mesh and texture:
+
+```cpp
+// Store for reuse
+std::shared_ptr<Mesh> duckMesh = nullptr;
+std::shared_ptr<Texture> duckTexture = nullptr;
+
+if (duckModel && duckModel->GetMeshCount() > 0)
+{
+    duckMesh = duckModel->GetMeshes()[0];
+    const auto& material = duckModel->GetMaterialForMesh(0);
+    if (material.BaseColorTexture)
+    {
+        duckTexture = material.BaseColorTexture;
+    }
+}
+
+// Later, in UI:
+if (duckMesh && ImGui::Button("Add Duck"))
+{
+    auto& newObj = scene.Add(duckMesh, "Duck " + std::to_string(scene.Size() + 1));
+    newObj.ObjectTransform.Scale = glm::vec3(0.02f);
+    newObj.Color = glm::vec4(1.0f);  // No tint
+    newObj.TexturePtr = duckTexture;
+}
+```
+
+This pattern lets you spawn multiple instances of any loaded model!
 
 ---
 
@@ -833,7 +907,7 @@ if (helmetModel)
     // Add each mesh to the scene
     for (size_t i = 0; i < helmetModel->GetMeshCount(); i++)
     {
-        auto& obj = scene.AddObject(helmetModel->GetMeshes()[i]);
+        auto& obj = scene.Add(helmetModel->GetMeshes()[i]);
         obj.ObjectTransform.Position = glm::vec3(0.0f, 2.0f, 0.0f);
         
         // Store material reference for rendering

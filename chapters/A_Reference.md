@@ -151,8 +151,8 @@ VizEngine (namespace)
 │   ├── Update(), Render()
 │
 ├── SceneObject (struct)
-│   ├── MeshPtr, ObjectTransform, Color, Active, Name
-│   └── Bundles mesh + transform for rendering
+│   ├── MeshPtr, TexturePtr, ObjectTransform, Color, Active, Name
+│   └── Bundles mesh + optional texture + transform for rendering
 │
 ├── Model
 │   ├── LoadFromFile() [static factory]
