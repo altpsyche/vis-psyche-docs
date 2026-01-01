@@ -193,7 +193,7 @@ Stores vertex data on the GPU:
 
 ```cpp
 float vertices[] = {
-    // Position (x,y,z,w)    Color (r,g,b,a)       TexCoord (u,v)
+    // Position (x,y,z,w)    Color (r,g,b,a)       TexCoords (u,v)
     -0.5f, 0.0f, 0.5f, 1.0f,  1.0f, 1.0f, 1.0f, 1.0f,  0.0f, 0.0f,
     // ... more vertices
 };
@@ -249,7 +249,7 @@ The GPU needs to know how to interpret your vertex data.
 
 ```cpp
 // Our vertex layout:
-// [Position: 4 floats][Color: 4 floats][TexCoord: 2 floats]
+// [Position: 4 floats][Color: 4 floats][TexCoords: 2 floats]
 // Total: 10 floats per vertex = 40 bytes
 
 // Attribute 0: Position
@@ -265,7 +265,7 @@ glVertexAttribPointer(0,           // Attribute index
 glEnableVertexAttribArray(1);
 glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 40, (void*)16);  // Offset: 4 floats * 4 bytes
 
-// Attribute 2: TexCoord
+// Attribute 2: TexCoords
 glEnableVertexAttribArray(2);
 glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 40, (void*)32);  // Offset: 8 floats * 4 bytes
 ```
@@ -289,19 +289,19 @@ Runs once per vertex. Transforms positions:
 #version 460 core
 
 layout (location = 0) in vec4 aPos;       // From attribute 0
-layout (location = 1) in vec4 vertColor;  // From attribute 1
-layout (location = 2) in vec2 texCoord;   // From attribute 2
+layout (location = 1) in vec4 aColor;     // From attribute 1
+layout (location = 2) in vec2 aTexCoords; // From attribute 2
 
-out vec4 v_VertColor;    // Pass to fragment shader
-out vec2 v_TexCoord;
+out vec4 v_Color;        // Pass to fragment shader
+out vec2 v_TexCoords;
 
 uniform mat4 u_MVP;      // Model-View-Projection matrix
 
 void main()
 {
     gl_Position = u_MVP * aPos;   // Transform position
-    v_VertColor = vertColor;      // Pass through
-    v_TexCoord = texCoord;
+    v_Color = aColor;
+    v_TexCoords = aTexCoords;
 }
 ```
 
@@ -314,16 +314,16 @@ Runs once per pixel. Determines final color:
 
 out vec4 FragColor;           // Output: pixel color
 
-in vec4 v_VertColor;          // From vertex shader
-in vec2 v_TexCoord;
+in vec4 v_Color;
+in vec2 v_TexCoords;
 
 uniform vec4 u_Color;         // Tint color
 uniform sampler2D u_MainTex;  // Texture
 
 void main()
 {
-    vec4 textureColor = texture(u_MainTex, v_TexCoord);
-    vec3 combinedColor = v_VertColor.rgb * u_Color.rgb * textureColor.rgb;
+    vec4 textureColor = texture(u_MainTex, v_TexCoords);
+    vec3 combinedColor = v_Color.rgb * u_Color.rgb * textureColor.rgb;
     FragColor = vec4(combinedColor, textureColor.a);
 }
 ```
@@ -496,72 +496,7 @@ This chapter covered OpenGL fundamentals:
 CPU Data → VBO → Vertex Shader → Rasterizer → Fragment Shader → Pixels
 ```
 
-**Building Along?**
-
-Add the Hello Triangle to your `Application::Run()`:
-
-1. Add vertex data and shaders (inside `Run()` before the loop):
-   ```cpp
-   float vertices[] = {
-       -0.5f, -0.5f, 0.0f,
-        0.5f, -0.5f, 0.0f,
-        0.0f,  0.5f, 0.0f
-   };
-
-   const char* vertexSrc = R"(
-       #version 460 core
-       layout (location = 0) in vec3 aPos;
-       void main() { gl_Position = vec4(aPos, 1.0); }
-   )";
-
-   const char* fragmentSrc = R"(
-       #version 460 core
-       out vec4 FragColor;
-       void main() { FragColor = vec4(1.0, 0.5, 0.2, 1.0); }
-   )";
-   ```
-
-2. Create and compile shaders:
-   ```cpp
-   unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-   glShaderSource(vertexShader, 1, &vertexSrc, NULL);
-   glCompileShader(vertexShader);
-
-   unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-   glShaderSource(fragmentShader, 1, &fragmentSrc, NULL);
-   glCompileShader(fragmentShader);
-
-   unsigned int shaderProgram = glCreateProgram();
-   glAttachShader(shaderProgram, vertexShader);
-   glAttachShader(shaderProgram, fragmentShader);
-   glLinkProgram(shaderProgram);
-   glDeleteShader(vertexShader);
-   glDeleteShader(fragmentShader);
-   ```
-
-3. Create VAO and VBO:
-   ```cpp
-   unsigned int VAO, VBO;
-   glGenVertexArrays(1, &VAO);
-   glGenBuffers(1, &VBO);
-   glBindVertexArray(VAO);
-   glBindBuffer(GL_ARRAY_BUFFER, VBO);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-   glEnableVertexAttribArray(0);
-   ```
-
-4. In the render loop:
-   ```cpp
-   glClear(GL_COLOR_BUFFER_BIT);
-   glUseProgram(shaderProgram);
-   glBindVertexArray(VAO);
-   glDrawArrays(GL_TRIANGLES, 0, 3);
-   ```
-
-5. Rebuild and run.
-
-**✓ Success:** An orange triangle appears on screen!
+✓ **Checkpoint:** Copy the Hello Triangle code into `Application::Run()`, rebuild, and verify an orange/pink triangle appears.
 
 ---
 

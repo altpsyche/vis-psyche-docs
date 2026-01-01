@@ -45,7 +45,7 @@ When you compile a DLL, the compiler needs to know:
 - **Which symbols to EXPORT** (make available to users)
 - **Which symbols to IMPORT** (use from a DLL)
 
-### The Windows Way
+On Windows, the same function needs different keywords depending on context:
 
 ```cpp
 // When BUILDING the DLL:
@@ -55,13 +55,13 @@ __declspec(dllexport) void MyFunction();
 __declspec(dllimport) void MyFunction();
 ```
 
-Same function needs different keywords depending on context!
+### Creating Core.h
 
-### Our Solution: Core.h
+We solve this with a macro that automatically switches based on context.
+
+Create **`VizEngine/src/VizEngine/Core.h`**:
 
 ```cpp
-// VizEngine/src/VizEngine/Core.h
-
 #pragma once
 
 #ifdef VP_PLATFORM_WINDOWS
@@ -71,7 +71,7 @@ Same function needs different keywords depending on context!
         #define VizEngine_API __declspec(dllimport)
     #endif
 #else
-    #error VizEngine only supports Windows!
+    #error VizEngine only supports windows!
 #endif
 ```
 
@@ -87,10 +87,9 @@ How it works:
    - `VizEngine_API` becomes `__declspec(dllimport)`
    - Symbols are imported FROM the DLL
 
-### Using the Macro
+Any class or function that should be usable from outside the DLL needs this macro:
 
 ```cpp
-// Any class/function that should be usable from outside the DLL:
 class VizEngine_API Application { ... };
 class VizEngine_API Camera { ... };
 class VizEngine_API Renderer { ... };
@@ -98,46 +97,52 @@ class VizEngine_API Renderer { ... };
 
 ---
 
-## Namespaces
+## The Application Base Class
 
-All engine code lives in the `VizEngine` namespace:
+Games need a base class to inherit from. The engine controls the lifecycle, but games customize behavior.
+
+Create **`VizEngine/src/VizEngine/Application.h`**:
 
 ```cpp
+#pragma once
+#include "Core.h"
+
 namespace VizEngine
 {
-    class Camera { ... };
-    class Mesh { ... };
-    class Shader { ... };
+    class VizEngine_API Application
+    {
+    public:
+        Application();
+        virtual ~Application();
+        int Run();
+    };
+
+    // Implemented by client
+    Application* CreateApplication();
 }
 ```
 
-Why?
-- **Prevents name collisions** - Your `Texture` won't conflict with another library's `Texture`
-- **Clear ownership** - `VizEngine::Renderer` vs `SomeOtherLib::Renderer`
-- **Organization** - All engine symbols are grouped
+All engine code lives in the `VizEngine` namespace to prevent name collisions and clearly indicate ownership.
 
 ---
 
 ## The Entry Point
 
-Games have a special startup sequence. We handle this in `EntryPoint.h`:
+Games have a special startup sequence. The engine defines `main()`, not the application — this lets the engine control initialization order.
+
+Create **`VizEngine/src/VizEngine/EntryPoint.h`**:
 
 ```cpp
-// VizEngine/src/VizEngine/EntryPoint.h
-
 #pragma once
-
 #ifdef VP_PLATFORM_WINDOWS
 
 namespace VizEngine
 {
-    // Implemented by the client application (e.g., Sandbox)
     extern Application* CreateApplication();
 }
 
 int main(int argc, char** argv)
 {
-    VizEngine::Log::Init();
     auto app = VizEngine::CreateApplication();
     app->Run();
     delete app;
@@ -146,18 +151,63 @@ int main(int argc, char** argv)
 #endif
 ```
 
-> **Note:** `CreateApplication()` is declared inside `VizEngine` namespace with `extern`. 
-> The `extern` keyword tells the compiler "this function exists somewhere else" - in this 
-> case, it will be defined by the user in their application (Sandbox).
+> **Note:** `extern` tells the compiler "this function exists somewhere else" - it will be defined by the user in their application (Sandbox).
 
-### How It Works
+### The Pattern
 
-1. **The engine defines `main()`** - Not the application!
+1. **Engine defines `main()`** - Not the application!
 2. **Application implements `CreateApplication()`** - Factory function
 3. **Engine calls the factory** - Gets an Application instance
 4. **Engine runs the app** - Calls `Run()` method
 
-### In Sandbox (SandboxApp.cpp)
+---
+
+## The Public Header
+
+Users need a single header that includes everything they need.
+
+Create **`VizEngine/src/VizEngine.h`**:
+
+```cpp
+#pragma once
+#include "VizEngine/Application.h"
+#include "VizEngine/EntryPoint.h"
+```
+
+Users just write `#include <VizEngine.h>` and get access to the Application base class and entry point.
+
+---
+
+## CMake Configuration
+
+Update **`VizEngine/CMakeLists.txt`** to build as a DLL with the correct macros:
+
+```cmake
+add_library(VizEngine SHARED
+    src/VizEngine/Application.h
+    src/VizEngine/Core.h
+    src/VizEngine/EntryPoint.h
+)
+
+target_include_directories(VizEngine PUBLIC src)
+target_compile_definitions(VizEngine
+    PUBLIC VP_PLATFORM_WINDOWS
+    PRIVATE VP_BUILD_DLL
+)
+```
+
+Key points:
+- `SHARED` creates a DLL (not static library)
+- `PUBLIC VP_PLATFORM_WINDOWS` - defined for engine AND users
+- `PRIVATE VP_BUILD_DLL` - defined ONLY when building VizEngine.dll
+
+---
+
+## Creating Your Application
+
+Now create the Sandbox application that uses the engine.
+
+Create **`Sandbox/src/SandboxApp.cpp`**:
 
 ```cpp
 #include <VizEngine.h>
@@ -176,36 +226,14 @@ VizEngine::Application* VizEngine::CreateApplication()
 }
 ```
 
-### Why This Pattern?
+Build and run:
 
-1. **Engine controls initialization order** - Logging starts before app code
-2. **Engine controls shutdown** - Cleanup happens correctly
-3. **Application is decoupled** - Just implement the factory
-4. **Extendable** - Sandbox can override Application methods (virtual)
-
----
-
-## The VizEngine.h Public Header
-
-```cpp
-// VizEngine/src/VizEngine.h
-
-#pragma once
-
-#include "VizEngine/Application.h"
-#include "VizEngine/Log.h"
-#include "VizEngine/EntryPoint.h"
+```bash
+cmake --build build --config Debug
+.\build\bin\Debug\Sandbox.exe
 ```
 
-This is the **one header** users include. It pulls in:
-- Application base class (to inherit from)
-- Logging macros
-- Entry point (defines `main()`)
-
-Users just write:
-```cpp
-#include <VizEngine.h>
-```
+The application runs (exits immediately since `Run()` is empty for now).
 
 ---
 
@@ -218,20 +246,8 @@ VizEngine/src/
     ├── Core.h               ← Export macros, platform detection
     ├── Application.h/cpp    ← Base application class
     ├── EntryPoint.h         ← Defines main()
-    ├── Log.h/cpp            ← Logging system
-    ├── Core/                ← Engine core systems
-    │   ├── Camera.h/cpp
-    │   ├── Mesh.h/cpp
-    │   └── Transform.h
-    ├── OpenGL/              ← Graphics abstractions
-    │   ├── Shader.h/cpp
-    │   ├── Texture.h/cpp
-    │   └── ...
-    └── GUI/                 ← UI system
-        └── UIManager.h/cpp
+    └── ...
 ```
-
----
 
 ## What Gets Built
 
@@ -241,24 +257,12 @@ After building:
 build/bin/Debug/
 ├── Sandbox.exe         ← Your application (small)
 ├── VizEngine.dll       ← The engine (most of the code)
-├── VizEngine.pdb       ← Debug symbols (for debugging)
-└── src/resources/      ← Shaders, textures (copied)
+└── VizEngine.pdb       ← Debug symbols
 
 build/lib/Debug/
 ├── VizEngine.lib       ← Import library (tells linker what's in the DLL)
-├── VizEngine.exp       ← Export file (linker intermediate)
-└── glfw3.lib           ← GLFW static library
+└── VizEngine.exp       ← Export file (linker intermediate)
 ```
-
----
-
-## Key Takeaways
-
-1. **DLLs separate code** - Engine and app are different files
-2. **Export/Import macros** - `VizEngine_API` handles the switching
-3. **Namespaces prevent collisions** - Everything in `VizEngine::`
-4. **Engine owns main()** - Applications just implement a factory
-5. **Single public header** - Users include one file
 
 ---
 
@@ -274,133 +278,22 @@ build/lib/Debug/
 
 ## Checkpoint
 
-This chapter covered how VizEngine uses DLL architecture:
+✓ Created `Core.h` with export/import macro  
+✓ Created `Application.h` with base class  
+✓ Created `EntryPoint.h` with `main()`  
+✓ Created `VizEngine.h` as public header  
+✓ Created `SandboxApp.cpp` with factory function  
 
-**Key Files:**
-- `VizEngine/Core.h` — Export/import macro (`VizEngine_API`)
-- `VizEngine/EntryPoint.h` — Defines `main()`, calls your factory
-- `VizEngine.h` — Single public header users include
-
-**Pattern:**
-```cpp
-// Your app implements this:
-VizEngine::Application* VizEngine::CreateApplication()
-{
-    return new YourApp();
-}
-```
-
-**Building Along?**
-
-Create the DLL architecture files:
-
-1. Create **`VizEngine/src/VizEngine/Core.h`**:
-   ```cpp
-   #pragma once
-
-   #ifdef VP_PLATFORM_WINDOWS
-       #ifdef VP_BUILD_DLL
-           #define VizEngine_API __declspec(dllexport)
-       #else
-           #define VizEngine_API __declspec(dllimport)
-       #endif
-   #else
-       #error VizEngine only supports Windows!
-   #endif
-   ```
-
-2. Create **`VizEngine/src/VizEngine/Application.h`**:
-   ```cpp
-   #pragma once
-   #include "Core.h"
-
-   namespace VizEngine
-   {
-       class VizEngine_API Application
-       {
-       public:
-           Application() = default;
-           virtual ~Application() = default;
-           virtual int Run() { return 0; }
-       };
-
-       // Implemented by client
-       extern Application* CreateApplication();
-   }
-   ```
-
-3. Create **`VizEngine/src/VizEngine/EntryPoint.h`**:
-   ```cpp
-   #pragma once
-   #ifdef VP_PLATFORM_WINDOWS
-
-   int main(int argc, char** argv)
-   {
-       auto app = VizEngine::CreateApplication();
-       app->Run();
-       delete app;
-       return 0;
-   }
-
-   #endif
-   ```
-
-4. Create **`VizEngine/src/VizEngine.h`** (public header):
-   ```cpp
-   #pragma once
-   #include "VizEngine/Application.h"
-   #include "VizEngine/EntryPoint.h"
-   ```
-
-5. Update **`VizEngine/CMakeLists.txt`**:
-   ```cmake
-   add_library(VizEngine SHARED
-       src/VizEngine/Application.h
-       src/VizEngine/Core.h
-       src/VizEngine/EntryPoint.h
-   )
-
-   target_include_directories(VizEngine PUBLIC src)
-   target_compile_definitions(VizEngine
-       PUBLIC VP_PLATFORM_WINDOWS
-       PRIVATE VP_BUILD_DLL
-   )
-   ```
-
-6. Update **`Sandbox/src/SandboxApp.cpp`**:
-   ```cpp
-   #include <VizEngine.h>
-
-   class Sandbox : public VizEngine::Application
-   {
-   public:
-       Sandbox() { }
-       ~Sandbox() { }
-   };
-
-   VizEngine::Application* VizEngine::CreateApplication()
-   {
-       return new Sandbox();
-   }
-   ```
-
-7. Rebuild and run:
-   ```bash
-   cmake --build build --config Debug
-   .\build\bin\Debug\Sandbox.exe
-   ```
-
-**✓ Success:** Application runs (exits immediately since `Run()` is empty).
+**Verify:** Run Sandbox.exe — it should start and exit cleanly.
 
 ---
 
 ## Exercise
 
-1. Add `VP_CORE_INFO("Hello from Application constructor!")` and see it in console
-2. Try removing `VizEngine_API` from a class - what error do you get?
+1. Add a print statement in `Application::Run()` and see it execute
+2. Try removing `VizEngine_API` from Application class - what error do you get?
 3. Create a second application class and switch `CreateApplication()` to use it
 
 ---
 
 > **Next:** [Chapter 3: Third-Party Libraries](03_ThirdPartyLibraries.md) - The libraries we use and why.
-

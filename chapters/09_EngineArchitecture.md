@@ -210,7 +210,12 @@ struct Vertex
 {
     glm::vec4 Position;
     glm::vec4 Color;
-    glm::vec2 TexCoord;
+    glm::vec2 TexCoords;
+
+    Vertex() = default;
+    
+    Vertex(const glm::vec4& pos, const glm::vec4& col, const glm::vec2& tex)
+        : Position(pos), Color(col), TexCoords(tex) {}
 };
 ```
 
@@ -464,87 +469,7 @@ Application
 └── Scene (list of SceneObjects)
 ```
 
-**Building Along?**
-
-Create the engine architecture classes:
-
-1. Create **`VizEngine/src/VizEngine/Core/Transform.h`**:
-   ```cpp
-   #pragma once
-   #include <glm/glm.hpp>
-   #include <glm/gtc/matrix_transform.hpp>
-
-   namespace VizEngine
-   {
-       struct Transform
-       {
-           glm::vec3 Position{0.0f};
-           glm::vec3 Rotation{0.0f};  // Euler angles (degrees)
-           glm::vec3 Scale{1.0f};
-
-           glm::mat4 GetModelMatrix() const
-           {
-               glm::mat4 model(1.0f);
-               model = glm::translate(model, Position);
-               model = glm::rotate(model, glm::radians(Rotation.x), {1,0,0});
-               model = glm::rotate(model, glm::radians(Rotation.y), {0,1,0});
-               model = glm::rotate(model, glm::radians(Rotation.z), {0,0,1});
-               model = glm::scale(model, Scale);
-               return model;
-           }
-       };
-   }
-   ```
-
-2. Create **`VizEngine/src/VizEngine/Core/Camera.h`**:
-   ```cpp
-   #pragma once
-   #include <glm/glm.hpp>
-   #include <glm/gtc/matrix_transform.hpp>
-
-   namespace VizEngine
-   {
-       class Camera
-       {
-       public:
-           Camera(glm::vec3 position, glm::vec3 target)
-               : m_Position(position), m_Target(target) {}
-
-           glm::mat4 GetViewMatrix() const {
-               return glm::lookAt(m_Position, m_Target, glm::vec3(0,1,0));
-           }
-
-           glm::mat4 GetProjectionMatrix(float aspect = 16.0f/9.0f) const {
-               return glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
-           }
-
-           glm::vec3 GetPosition() const { return m_Position; }
-
-       private:
-           glm::vec3 m_Position;
-           glm::vec3 m_Target;
-       };
-   }
-   ```
-
-3. Use in `Application::Run()`:
-   ```cpp
-   Camera camera(glm::vec3(0, 2, 5), glm::vec3(0, 0, 0));
-   Transform objectTransform;
-   objectTransform.Position = glm::vec3(0, 0, 0);
-
-   // In render loop:
-   glm::mat4 model = objectTransform.GetModelMatrix();
-   glm::mat4 view = camera.GetViewMatrix();
-   glm::mat4 projection = camera.GetProjectionMatrix();
-   glm::mat4 mvp = projection * view * model;
-   
-   shader.SetMat4("u_MVP", mvp);
-   ```
-
-4. Rebuild and run.
-
-**✓ Success:** Object renders with proper 3D perspective from camera position.
+✓ **Checkpoint:** Create `Transform.h`, `Camera.h/.cpp`, `Mesh.h/.cpp`, use MVP matrices in `Application::Run()`, and verify 3D perspective rendering.
 
 ---
 

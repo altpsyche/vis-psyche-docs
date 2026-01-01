@@ -28,7 +28,7 @@ Every vertex has **texture coordinates** (often called **UV coordinates**) that 
 ```cpp
 // Each vertex has: position + color + texcoord
 float vertices[] = {
-    // Position           Color              TexCoord
+    // Position           Color              TexCoords
     -0.5f, -0.5f, 0.0f,   1,1,1,1,          0.0f, 0.0f,  // bottom-left
      0.5f, -0.5f, 0.0f,   1,1,1,1,          1.0f, 0.0f,  // bottom-right
      0.0f,  0.5f, 0.0f,   1,1,1,1,          0.5f, 1.0f,  // top-center
@@ -270,11 +270,11 @@ In your fragment shader:
 ```glsl
 uniform sampler2D u_MainTex;  // Texture sampler
 
-in vec2 v_TexCoord;  // From vertex shader
+in vec2 v_TexCoords;  // From vertex shader
 
 void main()
 {
-    vec4 texColor = texture(u_MainTex, v_TexCoord);
+    vec4 texColor = texture(u_MainTex, v_TexCoords);
     FragColor = texColor;
 }
 ```
@@ -427,81 +427,7 @@ This chapter covered textures:
 **Files:**
 - `VizEngine/OpenGL/Texture.h/cpp`
 
-**Building Along?**
-
-Create the Texture class:
-
-1. Download **stb_image.h** from https://github.com/nothings/stb
-   - Place in `VizEngine/vendor/stb/`
-
-2. Create **`VizEngine/src/VizEngine/OpenGL/Texture.h`**:
-   ```cpp
-   #pragma once
-   #include <glad/glad.h>
-   #include <string>
-
-   namespace VizEngine
-   {
-       class Texture
-       {
-       public:
-           Texture(const std::string& filepath);
-           ~Texture() { glDeleteTextures(1, &m_ID); }
-           
-           void Bind(unsigned int slot = 0) const
-           {
-               glActiveTexture(GL_TEXTURE0 + slot);
-               glBindTexture(GL_TEXTURE_2D, m_ID);
-           }
-           
-       private:
-           unsigned int m_ID = 0;
-           int m_Width = 0, m_Height = 0;
-       };
-   }
-   ```
-
-3. Create **`VizEngine/src/VizEngine/OpenGL/Texture.cpp`**:
-   ```cpp
-   #include "Texture.h"
-   #define STB_IMAGE_IMPLEMENTATION
-   #include <stb_image.h>
-
-   namespace VizEngine
-   {
-       Texture::Texture(const std::string& filepath)
-       {
-           stbi_set_flip_vertically_on_load(1);
-           int channels;
-           unsigned char* data = stbi_load(filepath.c_str(), 
-                                          &m_Width, &m_Height, &channels, 4);
-           
-           glGenTextures(1, &m_ID);
-           glBindTexture(GL_TEXTURE_2D, m_ID);
-           glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-           glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-           glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_Width, m_Height, 
-                       0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-           
-           stbi_image_free(data);
-       }
-   }
-   ```
-
-4. Add a texture image file to `src/resources/textures/` (any PNG)
-
-5. Use in `Application::Run()`:
-   ```cpp
-   Texture myTexture("src/resources/textures/brick.png");
-   
-   // In render loop:
-   myTexture.Bind(0);
-   shader.SetInt("u_Texture", 0);
-   ```
-
-6. Rebuild and run.
-
-**✓ Success:** Your geometry displays the loaded image!
+✓ **Checkpoint:** Create `Texture.h/.cpp`, add stb_image to vendor, load a texture, and verify it displays on geometry.
 
 ---
 

@@ -16,69 +16,143 @@ GLFW creates both the window AND the context together.
 
 ---
 
-## The GLFWManager Class
+## Creating the GLFWManager Class
 
-Here's our wrapper class:
+We need a wrapper class that handles window creation, context setup, input, and cleanup.
+
+Create **`VizEngine/src/VizEngine/OpenGL/GLFWManager.h`**:
 
 ```cpp
-class VizEngine_API GLFWManager
+#pragma once
+#include <iostream>
+#include <string>
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+#include "VizEngine/Core.h"
+
+namespace VizEngine
 {
-public:
-    GLFWManager(unsigned int width, unsigned int height, const std::string& title);
-    ~GLFWManager();
+    class VizEngine_API GLFWManager
+    {
+    public:
+        GLFWManager(unsigned int width, unsigned int height, 
+                    const std::string& title);
+        ~GLFWManager();
 
-    void ProcessInput();
-    bool WindowShouldClose();
-    void SwapBuffersAndPollEvents();
-    GLFWwindow* GetWindow() const;
+        void ProcessInput();
+        bool WindowShouldClose();
+        void SwapBuffersAndPollEvents();
+        GLFWwindow* GetWindow() const;
 
-private:
-    GLFWwindow* m_Window;
-    static void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
-    static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
-    void Init(unsigned int width, unsigned int height, const std::string& title);
-    void Shutdown();
-};
+    private:
+        GLFWwindow* m_Window;
+        static void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
+        static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+        void Init(unsigned int width, unsigned int height, const std::string& title);
+        void Shutdown();
+    };
+}
 ```
 
 ---
 
-## Initialization: Creating Window and Context
+## Implementing GLFWManager
 
-### Step 1: Initialize GLFW
+Create **`VizEngine/src/VizEngine/OpenGL/GLFWManager.cpp`**:
 
 ```cpp
-if (!glfwInit())
+#include "GLFWManager.h"
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+#include <iostream>
+
+namespace VizEngine
 {
-    std::cerr << "Failed to initialize GLFW\n";
-    exit(EXIT_FAILURE);
+    GLFWManager::GLFWManager(unsigned int width, unsigned int height,
+                             const std::string& title)
+    {
+        // Step 1: Initialize GLFW
+        if (!glfwInit()) {
+            std::cerr << "Failed to initialize GLFW\n";
+            return;
+        }
+        
+        // Step 2: Set window hints
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        
+        // Step 3: Create window
+        m_Window = glfwCreateWindow(width, height, title.c_str(), 
+                                    nullptr, nullptr);
+        if (!m_Window) {
+            std::cerr << "Failed to create GLFW window\n";
+            glfwTerminate();
+            return;
+        }
+        
+        // Step 4: Make context current
+        glfwMakeContextCurrent(m_Window);
+        
+        // Step 5: Load OpenGL functions via GLAD
+        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+            std::cerr << "Failed to initialize GLAD\n";
+            return;
+        }
+        
+        // Step 6: Set callbacks
+        glfwSetFramebufferSizeCallback(m_Window, FramebufferSizeCallback);
+        glfwSetKeyCallback(m_Window, KeyCallback);
+    }
+
+    GLFWManager::~GLFWManager()
+    {
+        glfwDestroyWindow(m_Window);
+        glfwTerminate();
+    }
+
+    void GLFWManager::ProcessInput()
+    {
+        if (glfwGetKey(m_Window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            glfwSetWindowShouldClose(m_Window, true);
+    }
+
+    bool GLFWManager::WindowShouldClose()
+    {
+        return glfwWindowShouldClose(m_Window);
+    }
+
+    void GLFWManager::SwapBuffersAndPollEvents()
+    {
+        glfwSwapBuffers(m_Window);
+        glfwPollEvents();
+    }
+
+    GLFWwindow* GLFWManager::GetWindow() const
+    {
+        return m_Window;
+    }
+
+    void GLFWManager::FramebufferSizeCallback(GLFWwindow* window, int width, int height)
+    {
+        (void)window;
+        glViewport(0, 0, width, height);
+    }
+
+    void GLFWManager::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+    {
+        (void)window; (void)scancode; (void)mods;
+        if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
+        {
+            // Toggle help menu (placeholder)
+        }
+    }
 }
 ```
 
-This must be called before any other GLFW function. It sets up the library.
-
-### Step 2: Set Window Hints
+### Understanding Window Hints
 
 Before creating the window, we tell GLFW what kind of OpenGL context we want:
-
-```cpp
-// Request OpenGL 4.6
-glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-
-// Core Profile (no deprecated functions)
-glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-// macOS compatibility (not needed on Windows)
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-
-// Enable debug context for error messages
-glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
-```
-
-#### Understanding Window Hints
 
 | Hint | Values | Purpose |
 |------|--------|---------|
@@ -86,53 +160,62 @@ glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 | `OPENGL_PROFILE` | `CORE` / `COMPAT` | Core removes deprecated features |
 | `OPENGL_DEBUG_CONTEXT` | `TRUE` / `FALSE` | Enables error callbacks |
 | `RESIZABLE` | `TRUE` / `FALSE` | Can user resize window? |
-| `DECORATED` | `TRUE` / `FALSE` | Show title bar? |
 
-### Step 3: Create the Window
+---
+
+## Using GLFWManager in Your Application
+
+Update **`Application.cpp`** to create a window and render loop:
 
 ```cpp
-m_Window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
-if (!m_Window)
+#include "Application.h"
+#include "VizEngine/OpenGL/GLFWManager.h"
+
+namespace VizEngine
 {
-    std::cerr << "Failed to create GLFW window\n";
-    glfwTerminate();
-    exit(EXIT_FAILURE);
+    int Application::Run()
+    {
+        GLFWManager window(1280, 720, "VizPsyche");
+        
+        while (!window.WindowShouldClose())
+        {
+            window.ProcessInput();
+            
+            // Clear the screen
+            glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            
+            // Swap and poll
+            window.SwapBuffersAndPollEvents();
+        }
+        
+        return 0;
+    }
 }
 ```
 
-The parameters:
-- `width, height` - Window size in pixels
-- `title` - Window title bar text
-- `NULL` (monitor) - Windowed mode (fullscreen if you pass a monitor)
-- `NULL` (share) - Context sharing for multi-window apps
+Add the files to **`VizEngine/CMakeLists.txt`**:
 
-### Step 4: Make Context Current
-
-```cpp
-glfwMakeContextCurrent(m_Window);
+```cmake
+add_library(VizEngine SHARED
+    src/VizEngine/OpenGL/GLFWManager.cpp
+    src/VizEngine/OpenGL/glad.c
+    # ... other files
+)
 ```
 
-This activates the OpenGL context for this thread. A context can only be current in one thread at a time.
-
-### Step 5: Set Up Callbacks
-
-```cpp
-glfwSetFramebufferSizeCallback(m_Window, FramebufferSizeCallback);
-glfwSetKeyCallback(m_Window, KeyCallback);
-```
-
-Callbacks notify us when events happen. We'll cover these next.
+Rebuild and run. A dark blue window appears and stays open!
 
 ---
 
 ## Framebuffer Callback: Handling Resize
 
-When the user resizes the window, we need to update the OpenGL viewport:
+When the user resizes the window, the framebuffer callback updates the OpenGL viewport:
 
 ```cpp
 void GLFWManager::FramebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
-    (void)window;  // Suppress unused parameter warning
+    (void)window;
     glViewport(0, 0, width, height);
 }
 ```
@@ -150,25 +233,33 @@ OpenGL renders to the **framebuffer**, so we use framebuffer callbacks.
 
 ---
 
-## Key Callback: Single Key Events
+## Input Handling
 
-For events that should trigger once per press (like opening a menu):
+### Polling (Continuous Input)
+
+For movement and other continuous input, poll each frame:
+
+```cpp
+void GLFWManager::ProcessInput()
+{
+    if (glfwGetKey(m_Window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(m_Window, true);
+}
+```
+
+### Callbacks (Single Events)
+
+For events that should trigger once per press:
 
 ```cpp
 void GLFWManager::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    (void)window;
-    (void)scancode;
-    (void)mods;
-    
     if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
     {
         // Toggle help menu
     }
 }
 ```
-
-The `action` parameter tells you what happened:
 
 | Action | Meaning |
 |--------|---------|
@@ -178,197 +269,45 @@ The `action` parameter tells you what happened:
 
 ---
 
-## Input Polling: Continuous Input
-
-For movement and other continuous input, we poll each frame:
+## The Main Loop Pattern
 
 ```cpp
-void GLFWManager::ProcessInput()
+while (!window.WindowShouldClose())
 {
-    if (glfwGetKey(m_Window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-    {
-        glfwSetWindowShouldClose(m_Window, true);
-    }
-}
-```
-
-### Polling vs Callbacks
-
-| Polling | Callbacks |
-|---------|-----------|
-| Check every frame | Called when event happens |
-| Good for: movement, held keys | Good for: toggles, single actions |
-| `glfwGetKey()` | `glfwSetKeyCallback()` |
-
-### Common Input Checks
-
-```cpp
-// Keyboard
-if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-    moveForward();
-
-// Mouse buttons
-if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-    shoot();
-
-// Mouse position
-double xpos, ypos;
-glfwGetCursorPos(window, &xpos, &ypos);
-```
-
----
-
-## The Main Loop
-
-Our main loop structure:
-
-```cpp
-while (!glfwWindowShouldClose(m_Window))
-{
-    // 1. Process input
-    ProcessInput();
+    // 1. Input
+    window.ProcessInput();
     
-    // 2. Update game logic
-    Update(deltaTime);
+    // 2. Update (game logic)
+    UpdateGame(deltaTime);
     
     // 3. Render
-    Render();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    RenderScene();
     
-    // 4. Swap buffers and poll events
-    glfwSwapBuffers(m_Window);
-    glfwPollEvents();
+    // 4. Swap and poll
+    window.SwapBuffersAndPollEvents();
 }
 ```
 
-### Double Buffering
-
-`glfwSwapBuffers()` implements **double buffering**:
-
-![Double Buffering](images/04-double-buffering.png)
-
-We always draw to the "back" buffer (invisible), then swap it with the "front" buffer (visible). This prevents screen tearing.
-
-### Polling Events
-
-`glfwPollEvents()` processes all pending window events:
-- Input (keyboard, mouse)
-- Window resize, move, close
-- Focus gained/lost
-
-Without calling this, the window becomes unresponsive.
+This is the standard game loop order: **Input → Update → Render → Present**.
 
 ---
 
-## Shutdown: Cleanup
+## RAII: Automatic Cleanup
+
+Our `GLFWManager` follows RAII (Resource Acquisition Is Initialization):
+
+- **Constructor** initializes GLFW and creates the window
+- **Destructor** destroys the window and terminates GLFW
 
 ```cpp
-void GLFWManager::Shutdown()
 {
-    glfwDestroyWindow(m_Window);
-    glfwTerminate();
-}
+    GLFWManager window(800, 600, "Test");
+    // ... use window
+}  // Destructor called automatically, cleans up
 ```
 
-- `glfwDestroyWindow()` - Destroys window and its context
-- `glfwTerminate()` - Cleans up GLFW completely
-
-Our destructor calls `Shutdown()`, so cleanup is automatic (RAII pattern).
-
----
-
-## Complete Initialization Sequence
-
-Here's what happens when our application starts:
-
-```
-1. GLFWManager constructor called
-   └─ Init()
-       ├─ glfwInit()                    ← Initialize library
-       ├─ glfwWindowHint(...)           ← Configure context
-       ├─ glfwCreateWindow(...)         ← Create window + context
-       ├─ glfwMakeContextCurrent(...)   ← Activate context
-       └─ glfwSet*Callback(...)         ← Register callbacks
-
-2. Application loads GLAD
-   └─ gladLoadGLLoader(...)             ← Load OpenGL functions
-
-3. OpenGL is now ready!
-   └─ glCreateShader(), etc. now work
-```
-
----
-
-## VSync
-
-Vertical sync synchronizes frame swapping with your monitor's refresh rate:
-
-```cpp
-glfwSwapInterval(1);  // Enable VSync (1 = wait for refresh)
-glfwSwapInterval(0);  // Disable VSync (swap immediately)
-```
-
-| VSync | Pros | Cons |
-|-------|------|------|
-| On | No tearing, consistent timing | Input lag, capped FPS |
-| Off | Lower latency | Tearing, higher GPU usage |
-
----
-
-## Error Handling
-
-GLFW can report errors via callback:
-
-```cpp
-void ErrorCallback(int error, const char* description)
-{
-    std::cerr << "GLFW Error " << error << ": " << description << std::endl;
-}
-
-// In init:
-glfwSetErrorCallback(ErrorCallback);
-```
-
-Common errors:
-- **65543**: Platform error (graphics driver issue)
-- **65542**: API unavailable (OpenGL version not supported)
-
----
-
-## GLFW vs Our Wrapper
-
-Why wrap GLFW instead of using it directly?
-
-| Direct GLFW | GLFWManager |
-|-------------|-------------|
-| GLFW functions everywhere | Encapsulated in one class |
-| Manual init/cleanup | RAII automatic cleanup |
-| Exposed `GLFWwindow*` | Implementation detail hidden |
-| Harder to change later | Could swap to SDL, etc. |
-
-Our wrapper is thin - we don't hide GLFW completely (we expose `GetWindow()` for ImGui). But it gives us a clean interface.
-
----
-
-## The `VizEngine_API` Macro
-
-Notice the class declaration:
-
-```cpp
-class VizEngine_API GLFWManager { ... }
-```
-
-This macro is for DLL export/import. When building VizEngine.dll, it expands to `__declspec(dllexport)`. When using the DLL, it expands to `__declspec(dllimport)`. See [Chapter 2: DLL Architecture](02_DLLArchitecture.md).
-
----
-
-## Key Takeaways
-
-1. **Context before OpenGL** - Must have active context before calling GL functions
-2. **Window hints before creation** - Configure before `glfwCreateWindow()`
-3. **Framebuffer != Window size** - Use framebuffer size for high-DPI
-4. **Polling vs Callbacks** - Polling for continuous input, callbacks for events
-5. **Double buffering** - Draw to back buffer, swap to prevent tearing
-6. **RAII cleanup** - Destructor handles `glfwDestroyWindow()` and `glfwTerminate()`
+No need to call cleanup manually — the destructor handles it.
 
 ---
 
@@ -376,129 +315,21 @@ This macro is for DLL export/import. When building VizEngine.dll, it expands to 
 
 | Symptom | Likely Cause | Fix |
 |---------|--------------|-----|
-| Black window | OpenGL context not current | Call `glfwMakeContextCurrent(window)` |
+| "proc-address" crash | GLAD not initialized | Call `gladLoadGLLoader(...)` after making context current |
 | `glfwInit()` returns false | GLFW already initialized or lib missing | Check console for error messages |
 | Window opens then crashes | GLAD not initialized | Call `gladLoadGLLoader(...)` after context |
-| Nothing appears (but no crash) | VSync + slow code = no frame | Check `glfwSwapInterval()` setting |
+| Nothing appears | VSync + slow code = no frame | Check `glfwSwapInterval()` setting |
 
 ---
 
 ## Checkpoint
 
-This chapter covered window and context creation:
+✓ Created `GLFWManager.h` with class declaration  
+✓ Created `GLFWManager.cpp` with implementation  
+✓ Updated `Application::Run()` with render loop  
+✓ Added files to CMakeLists.txt  
 
-**Key Class:** `GLFWManager` wraps GLFW (create, poll, swap, cleanup)
-
-**Files:**
-- `VizEngine/Core/GLFWManager.h` — Class declaration
-- `VizEngine/Core/GLFWManager.cpp` — Implementation
-
-**Init Order:**
-1. `glfwInit()` → 2. Window hints → 3. `glfwCreateWindow()` → 4. Make context current → 5. Load GLAD
-
-**Building Along?**
-
-Create the GLFWManager class:
-
-1. Create **`VizEngine/src/VizEngine/OpenGL/GLFWManager.h`**:
-   ```cpp
-   #pragma once
-   #include <string>
-   struct GLFWwindow;
-
-   namespace VizEngine
-   {
-       class GLFWManager
-       {
-       public:
-           GLFWManager(unsigned int width, unsigned int height, 
-                       const std::string& title);
-           ~GLFWManager();
-
-           bool WindowShouldClose();
-           void SwapBuffersAndPollEvents();
-           GLFWwindow* GetWindow() const { return m_Window; }
-
-       private:
-           GLFWwindow* m_Window = nullptr;
-       };
-   }
-   ```
-
-2. Create **`VizEngine/src/VizEngine/OpenGL/GLFWManager.cpp`**:
-   ```cpp
-   #include "GLFWManager.h"
-   #include <glad/glad.h>
-   #include <GLFW/glfw3.h>
-   #include <iostream>
-
-   namespace VizEngine
-   {
-       GLFWManager::GLFWManager(unsigned int width, unsigned int height,
-                                const std::string& title)
-       {
-           if (!glfwInit()) {
-               std::cerr << "Failed to initialize GLFW\n";
-               return;
-           }
-           
-           glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-           glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-           glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-           
-           m_Window = glfwCreateWindow(width, height, title.c_str(), 
-                                       nullptr, nullptr);
-           glfwMakeContextCurrent(m_Window);
-           gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-       }
-
-       GLFWManager::~GLFWManager()
-       {
-           glfwDestroyWindow(m_Window);
-           glfwTerminate();
-       }
-
-       bool GLFWManager::WindowShouldClose()
-       {
-           return glfwWindowShouldClose(m_Window);
-       }
-
-       void GLFWManager::SwapBuffersAndPollEvents()
-       {
-           glfwSwapBuffers(m_Window);
-           glfwPollEvents();
-       }
-   }
-   ```
-
-3. Add files to **`VizEngine/CMakeLists.txt`**:
-   ```cmake
-   add_library(VizEngine SHARED
-       src/VizEngine/OpenGL/GLFWManager.cpp
-       src/VizEngine/OpenGL/glad.c
-       # ... other files
-   )
-   ```
-
-4. Update **`Application::Run()`** to create a window:
-   ```cpp
-   int Application::Run()
-   {
-       GLFWManager window(1280, 720, "VizPsyche");
-       
-       while (!window.WindowShouldClose())
-       {
-           glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
-           glClear(GL_COLOR_BUFFER_BIT);
-           window.SwapBuffersAndPollEvents();
-       }
-       return 0;
-   }
-   ```
-
-5. Rebuild and run.
-
-**✓ Success:** A dark blue window appears and stays open.
+**Verify:** Rebuild and run — a dark blue window appears and stays open.
 
 ---
 
@@ -512,6 +343,3 @@ Create the GLFWManager class:
 ---
 
 > **Next:** [Chapter 5: Logging System](05_LoggingSystem.md) - How we track what's happening in the engine.
-
-
-

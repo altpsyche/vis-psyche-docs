@@ -98,9 +98,9 @@ We need to add a `Normal` field to the `Vertex` struct (from [Chapter 10](10_Mul
 struct Vertex
 {
     glm::vec4 Position;
-    glm::vec4 Color;
-    glm::vec2 TexCoord;
     glm::vec3 Normal;     // ADD THIS for lighting
+    glm::vec4 Color;
+    glm::vec2 TexCoords;
 };
 ```
 
@@ -108,9 +108,9 @@ Update the vertex buffer layout to match:
 
 ```cpp
 layout.Push<float>(4); // Position
-layout.Push<float>(4); // Color
-layout.Push<float>(2); // TexCoord
 layout.Push<float>(3); // Normal (NEW)
+layout.Push<float>(4); // Color
+layout.Push<float>(2); // TexCoords
 ```
 
 ### Face Normals vs Smooth Normals
@@ -158,12 +158,12 @@ light.Specular = glm::vec3(1.0f);  // Full highlights
 layout (location = 0) in vec4 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec4 aColor;
-layout (location = 3) in vec2 aTexCoord;
+layout (location = 3) in vec2 aTexCoords;
 
 out vec3 v_FragPos;   // Position in world space
 out vec3 v_Normal;    // Normal in world space
 out vec4 v_Color;
-out vec2 v_TexCoord;
+out vec2 v_TexCoords;
 
 uniform mat4 u_Model;
 uniform mat4 u_MVP;
@@ -177,7 +177,7 @@ void main()
     v_Normal = mat3(transpose(inverse(u_Model))) * aNormal;
     
     v_Color = aColor;
-    v_TexCoord = aTexCoord;
+    v_TexCoords = aTexCoords;
     
     gl_Position = u_MVP * aPos;
 }
@@ -197,7 +197,7 @@ out vec4 FragColor;
 in vec3 v_FragPos;
 in vec3 v_Normal;
 in vec4 v_Color;
-in vec2 v_TexCoord;
+in vec2 v_TexCoords;
 
 // Light
 uniform vec3 u_LightDirection;
@@ -215,7 +215,7 @@ uniform float u_Shininess;
 
 void main()
 {
-    vec4 texColor = texture(u_MainTex, v_TexCoord);
+    vec4 texColor = texture(u_MainTex, v_TexCoords);
     vec3 baseColor = texColor.rgb * v_Color.rgb * u_ObjectColor.rgb;
     
     vec3 norm = normalize(v_Normal);
@@ -329,77 +329,7 @@ This chapter covered Blinn-Phong lighting:
 - `src/resources/shaders/lit.shader` — Lighting shader
 - `VizEngine/Core/Mesh.cpp` — Updated with normals
 
-**Building Along?**
-
-Create the lighting shader:
-
-1. Create **`src/resources/shaders/lit.shader`**:
-   ```glsl
-   #shader vertex
-   #version 460 core
-   layout (location = 0) in vec4 aPos;
-   layout (location = 1) in vec4 aColor;
-   layout (location = 2) in vec2 aTexCoord;
-   layout (location = 3) in vec3 aNormal;
-
-   uniform mat4 u_MVP;
-   uniform mat4 u_Model;
-
-   out vec3 v_FragPos;
-   out vec3 v_Normal;
-   out vec4 v_Color;
-
-   void main() {
-       gl_Position = u_MVP * aPos;
-       v_FragPos = vec3(u_Model * aPos);
-       v_Normal = mat3(transpose(inverse(u_Model))) * aNormal;
-       v_Color = aColor;
-   }
-
-   #shader fragment
-   #version 460 core
-   out vec4 FragColor;
-
-   in vec3 v_FragPos;
-   in vec3 v_Normal;
-   in vec4 v_Color;
-
-   uniform vec3 u_LightDir;
-   uniform vec3 u_LightColor;
-   uniform vec3 u_ViewPos;
-
-   void main() {
-       // Ambient
-       vec3 ambient = 0.1 * u_LightColor;
-       
-       // Diffuse
-       vec3 norm = normalize(v_Normal);
-       vec3 lightDir = normalize(u_LightDir);
-       float diff = max(dot(norm, lightDir), 0.0);
-       vec3 diffuse = diff * u_LightColor;
-       
-       // Specular (Blinn-Phong)
-       vec3 viewDir = normalize(u_ViewPos - v_FragPos);
-       vec3 halfwayDir = normalize(lightDir + viewDir);
-       float spec = pow(max(dot(norm, halfwayDir), 0.0), 32.0);
-       vec3 specular = spec * u_LightColor;
-       
-       vec3 result = (ambient + diffuse + specular) * v_Color.rgb;
-       FragColor = vec4(result, v_Color.a);
-   }
-   ```
-
-2. Set uniforms in `Application::Run()`:
-   ```cpp
-   shader.SetMat4("u_Model", objectTransform.GetModelMatrix());
-   shader.SetVec3("u_LightDir", glm::normalize(glm::vec3(1, 1, 1)));
-   shader.SetVec3("u_LightColor", glm::vec3(1.0f));
-   shader.SetVec3("u_ViewPos", camera.GetPosition());
-   ```
-
-3. Rebuild and run.
-
-**✓ Success:** Objects show 3D shading with highlights!
+✓ **Checkpoint:** Create `Light.h` with `DirectionalLight` struct, create `lit.shader` with Blinn-Phong lighting, add Normal to Vertex struct, set lighting uniforms, and verify 3D shading appears.
 
 ---
 

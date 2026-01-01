@@ -508,14 +508,14 @@ void Model::ModelLoader::LoadMeshes(const tinygltf::Model& gltfModel)
                 // Texture coordinates (default to 0,0 if missing)
                 if (texCoords)
                 {
-                    v.TexCoord = glm::vec2(
+                    v.TexCoords = glm::vec2(
                         texCoords[i * 2 + 0],
                         texCoords[i * 2 + 1]
                     );
                 }
                 else
                 {
-                    v.TexCoord = glm::vec2(0.0f);
+                    v.TexCoords = glm::vec2(0.0f);
                 }
 
                 // Vertex colors (default to white if missing)
@@ -823,11 +823,11 @@ To use material properties, update your shader:
 layout (location = 0) in vec4 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec4 aColor;
-layout (location = 3) in vec2 aTexCoord;
+layout (location = 3) in vec2 aTexCoords;
 
 out vec3 v_FragPos;
 out vec3 v_Normal;
-out vec2 v_TexCoord;
+out vec2 v_TexCoords;
 
 uniform mat4 u_Model;
 uniform mat4 u_MVP;
@@ -836,7 +836,7 @@ void main()
 {
     v_FragPos = vec3(u_Model * aPos);
     v_Normal = mat3(transpose(inverse(u_Model))) * aNormal;
-    v_TexCoord = aTexCoord;
+    v_TexCoords = aTexCoords;
     gl_Position = u_MVP * aPos;
 }
 ```
@@ -850,7 +850,7 @@ out vec4 FragColor;
 
 in vec3 v_FragPos;
 in vec3 v_Normal;
-in vec2 v_TexCoord;
+in vec2 v_TexCoords;
 
 // Light
 uniform vec3 u_LightDirection;
@@ -884,7 +884,7 @@ void main()
     // Get base color
     vec4 baseColor = u_BaseColor;
     if (u_HasBaseColorTex) {
-        baseColor *= texture(u_BaseColorTex, v_TexCoord);
+        baseColor *= texture(u_BaseColorTex, v_TexCoords);
     }
     
     // Alpha cutoff for MASK mode
@@ -896,7 +896,7 @@ void main()
     float metallic = u_Metallic;
     float roughness = u_Roughness;
     if (u_HasMetallicRoughnessTex) {
-        vec4 mr = texture(u_MetallicRoughnessTex, v_TexCoord);
+        vec4 mr = texture(u_MetallicRoughnessTex, v_TexCoords);
         roughness *= mr.g;  // Green channel
         metallic *= mr.b;   // Blue channel
     }
@@ -910,7 +910,7 @@ void main()
     // Ambient (with occlusion if available)
     float ao = 1.0;
     if (u_HasOcclusionTex) {
-        ao = texture(u_OcclusionTex, v_TexCoord).r;
+        ao = texture(u_OcclusionTex, v_TexCoords).r;
     }
     vec3 ambient = 0.1 * baseColor.rgb * ao;
     
@@ -928,7 +928,7 @@ void main()
     // Emissive
     vec3 emissive = u_EmissiveFactor;
     if (u_HasEmissiveTex) {
-        emissive *= texture(u_EmissiveTex, v_TexCoord).rgb;
+        emissive *= texture(u_EmissiveTex, v_TexCoords).rgb;
     }
     
     vec3 result = ambient + diffuse + specular + emissive;
@@ -1115,77 +1115,7 @@ This chapter covered loading external 3D models:
 - Materials (PBR properties, stored but not yet rendered)
 - Textures (cached by index)
 
-**Building Along?**
-
-Create the Model class and load glTF:
-
-1. Add **tinygltf** as submodule:
-   ```bash
-   cd VizEngine/vendor
-   git submodule add https://github.com/syoyo/tinygltf.git
-   cd ../..
-   ```
-
-2. Create **`VizEngine/src/VizEngine/Core/TinyGLTF.cpp`** (one-time impl):
-   ```cpp
-   #define TINYGLTF_IMPLEMENTATION
-   #define TINYGLTF_NO_INCLUDE_STB_IMAGE
-   #define TINYGLTF_NO_STB_IMAGE_WRITE
-   #include <stb_image.h>
-   #include <tinygltf/tiny_gltf.h>
-   ```
-
-3. Create **`VizEngine/src/VizEngine/Core/Model.h`**:
-   ```cpp
-   #pragma once
-   #include "Mesh.h"
-   #include <string>
-   #include <vector>
-   #include <memory>
-
-   namespace VizEngine
-   {
-       class Model
-       {
-       public:
-           bool LoadFromFile(const std::string& filepath);
-           const std::vector<std::shared_ptr<Mesh>>& GetMeshes() const 
-               { return m_Meshes; }
-           
-       private:
-           std::vector<std::shared_ptr<Mesh>> m_Meshes;
-       };
-   }
-   ```
-
-4. Implement `LoadFromFile` in `Model.cpp` using tinygltf:
-   - Parse glTF/GLB file
-   - Extract vertex positions, normals, UVs
-   - Create Mesh objects from primitives
-   - *(See chapter prose for full implementation)*
-
-5. Download a test model:
-   ```bash
-   # From https://github.com/KhronosGroup/glTF-Sample-Assets
-   # Place Box.glb in src/resources/models/
-   ```
-
-6. Use in `Application::Run()`:
-   ```cpp
-   Model model;
-   model.LoadFromFile("src/resources/models/Box.glb");
-   
-   // In render loop:
-   for (const auto& mesh : model.GetMeshes()) {
-       mesh->Bind();
-       glDrawElements(GL_TRIANGLES, mesh->GetIndexCount(), 
-                     GL_UNSIGNED_INT, nullptr);
-   }
-   ```
-
-7. Rebuild and run.
-
-**✓ Success:** External 3D model renders!
+✓ **Checkpoint:** Add tinygltf as submodule, create `TinyGLTF.cpp` with implementation defines, create `Model.h/.cpp`, load a test .glb file, and verify an external 3D model renders.
 
 ---
 
