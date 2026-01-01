@@ -166,6 +166,57 @@ if (!success) {
 // Now 'model' contains all the data!
 ```
 
+### Getting Test Assets
+
+Khronos Group provides official glTF sample models for testing. We add these as a Git submodule:
+
+```bash
+git submodule add https://github.com/KhronosGroup/glTF-Sample-Assets.git VizEngine/assets/gltf-samples
+```
+
+This gives you access to many test models:
+
+| Model | Complexity | Good For Testing |
+|-------|------------|------------------|
+| `Box.glb` | Simple cube | Basic loading |
+| `Duck.glb` | Single mesh with texture | Textures, transforms |
+| `BoxTextured.glb` | Cube with UV mapping | UV coordinates |
+| `DamagedHelmet.glb` | Complex PBR | Full material system |
+
+### Loading a Model in Application
+
+Here's how to load the Duck model:
+
+```cpp
+// In Application.cpp - include the Model header
+#include "Core/Model.h"
+#include "Log.h"
+
+// After adding scene objects...
+auto duckModel = Model::LoadFromFile(
+    "VizEngine/assets/gltf-samples/Models/Duck/glTF-Binary/Duck.glb"
+);
+
+if (duckModel)
+{
+    VP_CORE_INFO("Duck loaded: {} meshes", duckModel->GetMeshCount());
+    
+    for (size_t i = 0; i < duckModel->GetMeshCount(); i++)
+    {
+        auto& duckObj = scene.AddObject(duckModel->GetMeshes()[i], "Duck");
+        duckObj.ObjectTransform.Position = glm::vec3(0.0f, 0.0f, 3.0f);
+        duckObj.ObjectTransform.Scale = glm::vec3(0.02f);  // Duck is large!
+        duckObj.Color = glm::vec4(1.0f, 0.9f, 0.0f, 1.0f); // Yellow tint
+    }
+}
+else
+{
+    VP_CORE_ERROR("Failed to load Duck model!");
+}
+```
+
+> **Note:** The Duck model is quite large in world units, so we scale it down to 0.02.
+
 ---
 
 ## The PBRMaterial Struct
@@ -1115,7 +1166,7 @@ This chapter covered loading external 3D models:
 - Materials (PBR properties, stored but not yet rendered)
 - Textures (cached by index)
 
-✓ **Checkpoint:** Add tinygltf as submodule, create `TinyGLTF.cpp` with implementation defines, create `Model.h/.cpp`, load a test .glb file, and verify an external 3D model renders.
+✓ **Checkpoint:** Add tinygltf as vendor dependency, add glTF-Sample-Assets as submodule, create `TinyGLTF.cpp` with implementation defines, create `Model.h/.cpp`, load the Duck.glb model, and verify it renders in the scene.
 
 ---
 

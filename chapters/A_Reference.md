@@ -147,7 +147,7 @@ VizEngine (namespace)
 ├── Scene
 │   ├── AddObject(), RemoveObject(), Clear()
 │   ├── Update(), Render()
-│   └── GetObjects(), GetObjectCount()
+│   └── GetObjects(), GetObjectCount(), GetSceneObject()
 │
 ├── SceneObject (struct)
 │   ├── MeshPtr, ObjectTransform, Color, Active, Name
