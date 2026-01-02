@@ -1245,8 +1245,8 @@ If a malformed file is detected, primitives or attributes are skipped with error
 
 ```
 Accessor bufferView index 999 out of range
-Position buffer too small for accessor.count, skipping primitive
-Normal buffer too small, skipping attribute
+Buffer offsets (5000) exceed buffer size (4096)
+Buffer data range (offset 4000 + 200 bytes) exceeds buffer size (4096)
 ```
 
 This makes the loader safe to use with untrusted glTF files.
