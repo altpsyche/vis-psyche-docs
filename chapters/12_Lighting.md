@@ -93,7 +93,7 @@ A **normal** is a vector perpendicular to a surface. Lighting calculations depen
 
 ### Adding Normals to Vertices
 
-We need to add a `Normal` field to the `Vertex` struct (from [Chapter 10](10_MultipleObjects.md)):
+We need to add a `Normal` field to the `Vertex` struct (from [Chapter 11](11_MultipleObjects.md)):
 
 ```cpp
 // Update Vertex in VizEngine/Core/Mesh.h
@@ -345,7 +345,7 @@ This chapter covered Blinn-Phong lighting:
 
 ---
 
-> **Next:** [Chapter 12: Model Loading](12_ModelLoading.md) - Loading external 3D models with glTF.
+> **Next:** [Chapter 13: Model Loading](13_ModelLoading.md) - Loading external 3D models with glTF.
 
 > **Reference:** For class diagrams and file locations, see [Appendix A: Code Reference](A_Reference.md).
 

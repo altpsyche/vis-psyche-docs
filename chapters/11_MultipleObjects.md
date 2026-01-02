@@ -637,7 +637,7 @@ This chapter covered managing multiple objects in a scene:
 
 ---
 
-> **Next:** [Chapter 11: Lighting](11_Lighting.md) - Making objects look 3D with Blinn-Phong lighting.
+> **Next:** [Chapter 12: Lighting](12_Lighting.md) - Making objects look 3D with Blinn-Phong lighting.
 
 > **Reference:** For implementation details, class diagrams, and debugging tips, see [Appendix A: Code Reference](A_Reference.md).
 

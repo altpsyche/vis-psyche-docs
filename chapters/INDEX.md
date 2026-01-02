@@ -21,15 +21,31 @@ A hands-on guide to building a 3D rendering engine from scratch.
 8. **[Abstractions](07_Abstractions.md)** - RAII wrappers, Rule of 5, clean APIs
 9. **[Textures](08_Textures.md)** - Image loading, GPU textures, UV mapping
 
-### Part 4: Engine
-10. **[Engine Architecture](09_EngineArchitecture.md)** - Camera, Transform, Mesh, separation of concerns
-11. **[Multiple Objects](10_MultipleObjects.md)** - Scene management, shared resources, object selection
+### Part 4: Editor I
+10. **[Dear ImGui](09_DearImGui.md)** - Immediate mode GUI, widgets, UIManager wrapper
 
-### Part 5: Graphics II
-12. **[Lighting](11_Lighting.md)** - Blinn-Phong model, normals, directional lights
+### Part 5: Engine
+11. **[Engine Architecture](10_EngineArchitecture.md)** - Camera, Transform, Mesh, separation of concerns
+12. **[Multiple Objects](11_MultipleObjects.md)** - Scene management, shared resources, object selection
 
-### Part 6: Assets
-13. **[Model Loading](12_ModelLoading.md)** - glTF format, tinygltf, PBR materials
+### Part 6: Graphics II
+13. **[Lighting](12_Lighting.md)** - Blinn-Phong model, normals, directional lights
+
+### Part 7: Assets
+14. **[Model Loading](13_ModelLoading.md)** - glTF format, tinygltf, PBR materials
+
+### Part 8: Input
+15. **[Input System](14_InputSystem.md)** - Keyboard, mouse, action mapping, polling vs events *(planned)*
+
+### Part 9: Graphics III
+16. **[Advanced OpenGL](15_AdvancedOpenGL.md)** - Framebuffers, depth/stencil testing, cubemaps, instancing *(planned)*
+17. **[Advanced Lighting](16_AdvancedLighting.md)** - Shadows, PBR rendering, HDR, bloom, tone mapping *(planned)*
+
+### Part 10: Editor II
+18. **[Editor UI Framework](17_EditorUI.md)** - Docking, panels, property inspector, asset browser *(planned)*
+
+### Part 11: Engine II
+19. **[Entity Component System](18_ECS.md)** - Components, systems, archetype storage, queries *(planned)*
 
 ### Appendices
 - **[Appendix A: Code Reference](A_Reference.md)** - Class diagrams, file reference, debugging tips
@@ -59,13 +75,25 @@ Read chapters in order. Each builds on the previous:
       ↓
 08 Textures ←── Add images to geometry
       ↓
-09 Engine Architecture ←── Understand how it all fits
+09 Editor I (ImGui) ←── Debug UI for development
       ↓
-10 Multiple Objects ←── Manage complex scenes
+10 Engine Architecture ←── Understand how it all fits
       ↓
-11 Lighting ←── Make it look 3D
+11 Multiple Objects ←── Manage complex scenes
       ↓
-12 Model Loading ←── Load external 3D models
+12 Lighting ←── Make it look 3D
+      ↓
+13 Model Loading ←── Load external 3D models
+      ↓
+14 Input System ←── Handle user interaction
+      ↓
+15 Advanced OpenGL ←── Framebuffers, render-to-texture
+      ↓
+16 Advanced Lighting ←── Shadows, PBR, HDR
+      ↓
+17 Editor II ←── Professional editor interface
+      ↓
+18 ECS ←── Component-based architecture
       ↓
 Appendix A ←── Reference material
 ```
@@ -99,8 +127,13 @@ Use [Appendix A](A_Reference.md) as a quick reference for class diagrams and fil
 This is a **living document**. As the engine grows, new chapters will be added:
 
 - [x] Model Loading
-- [ ] Input System
-- [ ] Audio
-- [ ] Physics
+- [x] Editor I (Dear ImGui) ← **NEW**
+- [ ] Input System *(next)*
+- [ ] Advanced OpenGL
+- [ ] Advanced Lighting
+- [ ] Editor II (UI Framework)
 - [ ] Entity Component System
+- [ ] Animation
+- [ ] Physics
+- [ ] Audio
 

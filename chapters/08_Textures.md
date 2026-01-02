@@ -442,7 +442,7 @@ This chapter covered textures:
 
 ---
 
-> **Next:** [Chapter 9: Engine Architecture](09_EngineArchitecture.md) - How all the pieces fit together.
+> **Next:** [Chapter 9: Editor I - Dear ImGui](09_DearImGui.md) - Building debug UI for development.
 
 
 

@@ -83,13 +83,16 @@ Each chapter builds on the previous. The concepts stack:
 7. **[Abstractions](07_Abstractions.md)** - Wrapping OpenGL in clean C++
 8. **[Textures](08_Textures.md)** - Loading and using images
 
-### Part 4: Engine
-9. **[Engine Architecture](09_EngineArchitecture.md)** - Proper game engine structure
-10. **[Multiple Objects & Scene](10_MultipleObjects.md)** - Managing complex scenes
+### Part 4: Editor I
+9. **[Dear ImGui](09_DearImGui.md)** - Debug UI for development
 
-### Part 5: Advanced Graphics
-11. **[Lighting](11_Lighting.md)** - Blinn-Phong lighting model
-12. **[Model Loading](12_ModelLoading.md)** - Loading glTF models with PBR materials
+### Part 5: Engine
+10. **[Engine Architecture](10_EngineArchitecture.md)** - Proper game engine structure
+11. **[Multiple Objects & Scene](11_MultipleObjects.md)** - Managing complex scenes
+
+### Part 6: Advanced Graphics
+12. **[Lighting](12_Lighting.md)** - Blinn-Phong lighting model
+13. **[Model Loading](13_ModelLoading.md)** - Loading glTF models with PBR materials
 
 ### Appendices
 - **[Appendix A: Code Reference](A_Reference.md)** - Class diagrams, file reference

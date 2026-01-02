@@ -360,10 +360,11 @@ cmake --build build --config Debug
 | Buffers, shaders, pipeline | [06 OpenGL Fundamentals](06_OpenGLFundamentals.md) |
 | RAII, Rule of 5, wrappers | [07 Abstractions](07_Abstractions.md) |
 | Texture class, stb_image | [08 Textures](08_Textures.md) |
-| Camera, Transform, Mesh | [09 Engine Architecture](09_EngineArchitecture.md) |
-| Scene, SceneObject | [10 Multiple Objects](10_MultipleObjects.md) |
-| DirectionalLight, Blinn-Phong | [11 Lighting](11_Lighting.md) |
-| Model, Material, glTF, tinygltf | [12 Model Loading](12_ModelLoading.md) |
+| UIManager, ImGui widgets | [09 Editor I](09_DearImGui.md) |
+| Camera, Transform, Mesh | [10 Engine Architecture](10_EngineArchitecture.md) |
+| Scene, SceneObject | [11 Multiple Objects](11_MultipleObjects.md) |
+| DirectionalLight, Blinn-Phong | [12 Lighting](12_Lighting.md) |
+| Model, Material, glTF, tinygltf | [13 Model Loading](13_ModelLoading.md) |
 
 ---
 

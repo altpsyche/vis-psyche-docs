@@ -12,10 +12,11 @@ chapters:
   - chapters/06_OpenGLFundamentals.md
   - chapters/07_Abstractions.md
   - chapters/08_Textures.md
-  - chapters/09_EngineArchitecture.md
-  - chapters/10_MultipleObjects.md
-  - chapters/11_Lighting.md
-  - chapters/12_ModelLoading.md
+  - chapters/09_DearImGui.md
+  - chapters/10_EngineArchitecture.md
+  - chapters/11_MultipleObjects.md
+  - chapters/12_Lighting.md
+  - chapters/13_ModelLoading.md
 
 appendices:
   - chapters/A_Reference.md
