@@ -81,6 +81,8 @@ The `shininess` exponent controls highlight size:
 - Low (8-16): Matte, wide highlights
 - High (64-256): Glossy, tight highlights
 
+> **Note:** In our engine, we use **Roughness** (0-1) instead of a raw shininess exponent. The shader converts roughness to shininess internally: `shininess = mix(256.0, 8.0, roughness)`. A roughness of 0 = shiny (high exponent), roughness of 1 = matte (low exponent).
+
 ---
 
 ## Normals: The Key to Lighting
@@ -211,7 +213,7 @@ uniform vec3 u_ViewPos;
 // Material
 uniform vec4 u_ObjectColor;
 uniform sampler2D u_MainTex;
-uniform float u_Shininess;
+uniform float u_Roughness;  // 0 = shiny, 1 = matte
 
 void main()
 {
@@ -231,7 +233,9 @@ void main()
 	// Specular (Blinn-Phong)
 	vec3 viewDir = normalize(u_ViewPos - v_FragPos);
 	vec3 halfDir = normalize(lightDir + viewDir);
-	float spec = pow(max(dot(norm, halfDir), 0.0), u_Shininess);
+	// Convert roughness to Blinn-Phong exponent
+	float shininess = mix(256.0, 8.0, u_Roughness);
+	float spec = pow(max(dot(norm, halfDir), 0.0), shininess);
 	vec3 specular = u_LightSpecular * spec;
     
     vec3 result = ambient + diffuse + specular;
@@ -251,8 +255,6 @@ light.Ambient = glm::vec3(0.2f, 0.2f, 0.25f);
 light.Diffuse = glm::vec3(0.8f, 0.8f, 0.75f);
 light.Specular = glm::vec3(1.0f, 1.0f, 0.95f);
 
-float shininess = 32.0f;
-
 // In render loop, before drawing:
 litShader.Bind();
 litShader.SetVec3("u_LightDirection", light.GetDirection());
@@ -260,7 +262,7 @@ litShader.SetVec3("u_LightAmbient", light.Ambient);
 litShader.SetVec3("u_LightDiffuse", light.Diffuse);
 litShader.SetVec3("u_LightSpecular", light.Specular);
 litShader.SetVec3("u_ViewPos", camera.GetPosition());
-litShader.SetFloat("u_Shininess", shininess);
+// Note: Roughness is set per-object in Scene::Render()
 
 // Scene::Render handles per-object uniforms
 scene.Render(renderer, litShader, camera);

@@ -42,6 +42,9 @@ glTF (GL Transmission Format) was designed by Khronos Group (the same people beh
 - **PBR** - Physically-based rendering materials built-in
 - **Two formats** - `.gltf` (JSON + binary) or `.glb` (single binary file)
 
+> [!NOTE]
+> **About PBR Materials:** glTF uses Physically-Based Rendering (PBR) with metallic-roughness workflow. Our engine currently uses Blinn-Phong shading (from Chapter 11). In this chapter, we'll parse and store the PBR material data from glTF files, but render using our existing Blinn-Phong shader. The base color texture works directly, and we approximate roughness by converting it to shininess. Full PBR rendering will be covered in a future **Advanced Lighting** chapter.
+
 ---
 
 ## glTF File Structure
@@ -941,197 +944,44 @@ struct SceneObject
 
 ---
 
-## Updating the Shader
+## What About PBR?
 
-To use material properties, update your shader:
+glTF uses **Physically-Based Rendering (PBR)** with the metallic-roughness workflow. Our engine uses **Blinn-Phong** shading (from Chapter 11) but with a **Roughness** parameter that maps directly from glTF:
 
-### Vertex Shader (unchanged from lighting)
+| glTF PBR Property | How We Handle It |
+|-------------------|------------------|
+| `baseColorFactor` | Copied to `obj.Color` |
+| `baseColorTexture` | Copied to `obj.TexturePtr` |
+| `roughnessFactor` | Copied to `obj.Roughness` (shader converts to shininess) |
+| `metallicFactor` | Stored but not used (needs proper PBR) |
+| Normal/Occlusion/Emissive textures | Stored but not rendered |
 
-```glsl
-#version 460 core
+### Material Integration
 
-layout (location = 0) in vec4 aPos;
-layout (location = 1) in vec3 aNormal;
-layout (location = 2) in vec4 aColor;
-layout (location = 3) in vec2 aTexCoords;
-
-out vec3 v_FragPos;
-out vec3 v_Normal;
-out vec2 v_TexCoords;
-
-uniform mat4 u_Model;
-uniform mat4 u_MVP;
-
-void main()
-{
-    v_FragPos = vec3(u_Model * aPos);
-    v_Normal = mat3(transpose(inverse(u_Model))) * aNormal;
-    v_TexCoords = aTexCoords;
-    gl_Position = u_MVP * aPos;
-}
-```
-
-### Fragment Shader (with material uniforms)
-
-```glsl
-#version 460 core
-
-out vec4 FragColor;
-
-in vec3 v_FragPos;
-in vec3 v_Normal;
-in vec2 v_TexCoords;
-
-// Light
-uniform vec3 u_LightDirection;
-uniform vec3 u_LightColor;
-
-// Camera
-uniform vec3 u_ViewPos;
-
-// PBR Material (from glTF)
-uniform vec4 u_BaseColor;
-uniform float u_Metallic;
-uniform float u_Roughness;
-uniform vec3 u_EmissiveFactor;
-uniform sampler2D u_BaseColorTex;
-uniform sampler2D u_MetallicRoughnessTex;
-uniform sampler2D u_NormalTex;
-uniform sampler2D u_OcclusionTex;
-uniform sampler2D u_EmissiveTex;
-uniform bool u_HasBaseColorTex;
-uniform bool u_HasMetallicRoughnessTex;
-uniform bool u_HasNormalTex;
-uniform bool u_HasOcclusionTex;
-uniform bool u_HasEmissiveTex;
-
-// Alpha
-uniform int u_AlphaMode;  // 0=Opaque, 1=Mask, 2=Blend
-uniform float u_AlphaCutoff;
-
-void main()
-{
-    // Get base color
-    vec4 baseColor = u_BaseColor;
-    if (u_HasBaseColorTex) {
-        baseColor *= texture(u_BaseColorTex, v_TexCoords);
-    }
-    
-    // Alpha cutoff for MASK mode
-    if (u_AlphaMode == 1 && baseColor.a < u_AlphaCutoff) {
-        discard;
-    }
-    
-    // Get metallic/roughness
-    float metallic = u_Metallic;
-    float roughness = u_Roughness;
-    if (u_HasMetallicRoughnessTex) {
-        vec4 mr = texture(u_MetallicRoughnessTex, v_TexCoords);
-        roughness *= mr.g;  // Green channel
-        metallic *= mr.b;   // Blue channel
-    }
-    
-    // Simple Blinn-Phong (could upgrade to full PBR later)
-    vec3 norm = normalize(v_Normal);
-    vec3 lightDir = normalize(-u_LightDirection);
-    vec3 viewDir = normalize(u_ViewPos - v_FragPos);
-    vec3 halfDir = normalize(lightDir + viewDir);
-    
-    // Ambient (with occlusion if available)
-    float ao = 1.0;
-    if (u_HasOcclusionTex) {
-        ao = texture(u_OcclusionTex, v_TexCoords).r;
-    }
-    vec3 ambient = 0.1 * baseColor.rgb * ao;
-    
-    // Diffuse
-    float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = diff * baseColor.rgb * u_LightColor;
-    
-    // Specular (roughness affects shininess)
-    float shininess = mix(256.0, 8.0, roughness);
-    float spec = pow(max(dot(norm, halfDir), 0.0), shininess);
-    // Metals have colored specular, dielectrics have white
-    vec3 specColor = mix(vec3(0.04), baseColor.rgb, metallic);
-    vec3 specular = spec * specColor * u_LightColor;
-    
-    // Emissive
-    vec3 emissive = u_EmissiveFactor;
-    if (u_HasEmissiveTex) {
-        emissive *= texture(u_EmissiveTex, v_TexCoords).rgb;
-    }
-    
-    vec3 result = ambient + diffuse + specular + emissive;
-    FragColor = vec4(result, baseColor.a);
-}
-```
-
-### Setting Material Uniforms
+When loading a model, we copy material properties to each `SceneObject`:
 
 ```cpp
-void RenderWithMaterial(Shader& shader, const PBRMaterial& mat)
+for (size_t i = 0; i < model->GetMeshCount(); i++)
 {
-    // Core PBR properties
-    shader.SetVec4("u_BaseColor", mat.BaseColor);
-    shader.SetFloat("u_Metallic", mat.Metallic);
-    shader.SetFloat("u_Roughness", mat.Roughness);
-    shader.SetVec3("u_EmissiveFactor", mat.EmissiveFactor);
+    auto& obj = scene.Add(model->GetMeshes()[i], "Model");
     
-    // Alpha mode
-    shader.SetInt("u_AlphaMode", static_cast<int>(mat.Alpha));
-    shader.SetFloat("u_AlphaCutoff", mat.AlphaCutoff);
-    
-    // Textures - bind each to its own slot
-    int texSlot = 0;
-    
-    // Base color texture
-    bool hasBaseTex = mat.HasBaseColorTexture();
-    shader.SetBool("u_HasBaseColorTex", hasBaseTex);
-    if (hasBaseTex) {
-        mat.BaseColorTexture->Bind(texSlot);
-        shader.SetInt("u_BaseColorTex", texSlot++);
-    }
-    
-    // Metallic-roughness texture
-    bool hasMRTex = mat.HasMetallicRoughnessTexture();
-    shader.SetBool("u_HasMetallicRoughnessTex", hasMRTex);
-    if (hasMRTex) {
-        mat.MetallicRoughnessTexture->Bind(texSlot);
-        shader.SetInt("u_MetallicRoughnessTex", texSlot++);
-    }
-    
-    // Normal texture
-    bool hasNormalTex = mat.HasNormalTexture();
-    shader.SetBool("u_HasNormalTex", hasNormalTex);
-    if (hasNormalTex) {
-        mat.NormalTexture->Bind(texSlot);
-        shader.SetInt("u_NormalTex", texSlot++);
-    }
-    
-    // Occlusion texture
-    bool hasOcclusionTex = mat.HasOcclusionTexture();
-    shader.SetBool("u_HasOcclusionTex", hasOcclusionTex);
-    if (hasOcclusionTex) {
-        mat.OcclusionTexture->Bind(texSlot);
-        shader.SetInt("u_OcclusionTex", texSlot++);
-    }
-    
-    // Emissive texture
-    bool hasEmissiveTex = mat.HasEmissiveTexture();
-    shader.SetBool("u_HasEmissiveTex", hasEmissiveTex);
-    if (hasEmissiveTex) {
-        mat.EmissiveTexture->Bind(texSlot);
-        shader.SetInt("u_EmissiveTex", texSlot++);
-    }
-    
-    // Double-sided: disable backface culling if needed
-    if (mat.DoubleSided) {
-        glDisable(GL_CULL_FACE);
-    } else {
-        glEnable(GL_CULL_FACE);
+    // Copy material properties from glTF
+    const auto& material = model->GetMaterialForMesh(i);
+    obj.Color = material.BaseColor;
+    obj.Roughness = material.Roughness;
+    if (material.BaseColorTexture)
+    {
+        obj.TexturePtr = material.BaseColorTexture;
     }
 }
 ```
+
+> [!NOTE]
+> **Future Work:** Full PBR will be implemented in the **Advanced Lighting** chapter, including:
+> - Image-Based Lighting (IBL) with environment maps
+> - Proper metallic/roughness texture sampling
+> - Normal mapping for surface detail
+> - Ambient occlusion and emissive rendering
 
 ---
 
