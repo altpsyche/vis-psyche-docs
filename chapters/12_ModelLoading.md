@@ -1216,9 +1216,10 @@ Tightly-packed: [P0 P1 P2...] [N0 N1 N2...] [UV0 UV1 UV2...]
 Interleaved:    [P0 N0 UV0] [P1 N1 UV1] [P2 N2 UV2]...
 ```
 
-If a model uses interleaved data, a warning is logged:
+If a model uses interleaved data, the primitive is **skipped** with an error:
 ```
-glTF buffer has non-zero byteStride (32), interleaved data may not load correctly
+glTF buffer has unsupported byteStride (32), cannot load interleaved data
+Failed to load positions for mesh, skipping primitive
 ```
 
 **In practice:** Standard exports from Blender, Maya, and most tools use tightly-packed buffers. The Duck and most Khronos sample models work correctly.
