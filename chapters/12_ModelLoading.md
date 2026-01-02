@@ -1226,6 +1226,10 @@ Failed to load positions for mesh, skipping primitive
 
 > **For Advanced Readers:** Supporting interleaved data requires iterating with the stride value instead of assuming contiguous layout. This is left as an exercise or future enhancement.
 
+### Normalized Integer Vertex Colors
+
+The loader only supports `COLOR_0` attributes with `FLOAT` component type. The glTF spec also allows `UNSIGNED_BYTE` and `UNSIGNED_SHORT` (normalized to [0, 1]). Models using these types will log a warning and fall back to white vertex colors.
+
 ---
 
 ## Key Takeaways
