@@ -1161,4 +1161,7 @@ This chapter covered loading external 3D models:
 
 > **Reference:** For the complete class diagram and file locations, see [Appendix A: Code Reference](A_Reference.md).
 
+---
+
+> **Next:** [Chapter 14: Input System](14_InputSystem.md) - Keyboard and mouse input with edge detection.
 

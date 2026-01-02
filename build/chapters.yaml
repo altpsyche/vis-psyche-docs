@@ -17,6 +17,7 @@ chapters:
   - chapters/11_MultipleObjects.md
   - chapters/12_Lighting.md
   - chapters/13_ModelLoading.md
+  - chapters/14_InputSystem.md
 
 appendices:
   - chapters/A_Reference.md

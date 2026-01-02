@@ -35,7 +35,7 @@ A hands-on guide to building a 3D rendering engine from scratch.
 14. **[Model Loading](13_ModelLoading.md)** - glTF format, tinygltf, PBR materials
 
 ### Part 8: Input
-15. **[Input System](14_InputSystem.md)** - Keyboard, mouse, action mapping, polling vs events *(planned)*
+15. **[Input System](14_InputSystem.md)** - Keyboard, mouse, polling vs events, edge detection
 
 ### Part 9: Graphics III
 16. **[Advanced OpenGL](15_AdvancedOpenGL.md)** - Framebuffers, depth/stencil testing, cubemaps, instancing *(planned)*
@@ -128,7 +128,7 @@ This is a **living document**. As the engine grows, new chapters will be added:
 
 - [x] Model Loading
 - [x] Editor I (Dear ImGui)
-- [ ] Input System *(next)*
+- [x] Input System
 - [ ] Advanced OpenGL
 - [ ] Advanced Lighting
 - [ ] Editor II (UI Framework)
