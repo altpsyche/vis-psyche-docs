@@ -324,10 +324,10 @@ No need to call cleanup manually — the destructor handles it.
 
 ## Checkpoint
 
-✓ Created `GLFWManager.h` with class declaration  
-✓ Created `GLFWManager.cpp` with implementation  
-✓ Updated `Application::Run()` with render loop  
-✓ Added files to CMakeLists.txt  
+- Created `GLFWManager.h` with class declaration  
+- Created `GLFWManager.cpp` with implementation  
+- Updated `Application::Run()` with render loop  
+- Added files to CMakeLists.txt  
 
 **Verify:** Rebuild and run — a dark blue window appears and stays open.
 

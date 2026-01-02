@@ -469,7 +469,7 @@ Application
 └── Scene (list of SceneObjects)
 ```
 
-✓ **Checkpoint:** Create `Transform.h`, `Camera.h/.cpp`, `Mesh.h/.cpp`, use MVP matrices in `Application::Run()`, and verify 3D perspective rendering.
+**Checkpoint:** Create `Transform.h`, `Camera.h/.cpp`, `Mesh.h/.cpp`, use MVP matrices in `Application::Run()`, and verify 3D perspective rendering.
 
 ---
 

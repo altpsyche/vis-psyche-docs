@@ -338,7 +338,7 @@ while (!window.WindowShouldClose())
 
 ## Building a Real UI
 
-Let's build a practical example: an object inspector.
+A practical example: building an object inspector.
 
 ### Object Selection List
 
@@ -503,7 +503,7 @@ This chapter covered Dear ImGui for debug/editor UI:
 - `VizEngine/GUI/UIManager.h`
 - `VizEngine/GUI/UIManager.cpp`
 
-✓ **Checkpoint:** Create UIManager class, add ImGui initialization/frame code, render a test window with text and sliders, verify it appears over your 3D scene.
+**Checkpoint:** Create UIManager class, add ImGui initialization/frame code, render a test window with text and sliders, verify it appears over your 3D scene.
 
 ---
 

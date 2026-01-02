@@ -223,9 +223,9 @@ Log::SetCoreLogLevel(LogLevel::Warn);
 VP_CORE_TRACE("This won't appear");
 VP_CORE_DEBUG("This won't appear");
 VP_CORE_INFO("This won't appear");
-VP_CORE_WARN("This WILL appear");     // ✓
-VP_CORE_ERROR("This WILL appear");    // ✓
-VP_CORE_CRITICAL("This WILL appear"); // ✓
+VP_CORE_WARN("This WILL appear");     // YES
+VP_CORE_ERROR("This WILL appear");    // YES
+VP_CORE_CRITICAL("This WILL appear"); // YES
 ```
 
 Common configurations:
@@ -326,10 +326,10 @@ if (newState != oldState)
 
 ## Checkpoint
 
-✓ Created `Log.h` with Log class and macros  
-✓ Created `Log.cpp` with initialization  
-✓ Updated `EntryPoint.h` to call `Log::Init()`  
-✓ Tested with VP_INFO in Sandbox  
+- Created `Log.h` with Log class and macros  
+- Created `Log.cpp` with initialization  
+- Updated `EntryPoint.h` to call `Log::Init()`  
+- Tested with VP_INFO in Sandbox  
 
 **Verify:** Rebuild and run. Colored log messages appear in console.
 

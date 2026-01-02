@@ -230,7 +230,7 @@ This chapter covered the build system that compiles VizPsyche:
 - `VizEngine/CMakeLists.txt` — Engine library with all sources
 - `Sandbox/CMakeLists.txt` — Test application
 
-✓ **Checkpoint:** Create the folder structure, CMakeLists.txt files, minimal SandboxApp.cpp, generate and build. Verify `Sandbox.exe` exists.
+**Checkpoint:** Create the folder structure, CMakeLists.txt files, minimal SandboxApp.cpp, generate and build. Verify `Sandbox.exe` exists.
 
 ---
 

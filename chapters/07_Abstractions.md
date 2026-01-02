@@ -449,7 +449,7 @@ This chapter covered wrapping OpenGL in C++ classes:
 
 **Files:** All in `VizEngine/OpenGL/`
 
-✓ **Checkpoint:** Create the wrapper classes in `VizEngine/OpenGL/`, refactor `Application::Run()` to use them, rebuild, and verify the triangle still renders.
+**Checkpoint:** Create the wrapper classes in `VizEngine/OpenGL/`, refactor `Application::Run()` to use them, rebuild, and verify the triangle still renders.
 
 ---
 

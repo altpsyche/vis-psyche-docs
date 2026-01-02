@@ -1145,7 +1145,7 @@ This chapter covered loading external 3D models:
 - Materials (PBR properties, stored but not yet rendered)
 - Textures (cached by index)
 
-✓ **Checkpoint:** Add tinygltf as vendor dependency, add glTF-Sample-Assets as submodule, create `TinyGLTF.cpp` with implementation defines, create `Model.h/.cpp`, load the Duck.glb model, and verify it renders in the scene.
+**Checkpoint:** Add tinygltf as vendor dependency, add glTF-Sample-Assets as submodule, create `TinyGLTF.cpp` with implementation defines, create `Model.h/.cpp`, load the Duck.glb model, and verify it renders in the scene.
 
 ---
 

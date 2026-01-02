@@ -2,7 +2,7 @@
 
 # Chapter 3: Third-Party Libraries
 
-Before we dive into graphics programming, let's understand the building blocks we're standing on. VizPsyche uses several third-party libraries, each solving a specific problem so we don't have to reinvent the wheel.
+Before diving into graphics programming, this chapter covers the building blocks we're standing on. VizPsyche uses several third-party libraries, each solving a specific problem so we don't have to reinvent the wheel.
 
 ## Why Use Third-Party Libraries?
 
@@ -621,7 +621,7 @@ This chapter introduced the third-party libraries in VizPsyche:
 | stb_image | Image loading | `vendor/stb_image/` |
 | tinygltf | glTF/GLB model loading | `vendor/tinygltf/` |
 
-✓ **Checkpoint:** Create `VizEngine/vendor/` folder, add GLFW/GLM/spdlog as git submodules, download GLAD, update CMakeLists.txt files, and verify the build links all libraries.
+**Checkpoint:** Create `VizEngine/vendor/` folder, add GLFW/GLM/spdlog as git submodules, download GLAD, update CMakeLists.txt files, and verify the build links all libraries.
 
 ---
 

@@ -97,5 +97,5 @@ Each chapter builds on the previous. The concepts stack:
 ### Appendices
 - **[Appendix A: Code Reference](A_Reference.md)** - Class diagrams, file reference
 
-Let's begin!
+Ready to start.
 

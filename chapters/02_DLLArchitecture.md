@@ -278,11 +278,11 @@ build/lib/Debug/
 
 ## Checkpoint
 
-✓ Created `Core.h` with export/import macro  
-✓ Created `Application.h` with base class  
-✓ Created `EntryPoint.h` with `main()`  
-✓ Created `VizEngine.h` as public header  
-✓ Created `SandboxApp.cpp` with factory function  
+- Created `Core.h` with export/import macro  
+- Created `Application.h` with base class  
+- Created `EntryPoint.h` with `main()`  
+- Created `VizEngine.h` as public header  
+- Created `SandboxApp.cpp` with factory function  
 
 **Verify:** Run Sandbox.exe — it should start and exit cleanly.
 

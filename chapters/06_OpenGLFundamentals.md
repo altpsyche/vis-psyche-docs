@@ -41,7 +41,7 @@ This chapter teaches you to set up each piece. By the end, you'll understand the
 
 ## Hello Triangle: Your First Pixel on Screen
 
-Before we build abstractions, let's see the **absolute minimum** needed to render pixels. This is the "Hello World" of graphics programming.
+Before building abstractions, here is the **absolute minimum** needed to render pixels. This is the "Hello World" of graphics programming.
 
 > **Note:** This code is intentionally ugly - raw OpenGL with no wrappers. We'll clean it up in [Chapter 7: Abstractions](07_Abstractions.md). The goal here is understanding, not elegance.
 
@@ -116,7 +116,7 @@ glDrawArrays(GL_TRIANGLES, 0, 3);
 
 **If you see a pink triangle, OpenGL is working!**
 
-This is ~30 lines of raw OpenGL. Now let's understand what each piece does, then wrap it all in clean C++ classes.
+This is ~30 lines of raw OpenGL. The following sections explain what each piece does, then wrap it all in clean C++ classes.
 
 ---
 
@@ -496,7 +496,7 @@ This chapter covered OpenGL fundamentals:
 CPU Data → VBO → Vertex Shader → Rasterizer → Fragment Shader → Pixels
 ```
 
-✓ **Checkpoint:** Copy the Hello Triangle code into `Application::Run()`, rebuild, and verify an orange/pink triangle appears.
+**Checkpoint:** Copy the Hello Triangle code into `Application::Run()`, rebuild, and verify an orange/pink triangle appears.
 
 ---
 

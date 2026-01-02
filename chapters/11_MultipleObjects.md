@@ -294,7 +294,7 @@ int Application::Run()
 
 ## ImGui: Immediate Mode GUI
 
-Before diving into object selection UI, let's understand the GUI library we're using.
+Before diving into object selection UI, this section covers the GUI library we're using.
 
 ### What is Dear ImGui?
 
@@ -441,7 +441,7 @@ ui.EndWindow();
 
 ## Limitations of This Approach
 
-Let's be honest about what our simple `SceneObject` can't do.
+To be honest about what our simple `SceneObject` can't do.
 
 ### The "God Struct" Problem
 
@@ -623,7 +623,7 @@ This chapter covered managing multiple objects in a scene:
 - `shared_ptr<Mesh>` — Geometry shared across instances
 - `Transform` — Unique per object (position, rotation, scale)
 
-✓ **Checkpoint:** Create `Mesh.h` with Vertex struct and factory methods, `SceneObject.h`, `Scene.h`, use the Scene class in `Application::Run()` to manage multiple objects, and verify they render.
+**Checkpoint:** Create `Mesh.h` with Vertex struct and factory methods, `SceneObject.h`, `Scene.h`, use the Scene class in `Application::Run()` to manage multiple objects, and verify they render.
 
 ---
 

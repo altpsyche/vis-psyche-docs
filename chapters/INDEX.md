@@ -127,7 +127,7 @@ Use [Appendix A](A_Reference.md) as a quick reference for class diagrams and fil
 This is a **living document**. As the engine grows, new chapters will be added:
 
 - [x] Model Loading
-- [x] Editor I (Dear ImGui) ← **NEW**
+- [x] Editor I (Dear ImGui)
 - [ ] Input System *(next)*
 - [ ] Advanced OpenGL
 - [ ] Advanced Lighting

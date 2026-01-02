@@ -331,7 +331,7 @@ This chapter covered Blinn-Phong lighting:
 - `src/resources/shaders/lit.shader` — Lighting shader
 - `VizEngine/Core/Mesh.cpp` — Updated with normals
 
-✓ **Checkpoint:** Create `Light.h` with `DirectionalLight` struct, create `lit.shader` with Blinn-Phong lighting, add Normal to Vertex struct, set lighting uniforms, and verify 3D shading appears.
+**Checkpoint:** Create `Light.h` with `DirectionalLight` struct, create `lit.shader` with Blinn-Phong lighting, add Normal to Vertex struct, set lighting uniforms, and verify 3D shading appears.
 
 ---
 

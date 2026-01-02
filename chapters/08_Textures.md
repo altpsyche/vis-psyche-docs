@@ -428,7 +428,7 @@ This chapter covered textures:
 **Files:**
 - `VizEngine/OpenGL/Texture.h/cpp`
 
-✓ **Checkpoint:** Create `Texture.h/.cpp`, add stb_image to vendor, load a texture, and verify it displays on geometry.
+**Checkpoint:** Create `Texture.h/.cpp`, add stb_image to vendor, load a texture, and verify it displays on geometry.
 
 ---
 
