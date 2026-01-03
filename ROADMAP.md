@@ -9,10 +9,11 @@
 | Aspect | Decision |
 |--------|----------|
 | **Game** | First-Person Puzzle (Papers Please inspired) |
-| **Graphics API** | NVRHI (Vulkan, D3D12, OpenGL backends) |
+| **Graphics API** | OpenGL for learning, then NVRHI for multi-API |
 | **Libraries** | Production libraries (EnTT, Jolt, miniaudio, NVRHI) |
 | **Editor** | Featured but practical |
 | **Audience** | Intermediate (assumes C++ and graphics fundamentals) |
+| **Learning Goal** | Deep understanding of modern graphics APIs |
 
 ---
 
@@ -27,55 +28,50 @@ At the end of Part VII, the engine contains:
 | **GUI** | UIManager (Dear ImGui) |
 | **Assets** | glTF loader (tinygltf), stb_image |
 
-**Problem**: All logic resides in a 377-line `Application::Run()` method.
-
-**Goal**: Clean architecture supporting both Editor and Game applications.
-
 ---
 
 ## Key Libraries
 
 | Purpose | Library | Part |
 |---------|---------|------|
-| Graphics Abstraction | NVRHI | IX |
-| Entity-Component System | EnTT | XIII |
-| Physics | Jolt Physics | XIV |
-| Audio | miniaudio | XVI |
-| Serialization | nlohmann/json | XIV |
+| Entity-Component System | EnTT | XII |
+| Physics | Jolt Physics | XIII |
+| Graphics Abstraction | NVRHI | XV |
+| Audio | miniaudio | XVII |
+| Serialization | nlohmann/json | XIII |
 
 ---
 
 ## The Game: Checkpoint
 
-**Genre**: First-Person Puzzle
-
-**Inspiration**: Papers Please
+**Genre**: First-Person Puzzle  
+**Inspiration**: Papers Please  
+**Scope**: 5–10 minute experience
 
 **Concept**: The player is a bureaucrat in a surreal 3D checkpoint. Examine documents, inspect objects, interrogate visitors. Make decisions. Face consequences.
 
-**Scope**: 5–10 minute experience
+---
 
-**Required Systems**:
+## Pedagogical Approach
 
-- Object interaction (pick up, inspect, place)
-- Document inspection UI
-- Decision and consequence logic
-- Atmospheric rendering (lighting, audio, post-processing)
+| Stage | API | Purpose |
+|-------|-----|---------|
+| **Learn** | OpenGL | Concrete, immediate feedback, understand GPU concepts |
+| **Understand** | Vulkan/D3D12 theory | Explicit memory, command buffers, synchronization |
+| **Abstract** | NVRHI | Production-ready, portable, informed abstraction |
 
 ---
 
 ## Development Phases
 
-The book is organized into six phases spanning seventeen parts.
-
 | Phase | Focus | Parts | Chapters |
 |-------|-------|-------|----------|
 | 1. Foundation | Engine/Application separation | VIII | 23–25 |
-| 2. Graphics Abstraction | NVRHI, shader pipeline, render graph | IX–X | 26–33 |
-| 3. Advanced Rendering | Shadows, PBR, HDR, post-processing | XI–XII | 34–40 |
-| 4. Engine Systems | ECS, serialization, physics, threading | XIII–XIV | 41–49 |
-| 5. Editor | Scene editor with tooling | XV | 50–54 |
-| 6. Game Development | Checkpoint puzzle game | XVI–XVII | 55–62 |
+| 2. Advanced OpenGL | Framebuffers, shadows, PBR | IX–X | 26–33 |
+| 3. Engine Systems | ECS, serialization, physics | XI–XIII | 34–44 |
+| 4. Modern Graphics | Vulkan/D3D12 concepts, NVRHI, render graph | XIV–XVI | 45–57 |
+| 5. Editor | Scene editor with tooling | XVII | 58–63 |
+| 6. Game Development | Checkpoint puzzle game | XVIII–XIX | 64–71 |
 
 ---
 
@@ -83,123 +79,142 @@ The book is organized into six phases spanning seventeen parts.
 
 **Part VIII: Application Lifecycle**
 
-| Chapter | Title | Topics |
-|---------|-------|--------|
-| 23 | Application Lifecycle | Engine owns main(), virtual OnInit/OnUpdate/OnRender/OnShutdown |
-| 24 | Engine Subsystems | Window, Renderer, Input as engine-owned modules |
-| 25 | Event System | Event dispatcher, window and input events |
+| Ch | Title | Topics |
+|----|-------|--------|
+| 23 | Application Lifecycle | Engine owns main(), virtual methods |
+| 24 | Engine Subsystems | Window, Renderer, Input as modules |
+| 25 | Event System | Dispatcher, window/input events |
 
 **Deliverable**: Engine as library; Sandbox as thin client.
 
 ---
 
-## Phase 2: Graphics Abstraction
+## Phase 2: Advanced OpenGL
 
-**Part IX: Render Hardware Interface**
+**Part IX: Advanced Techniques**
 
-| Chapter | Title | Topics |
-|---------|-------|--------|
-| 26 | Why Abstract | Motivation, API differences, NVRHI architecture |
-| 27 | Device and Swapchain | Device creation, surface management, present modes |
-| 28 | Command Lists | Recording, submission, synchronization |
-| 29 | Buffers and Textures | NVRHI buffer/texture creation, memory management |
-| 30 | Pipeline State | Graphics pipelines, input layouts, blend/depth state |
+| Ch | Title | Topics |
+|----|-------|--------|
+| 26 | Framebuffers | Render targets, MRT, attachments |
+| 27 | Shadow Mapping | Depth from light, PCF, cascades |
+| 28 | Cubemaps and Skybox | Environment mapping, reflections |
 
-**Part X: Shader and Frame Management**
+**Part X: Physically Based Rendering**
 
-| Chapter | Title | Topics |
-|---------|-------|--------|
-| 31 | Shader Compilation | HLSL to SPIR-V, offline compilation, reflection |
-| 32 | Shader Permutations | Variants, includes, defines, caching |
-| 33 | Render Graph Basics | Frame graph concepts, resource transitions, barriers |
+| Ch | Title | Topics |
+|----|-------|--------|
+| 29 | PBR Theory | Energy conservation, microfacets |
+| 30 | PBR Implementation | Cook-Torrance, metallic-roughness |
+| 31 | Image-Based Lighting | Irradiance, prefiltered environment |
+| 32 | HDR Pipeline | Floating-point framebuffers, exposure |
+| 33 | Post-Processing | Bloom, tone mapping, color grading |
 
-**Deliverable**: Portable renderer with Vulkan, D3D12, and OpenGL backends.
-
----
-
-## Phase 3: Advanced Rendering
-
-**Part XI: Rendering Techniques**
-
-| Chapter | Title | Topics |
-|---------|-------|--------|
-| 34 | Framebuffers and MRT | Render targets, multiple outputs, depth/stencil |
-| 35 | Shadow Mapping | Shadow maps, PCF filtering, cascaded shadows |
-| 36 | Cubemaps and Skybox | Cubemap textures, environment mapping |
-
-**Part XII: Physically Based Rendering**
-
-| Chapter | Title | Topics |
-|---------|-------|--------|
-| 37 | PBR Fundamentals | Metallic-roughness, Cook-Torrance BRDF |
-| 38 | Image-Based Lighting | Environment probes, irradiance, prefiltered maps |
-| 39 | HDR Pipeline | High dynamic range, exposure, tone mapping |
-| 40 | Post-Processing | Bloom, color grading, film effects |
-
-**Deliverable**: Production-quality visuals with PBR, shadows, HDR, and post-processing.
+**Deliverable**: Production-quality rendering in OpenGL.
 
 ---
 
-## Phase 4: Engine Systems
+## Phase 3: Engine Systems
 
-**Part XIII: Entity-Component System**
+**Part XI: Entity-Component System**
 
-| Chapter | Title | Topics |
-|---------|-------|--------|
-| 41 | ECS with EnTT | Integration, entities, components, iteration |
-| 42 | Core Components | Transform, MeshRenderer, Camera, Light |
-| 43 | Systems Architecture | Render system, transform hierarchy, ordering |
-| 44 | Threading Fundamentals | Job system, task graphs, thread-safe containers |
+| Ch | Title | Topics |
+|----|-------|--------|
+| 34 | ECS with EnTT | Entities, components, iteration |
+| 35 | Core Components | Transform, MeshRenderer, Camera, Light |
+| 36 | Systems Architecture | Render system, hierarchy, ordering |
 
-**Part XIV: Engine Infrastructure**
+**Part XII: Engine Infrastructure**
 
-| Chapter | Title | Topics |
-|---------|-------|--------|
-| 45 | Resource Management | Asset handles, reference counting, hot-reload |
-| 46 | Serialization | JSON scene format, save/load, prefabs |
-| 47 | Physics World | Jolt initialization, simulation stepping, debug draw |
-| 48 | Collision and Queries | Shapes, layers, filtering, triggers |
-| 49 | Raycasting and Picking | Ray queries, object selection, interaction |
+| Ch | Title | Topics |
+|----|-------|--------|
+| 37 | Resource Management | Handles, reference counting, hot-reload |
+| 38 | Serialization | JSON scenes, save/load, prefabs |
+| 39 | Threading Fundamentals | Job system, thread-safe containers |
 
-**Deliverable**: Complete engine with ECS, serialization, physics, and threading.
+**Part XIII: Physics**
+
+| Ch | Title | Topics |
+|----|-------|--------|
+| 40 | Physics World | Jolt setup, simulation loop, debug draw |
+| 41 | Collision System | Shapes, layers, filtering, triggers |
+| 42 | Queries and Raycasting | Ray/shape queries, object picking |
+| 43 | Character Controller | Kinematic body, ground detection, slopes |
+| 44 | Physics Debugging | Visualization, profiling, common issues |
+
+**Deliverable**: Complete engine with ECS, serialization, threading, physics.
+
+---
+
+## Phase 4: Modern Graphics
+
+**Part XIV: Understanding Modern APIs**
+
+| Ch | Title | Topics |
+|----|-------|--------|
+| 45 | GPU Architecture | Queues, command processors, async compute |
+| 46 | Vulkan Concepts | Instance, device, queues, command buffers |
+| 47 | D3D12 Concepts | Devices, command lists, descriptor heaps |
+| 48 | Memory Management | Heaps, allocation strategies, residency |
+| 49 | Synchronization | Fences, semaphores, barriers, hazards |
+| 50 | Pipeline State | PSOs, root signatures, descriptor sets |
+
+**Part XV: NVRHI Integration**
+
+| Ch | Title | Topics |
+|----|-------|--------|
+| 51 | NVRHI Architecture | How it maps to Vulkan/D3D12/OpenGL |
+| 52 | Porting Buffers and Textures | Resource creation, views, memory |
+| 53 | Shader Compilation | HLSL to SPIR-V, DXC, offline compilation |
+| 54 | Shader Permutations | Variants, defines, caching, reflection |
+| 55 | Porting Pipelines | Graphics/compute PSOs, binding layouts |
+
+**Part XVI: Frame Architecture**
+
+| Ch | Title | Topics |
+|----|-------|--------|
+| 56 | Render Graph Concepts | Frame graphs, resource lifetimes, passes |
+| 57 | Implementing Render Graph | Automatic barriers, resource aliasing |
+
+**Deliverable**: Multi-API renderer with render graph and shader pipeline.
 
 ---
 
 ## Phase 5: Editor
 
-**Part XV: Editor Application**
+**Part XVII: Editor Application**
 
-| Chapter | Title | Topics |
-|---------|-------|--------|
-| 50 | Editor Architecture | EditorApp vs RuntimeApp, docking layout |
-| 51 | Scene Hierarchy | Entity tree view, selection, parenting |
-| 52 | Inspector Panel | Component properties, add/remove components |
-| 53 | Viewport and Gizmos | Framebuffer viewport, transform gizmos, picking |
-| 54 | Undo System | Command pattern, history stack, macro commands |
+| Ch | Title | Topics |
+|----|-------|--------|
+| 58 | Editor Architecture | EditorApp, docking, play mode |
+| 59 | Scene Hierarchy | Entity tree, selection, parenting |
+| 60 | Inspector and Properties | Component editing, add/remove |
+| 61 | Viewport and Gizmos | Framebuffer viewport, transform handles |
+| 62 | Asset Browser | File browsing, thumbnails, drag-and-drop |
+| 63 | Undo System | Command pattern, history, macros |
 
-**Deliverable**: Functional level editor for scene authoring.
+**Deliverable**: Functional level editor with asset management.
 
 ---
 
 ## Phase 6: Game Development
 
-**Part XVI: Game Systems**
+**Part XVIII: Game Systems**
 
-| Chapter | Title | Topics |
-|---------|-------|--------|
-| 55 | First-Person Controller | Mouse look, movement, physics character |
-| 56 | Object Interaction | Pick up, inspect, place; hand system |
-| 57 | Document System | Inspection UI, stamps, approval/rejection |
-| 58 | Audio with miniaudio | Ambience, sound effects, 3D positional audio |
-| 59 | Game State | State machine, scene transitions, save/load |
+| Ch | Title | Topics |
+|----|-------|--------|
+| 64 | First-Person Controller | Movement, physics character |
+| 65 | Object Interaction | Pick up, inspect, place |
+| 66 | Document System | Inspection UI, stamps, decisions |
+| 67 | Audio | miniaudio, ambience, 3D sound |
+| 68 | Game State | State machine, transitions, persistence |
 
-**Part XVII: Polish and Ship**
+**Part XIX: Polish and Ship**
 
-| Chapter | Title | Topics |
-|---------|-------|--------|
-| 60 | Visual Polish | Particles, atmosphere, post-processing tuning |
-| 61 | Performance | Profiling, culling, batching, optimization |
-| 62 | Distribution | Release builds, asset packaging, installer |
+| Ch | Title | Topics |
+|----|-------|--------|
+| 69 | Visual Polish | Particles, atmosphere, tuning |
+| 70 | Performance | Profiling, culling, optimization |
+| 71 | Distribution | Release builds, packaging |
 
 **Deliverable**: Complete, polished, multi-API game.
 
@@ -217,17 +232,19 @@ The book is organized into six phases spanning seventeen parts.
 | VI | Asset Loading | 18–20 | Complete |
 | VII | Input and Controls | 21–22 | Complete |
 | VIII | Application Lifecycle | 23–25 | Next |
-| IX | Render Hardware Interface | 26–30 | Planned |
-| X | Shader and Frame Management | 31–33 | Planned |
-| XI | Rendering Techniques | 34–36 | Planned |
-| XII | Physically Based Rendering | 37–40 | Planned |
-| XIII | Entity-Component System | 41–44 | Planned |
-| XIV | Engine Infrastructure | 45–49 | Planned |
-| XV | Editor | 50–54 | Planned |
-| XVI | Game Systems | 55–59 | Planned |
-| XVII | Polish and Ship | 60–62 | Planned |
+| IX | Advanced Techniques | 26–28 | Planned |
+| X | Physically Based Rendering | 29–33 | Planned |
+| XI | Entity-Component System | 34–36 | Planned |
+| XII | Engine Infrastructure | 37–39 | Planned |
+| XIII | Physics | 40–44 | Planned |
+| XIV | Understanding Modern APIs | 45–50 | Planned |
+| XV | NVRHI Integration | 51–55 | Planned |
+| XVI | Frame Architecture | 56–57 | Planned |
+| XVII | Editor | 58–63 | Planned |
+| XVIII | Game Systems | 64–68 | Planned |
+| XIX | Polish and Ship | 69–71 | Planned |
 
-**Total**: 62 chapters across 17 parts
+**Total**: 71 chapters across 19 parts
 
 ---
 
@@ -235,21 +252,20 @@ The book is organized into six phases spanning seventeen parts.
 
 | Decision | Rationale |
 |----------|-----------|
-| NVRHI before rendering | All rendering code written once, portable from start |
-| Shader compilation chapter | Non-trivial system affecting entire renderer |
-| Render graph included | Modern pattern, teaches resource management |
-| Physics split into 3 chapters | World setup, collision, queries each deserve coverage |
-| Threading in ECS section | Natural fit with systems architecture |
-| Undo as separate chapter | Command pattern is significant architecture |
+| OpenGL before abstraction | Learn concretely before abstracting |
+| Dedicated modern API theory | Deep understanding, not just NVRHI usage |
+| Separate shader permutations chapter | Complex system affecting entire pipeline |
+| Render graph as its own part | Modern architecture, enables async compute |
+| Asset browser in editor | Essential for content creation workflow |
+| Physics debugging chapter | Real projects need debugging tools |
 
 ---
 
 ## Future Considerations
 
-Topics for appendices or follow-up material:
-
 - **Scripting**: Lua or C# integration
 - **Cross-Platform**: Linux and macOS support
 - **Networking**: Multiplayer foundations
 - **Ray Tracing**: NVRHI supports DXR and VK_KHR_ray_tracing
-- **Asset Pipeline**: Offline processing, compression, streaming
+- **Mesh Shaders**: Modern geometry pipeline
+- **Virtual Texturing**: Large world streaming
