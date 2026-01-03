@@ -81,8 +81,8 @@ At the end of Part VII, the engine contains:
 
 | Ch | Title | Topics |
 |----|-------|--------|
-| 23 | Application Lifecycle | Engine owns main(), virtual methods |
-| 24 | Engine Subsystems | Window, Renderer, Input as modules |
+| 23 | Engine and Game Loop | Engine class, main() ownership, game loop |
+| 24 | Virtual Lifecycle | Application as abstract, OnCreate/Update/Render |
 | 25 | Event System | Dispatcher, window/input events |
 
 **Deliverable**: Engine as library; Sandbox as thin client.
