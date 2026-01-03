@@ -1,142 +1,86 @@
-\newpage
+# VizPsyche Engine Book
 
-# VizPsyche Engine Technical Book
+A step-by-step guide to building a 3D rendering engine from scratch using C++ and OpenGL.
 
-A hands-on guide to building a 3D rendering engine from scratch.
+---
 
 ## Table of Contents
 
-### Part 1: Foundation
-1. **[Introduction](00_Introduction.md)** - What we're building and why
-2. **[Build System](01_BuildSystem.md)** - CMake, project structure, building
-3. **[DLL Architecture](02_DLLArchitecture.md)** - Exports, namespaces, entry points
-4. **[Third-Party Libraries](03_ThirdPartyLibraries.md)** - GLFW, GLAD, GLM, ImGui, spdlog, stb_image, tinygltf
+### Part I: Getting Started
+- [Chapter 0: Introduction](00_Introduction.md)
+- [Chapter 1: Environment Setup](01_EnvironmentSetup.md)
+- [Chapter 2: Hello Triangle](02_HelloTriangle.md)
+- [Chapter 3: Project Structure](03_ProjectStructure.md)
+- [Chapter 4: Logging System](04_LoggingSystem.md)
 
-### Part 2: Infrastructure
-5. **[Logging System](04_LoggingSystem.md)** - spdlog wrapper, log levels, macros
-6. **[Window & Context](05_WindowAndContext.md)** - GLFWManager, OpenGL context, input
+### Part II: OpenGL Foundations
+- [Chapter 5: Window & Context](05_WindowAndContext.md)
+- [Chapter 6: OpenGL Fundamentals](06_OpenGLFundamentals.md)
+- [Chapter 7: RAII & Resource Management](07_RAIIAndResourceManagement.md)
 
-### Part 3: C++ Patterns
-7. **[RAII & Resource Management](07_RAIIAndResourceManagement.md)** - Constructor/destructor patterns, Rule of 5
+### Part III: GPU Abstractions
+- [Chapter 8: Buffer Classes](08_BufferClasses.md)
+- [Chapter 9: Shader System](09_ShaderAndRenderer.md)
+- [Chapter 10: Texture System](10_Textures.md)
+- [Chapter 11: Renderer Class](11_Renderer.md)
 
-### Part 4: OpenGL Wrappers
-8. **[Buffer Classes](08_BufferClasses.md)** - VertexBuffer, IndexBuffer, VertexArray, Layout
-9. **[Shader & Renderer](09_ShaderAndRenderer.md)** - Shader parsing, uniforms, draw calls
-10. **[Textures](10_Textures.md)** - Image loading, GPU textures, UV mapping
+### Part IV: Engine Architecture
+- [Chapter 12: Transform & Mesh](12_TransformAndMesh.md)
+- [Chapter 13: Camera System](13_CameraSystem.md)
+- [Chapter 14: Scene Management](14_SceneManagement.md)
+- [Chapter 15: Dear ImGui](15_DearImGui.md)
 
-### Part 5: Editor
-11. **[Dear ImGui](11_DearImGui.md)** - Immediate mode GUI, widgets, UIManager wrapper
+### Part V: Lighting
+- [Chapter 16: Blinn-Phong Lighting](16_Lighting.md)
 
-### Part 6: Engine Architecture
-12. **[Transform & Mesh](12_TransformAndMesh.md)** - Position, rotation, scale, geometry factories
-13. **[Camera System](13_CameraSystem.md)** - View/projection matrices, camera movement
-14. **[Scene Management](14_SceneManagement.md)** - SceneObject, shared resources, object selection
+### Part VI: Asset Loading
+- [Chapter 17: glTF Format](17_glTFFormat.md)
+- [Chapter 18: Model Loader (Geometry)](18_ModelLoaderGeometry.md)
+- [Chapter 19: Model Loader (Materials)](19_ModelLoaderMaterials.md)
 
-### Part 7: Graphics II
-15. **[Lighting](15_Lighting.md)** - Blinn-Phong model, normals, directional lights
-
-### Part 8: Assets
-16. **[Model Loading](16_ModelLoading.md)** - glTF format, tinygltf, PBR materials
-
-### Part 9: Input
-17. **[Input System](17_InputSystem.md)** - Keyboard, mouse, polling vs events, edge detection
-18. **[Camera Controller](18_CameraController.md)** - WASD movement, mouse look, scroll zoom
-
-### Part 10: Graphics III *(planned)*
-19. **[Advanced OpenGL](19_AdvancedOpenGL.md)** - Framebuffers, depth/stencil, cubemaps
-20. **[Advanced Lighting](20_AdvancedLighting.md)** - Shadows, PBR, HDR, bloom
-
-### Part 11: Engine II *(planned)*
-21. **[Entity Component System](21_ECS.md)** - Components, systems, queries
+### Part VII: Input & Controls
+- [Chapter 20: Input System](20_InputSystem.md)
+- [Chapter 21: Camera Controller](21_CameraController.md)
 
 ### Appendices
-- **[Appendix A: Code Reference](A_Reference.md)** - Class diagrams, file reference, debugging tips
+- [Appendix A: Code Reference](A_Reference.md)
 
 ---
 
-## Reading Order
+## Dependencies Added By Chapter
 
-Read chapters in order. Each builds on the previous:
+| Chapter | Library | Method |
+|---------|---------|--------|
+| 2 | GLAD | Downloaded |
+| 3 | GLFW, GLM, spdlog | Git submodules |
+| 10 | stb_image | Downloaded |
+| 15 | Dear ImGui | Git submodule |
+| 17 | tinygltf | Git submodule |
 
-```
-00 Introduction
-      ↓
-01 Build System ←── Understand how we compile
-      ↓
-02 DLL Architecture ←── Understand how engine/app interact
-      ↓
-03 Third-Party Libraries ←── Know our building blocks
-      ↓
-04 Logging System ←── Track what's happening
-      ↓
-05 Window & Context ←── Create window, OpenGL context
-      ↓
-06 OpenGL Fundamentals ←── Understand graphics basics
-      ↓
-07 RAII & Resource Management ←── C++ resource patterns
-      ↓
-08 Buffer Classes ←── Apply RAII to OpenGL
-      ↓
-09 Shader & Renderer ←── Compile shaders, centralize drawing
-      ↓
-10 Textures ←── Add images to geometry
-      ↓
-11 Dear ImGui ←── Debug UI for development
-      ↓
-12 Transform & Mesh ←── Geometry and positioning
-      ↓
-13 Camera System ←── View the 3D world
-      ↓
-14 Scene Management ←── Manage multiple objects
-      ↓
-15 Lighting ←── Make it look 3D
-      ↓
-16 Model Loading ←── Load external 3D models
-      ↓
-17 Input System ←── Handle user interaction
-      ↓
-18 Camera Controller ←── WASD movement, mouse look
-      ↓
-Appendix A ←── Reference material
+---
+
+## Build Instructions
+
+```bash
+# Clone with submodules
+git clone --recursive https://github.com/yourusername/VizPsyche.git
+cd VizPsyche
+
+# Configure
+cmake -B build -G "Visual Studio 17 2022"
+
+# Build
+cmake --build build --config Debug
+
+# Run
+.\build\bin\Debug\Sandbox.exe
 ```
 
 ---
 
-## How to Use This Book
+## Requirements
 
-### While Coding
-Keep the book open alongside the code. When you see a class, find its section.
-
-### To Learn
-Work through exercises at the end of each chapter.
-
-### To Review
-Use [Appendix A](A_Reference.md) as a quick reference for class diagrams and file locations.
-
----
-
-## Prerequisites
-
-- Basic C++ (classes, templates, pointers)
-- Basic linear algebra (vectors, matrices)
-- Visual Studio 2022 or later
-- CMake 3.16+
-
----
-
-## Updates
-
-This is a **living document**. As the engine grows, new chapters will be added:
-
-- [x] Model Loading
-- [x] Dear ImGui
-- [x] Input System
-- [x] Camera Controller
-- [ ] Advanced OpenGL *(next)*
-- [ ] Advanced Lighting
-- [ ] Editor II (UI Framework)
-- [ ] Entity Component System
-- [ ] Animation
-- [ ] Physics
-- [ ] Audio
-
+- Windows 10/11
+- Visual Studio 2022
+- CMake 3.20+
+- GPU with OpenGL 4.6 support

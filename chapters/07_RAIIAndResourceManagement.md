@@ -2,195 +2,228 @@
 
 # Chapter 7: RAII & Resource Management
 
-## Why Abstract OpenGL?
+OpenGL resources (buffers, shaders, textures) must be explicitly deleted. C++ gives us tools to automate this and prevent leaks.
 
-Raw OpenGL code is verbose and error-prone:
+> [!NOTE]
+> This chapter explains C++ patterns. No new files yet—we'll apply these patterns in Chapters 8-11.
+
+---
+
+## The Problem
+
+Raw OpenGL code is error-prone:
 
 ```cpp
-// Raw OpenGL - 15+ lines just to create a buffer
 unsigned int VBO;
 glGenBuffers(1, &VBO);
 glBindBuffer(GL_ARRAY_BUFFER, VBO);
 glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
-// ... later
-glDeleteBuffers(1, &VBO);  // Easy to forget!
+
+// ... later, maybe forgot to:
+glDeleteBuffers(1, &VBO);  // Memory leak!
 ```
 
-Our abstraction:
-
-```cpp
-// Clean C++ - RAII handles everything
-VertexBuffer vbo(data, size);  // Created and uploaded
-// ... use it
-// Destructor automatically cleans up
-```
-
-This chapter covers the **C++ patterns** that make this possible. The next chapters apply these patterns to actual OpenGL objects.
+What can go wrong:
+- **Forget to delete** → GPU memory leak
+- **Delete twice** → Crash or corruption
+- **Exception thrown** → Cleanup code never runs
 
 ---
 
 ## RAII: Resource Acquisition Is Initialization
 
-**RAII** is a fundamental C++ pattern where:
-- **Constructor** acquires the resource
-- **Destructor** releases the resource
+**RAII** ties resource lifetime to object lifetime:
+
+- **Constructor** → Acquire resource
+- **Destructor** → Release resource
 
 ```cpp
 class VertexBuffer
 {
 public:
-    VertexBuffer(const void* data, unsigned int size)
+    VertexBuffer(const float* data, size_t size)
     {
-        glGenBuffers(1, &m_ID);        // Acquire
+        glGenBuffers(1, &m_ID);
         glBindBuffer(GL_ARRAY_BUFFER, m_ID);
         glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
     }
     
     ~VertexBuffer()
     {
-        if (m_ID != 0)
-            glDeleteBuffers(1, &m_ID);  // Release
+        glDeleteBuffers(1, &m_ID);  // Always cleaned up!
     }
     
 private:
-    unsigned int m_ID;
+    unsigned int m_ID = 0;
 };
 ```
 
-### Benefits of RAII
-
-| Benefit | Explanation |
-|---------|-------------|
-| **No memory leaks** | Destructor always runs when object goes out of scope |
-| **Exception safe** | Even if an error occurs mid-function, cleanup happens |
-| **Clear ownership** | The object *owns* the resource - no confusion |
-
-### RAII in Action
-
-```cpp
-void RenderScene()
-{
-    VertexBuffer vbo(vertices, sizeof(vertices));  // Created
-    
-    // ... do rendering work
-    
-    if (error) return;  // vbo destructor runs here!
-    
-    // More work...
-    
-}  // vbo destructor runs here too!
-```
-
-No matter how we exit the function, the destructor runs. No `delete` or `glDeleteBuffers` needed.
+When the object goes out of scope, the destructor runs automatically—even if an exception is thrown.
 
 ---
 
 ## The Rule of 5
 
-When a class manages a resource, you must handle 5 special member functions:
+When a class manages a resource, you must handle these five special functions:
 
-1. **Destructor** - Cleanup
-2. **Copy Constructor** - What if copied?
-3. **Copy Assignment** - What if assigned?
-4. **Move Constructor** - Efficient transfer
-5. **Move Assignment** - Efficient transfer
+| Function | Purpose |
+|----------|---------|
+| **Destructor** | Release resource |
+| **Copy Constructor** | Create copy of resource |
+| **Copy Assignment** | Replace with copy |
+| **Move Constructor** | Transfer ownership |
+| **Move Assignment** | Replace via transfer |
 
-### The Problem with Copying
+### The Problem with Copies
 
 ```cpp
-VertexBuffer vb1(data, size);   // Creates OpenGL buffer ID=1
-VertexBuffer vb2 = vb1;         // DEFAULT: shallow copy, ID=1
+VertexBuffer a(data, size);  // Creates OpenGL buffer
+VertexBuffer b = a;          // Default: copies m_ID
 
-// Now both vb1 and vb2 have ID=1
-// When vb2 destructor runs: glDeleteBuffers(ID=1)
-// When vb1 destructor runs: glDeleteBuffers(ID=1) ← CRASH! Already deleted!
+// Now both a and b have the same ID
+// When b is destroyed → glDeleteBuffers(ID)
+// When a is destroyed → glDeleteBuffers(ID) again!  // Crash!
 ```
 
-The default copy constructor just copies member variables. For resource handles, this is **disastrous**.
+### Solution: Delete Copy, Allow Move
 
-### Our Solution: Delete Copy, Allow Move
+For OpenGL wrappers, we:
+- **Delete copy operations** — Can't duplicate GPU resources cheaply
+- **Implement move operations** — Transfer ownership instead
 
 ```cpp
 class VertexBuffer
 {
 public:
-    // Delete copying (prevent the problem)
+    // Constructor
+    VertexBuffer(const float* data, size_t size)
+    {
+        glGenBuffers(1, &m_ID);
+        glBindBuffer(GL_ARRAY_BUFFER, m_ID);
+        glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+    }
+    
+    // Destructor
+    ~VertexBuffer()
+    {
+        if (m_ID != 0)
+            glDeleteBuffers(1, &m_ID);
+    }
+    
+    // Delete copy operations
     VertexBuffer(const VertexBuffer&) = delete;
     VertexBuffer& operator=(const VertexBuffer&) = delete;
     
-    // Allow moving (transfer ownership)
+    // Move constructor
     VertexBuffer(VertexBuffer&& other) noexcept
         : m_ID(other.m_ID)
     {
-        other.m_ID = 0;  // Source no longer owns it
+        other.m_ID = 0;  // Prevent other's destructor from deleting
     }
     
+    // Move assignment
     VertexBuffer& operator=(VertexBuffer&& other) noexcept
     {
         if (this != &other)
         {
+            // Release our current resource
             if (m_ID != 0)
-                glDeleteBuffers(1, &m_ID);  // Clean up our old resource
+                glDeleteBuffers(1, &m_ID);
+            
+            // Take ownership
             m_ID = other.m_ID;
             other.m_ID = 0;
         }
         return *this;
     }
+    
+private:
+    unsigned int m_ID = 0;
 };
 ```
 
-### Using Move Semantics
+---
+
+## Move Semantics Explained
+
+**Move** transfers ownership instead of copying:
 
 ```cpp
-VertexBuffer vb1(data, size);
-VertexBuffer vb2 = vb1;              // ERROR: can't copy (deleted)
-VertexBuffer vb3 = std::move(vb1);   // OK: vb1 gives ownership to vb3
-// vb1.m_ID is now 0, vb3 owns the buffer
+VertexBuffer a(data, size);  // a owns buffer ID 1
+VertexBuffer b = std::move(a);  // b takes ID 1, a becomes 0
+
+// a.m_ID is now 0 (no resource)
+// b.m_ID is now 1 (owns the resource)
+// When b is destroyed → glDeleteBuffers(1) runs once
 ```
 
-### Why Delete Copy?
+### When Moves Happen
 
-| Approach | When to Use |
-|----------|-------------|
-| **Delete copy** | When copying doesn't make sense (OpenGL handles, file handles) |
-| **Deep copy** | When you want independent copies (strings, vectors) |
-| **Reference counting** | When sharing ownership (`shared_ptr`) |
+```cpp
+// 1. std::move()
+VertexBuffer b = std::move(a);
 
-For OpenGL resources, copying doesn't make sense - we'd need to create a *new* OpenGL object and copy all the GPU data. It's expensive and rarely needed.
+// 2. Returning from functions (often optimized away)
+VertexBuffer CreateBuffer() {
+    VertexBuffer vb(data, size);
+    return vb;  // Move (or copy elision)
+}
+
+// 3. Passing temporaries
+void UseBuffer(VertexBuffer buf);
+UseBuffer(VertexBuffer(data, size));  // Move from temporary
+```
 
 ---
 
-## The Pattern Template
+## The Complete Pattern
 
-Every OpenGL wrapper in our engine follows this pattern:
+Every OpenGL wrapper class follows this pattern:
 
 ```cpp
-class VizEngine_API SomeOpenGLResource
+class OpenGLResource
 {
 public:
     // Constructor: Acquire
-    SomeOpenGLResource(/* parameters */)
+    OpenGLResource(/* params */)
     {
         glGen*(1, &m_ID);
-        // ... initialization
+        // Configure...
     }
     
     // Destructor: Release
-    ~SomeOpenGLResource()
+    ~OpenGLResource()
     {
         if (m_ID != 0)
             glDelete*(1, &m_ID);
     }
     
-    // Rule of 5: Delete copy, allow move
-    SomeOpenGLResource(const SomeOpenGLResource&) = delete;
-    SomeOpenGLResource& operator=(const SomeOpenGLResource&) = delete;
-    SomeOpenGLResource(SomeOpenGLResource&& other) noexcept;
-    SomeOpenGLResource& operator=(SomeOpenGLResource&& other) noexcept;
+    // No copying
+    OpenGLResource(const OpenGLResource&) = delete;
+    OpenGLResource& operator=(const OpenGLResource&) = delete;
     
-    // Common operations
-    void Bind() const;
-    void Unbind() const;
+    // Allow moving
+    OpenGLResource(OpenGLResource&& other) noexcept
+        : m_ID(other.m_ID)
+    {
+        other.m_ID = 0;
+    }
+    
+    OpenGLResource& operator=(OpenGLResource&& other) noexcept
+    {
+        if (this != &other)
+        {
+            if (m_ID != 0)
+                glDelete*(1, &m_ID);
+            m_ID = other.m_ID;
+            other.m_ID = 0;
+        }
+        return *this;
+    }
+    
+    // Usage
+    void Bind() const { glBind*(m_ID); }
+    void Unbind() const { glBind*(0); }
     unsigned int GetID() const { return m_ID; }
     
 private:
@@ -200,40 +233,61 @@ private:
 
 ---
 
-## Key Takeaways
+## Why noexcept?
 
-1. **RAII** - Constructor acquires, destructor releases
-2. **Rule of 5** - Handle copy/move for resource-owning classes
-3. **Delete copy** - Prevents double-free crashes
-4. **Allow move** - Enables efficient ownership transfer
-5. **Consistent pattern** - All wrappers follow the same structure
+Move operations should be `noexcept`:
 
----
+```cpp
+VertexBuffer(VertexBuffer&& other) noexcept
+```
 
-## Checkpoint
-
-This chapter covered C++ resource management patterns:
-
-**Concepts:**
-| Pattern | Purpose |
-|---------|---------|
-| RAII | Automatic resource cleanup |
-| Rule of 5 | Proper copy/move semantics |
-| Move semantics | Transfer ownership efficiently |
-
-**Checkpoint:** Understand these patterns before moving on. They're used in *every* OpenGL wrapper we create.
+Why:
+- Standard containers (like `std::vector`) use `noexcept` moves for optimization
+- If a move can throw, containers fall back to slower copying
+- Our moves just copy integers—they can't fail
 
 ---
 
-## Exercise
+## Using the Classes
 
-1. Create a simple `FileHandle` class that opens a file in constructor and closes in destructor
-2. Implement Rule of 5 for `FileHandle` (delete copy, allow move)
-3. Test what happens when you try to copy a `FileHandle`
+With RAII, resource management is automatic:
+
+```cpp
+void RenderScene()
+{
+    VertexBuffer vbo(vertices, sizeof(vertices));
+    IndexBuffer ibo(indices, sizeof(indices));
+    
+    // Use buffers...
+    vbo.Bind();
+    ibo.Bind();
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    
+}  // vbo and ibo automatically deleted here
+```
+
+Even if an exception is thrown, destructors run and resources are freed.
 
 ---
 
-> **Next:** [Chapter 8: Buffer Classes](08_BufferClasses.md) - Applying RAII to OpenGL buffers.
+## Summary
+
+| Concept | Rule |
+|---------|------|
+| **RAII** | Acquire in constructor, release in destructor |
+| **Rule of 5** | Define all 5 special functions or delete them |
+| **No Copy** | Delete copy constructor and copy assignment |
+| **Allow Move** | Implement move constructor and move assignment |
+| **Zero Check** | Check `m_ID != 0` before deletion |
+| **Null After Move** | Set source's ID to 0 after moving |
+| **noexcept** | Mark moves as noexcept for container compatibility |
+
+---
+
+## What's Next
+
+In **Chapter 8**, we'll apply these patterns to create `VertexBuffer`, `IndexBuffer`, and `VertexArray` classes.
+
+> **Next:** [Chapter 8: Buffer Classes](08_BufferClasses.md)
 
 > **Previous:** [Chapter 6: OpenGL Fundamentals](06_OpenGLFundamentals.md)
-

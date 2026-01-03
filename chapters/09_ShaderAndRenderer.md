@@ -1,344 +1,370 @@
 \newpage
 
-# Chapter 9: Shader & Renderer
+# Chapter 9: Shader System
 
-## The Shader System
-
-Shaders are programs that run on the GPU. We need to load, compile, and manage them.
-
-> [!NOTE]
-> **Prerequisites:** [Chapter 7](07_RAIIAndResourceManagement.md) (RAII) and [Chapter 8](08_BufferClasses.md) (Buffer classes).
+Create a `Shader` class that handles loading, compiling, and using GLSL shader programs.
 
 ---
 
-## Combined Shader Files
+## What We're Building
 
-We use a single file with both vertex and fragment shaders:
+| Feature | Purpose |
+|---------|---------|
+| File parsing | Load vertex/fragment shaders from one file |
+| Compilation | Compile and link shader program |
+| Error reporting | Log detailed shader errors |
+| Uniform caching | Cache uniform locations for performance |
+
+---
+
+## Shader File Format
+
+Use a single file with markers:
+
+**Example: `resources/shaders/basic.shader`**
 
 ```glsl
-// resources/shaders/basic.shader
-
 #shader vertex
 #version 460 core
-layout (location = 0) in vec4 aPos;
-layout (location = 1) in vec4 aColor;
-layout (location = 2) in vec2 aTexCoord;
 
-out vec4 v_Color;
-out vec2 v_TexCoord;
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aColor;
+
+out vec3 vertexColor;
 
 uniform mat4 u_MVP;
 
 void main()
 {
-    gl_Position = u_MVP * aPos;
-    v_Color = aColor;
-    v_TexCoord = aTexCoord;
+    gl_Position = u_MVP * vec4(aPos, 1.0);
+    vertexColor = aColor;
 }
 
 #shader fragment
 #version 460 core
-in vec4 v_Color;
-in vec2 v_TexCoord;
 
+in vec3 vertexColor;
 out vec4 FragColor;
-
-uniform sampler2D u_Texture;
 
 void main()
 {
-    FragColor = texture(u_Texture, v_TexCoord) * v_Color;
+    FragColor = vec4(vertexColor, 1.0);
 }
 ```
 
-**Why combined files?**
-- Easy to see vertex/fragment together
-- Single file to manage
-- Clear separation with `#shader` tags
-
 ---
 
-## The Shader Class
+## Step 1: Create Shader.h
+
+**Create `VizEngine/src/VizEngine/OpenGL/Shader.h`:**
 
 ```cpp
-// VizEngine/OpenGL/Shader.h
+// VizEngine/src/VizEngine/OpenGL/Shader.h
 
-class VizEngine_API Shader
+#pragma once
+
+#include <glad/glad.h>
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <iostream>
+#include <unordered_map>
+#include "glm.hpp"
+#include "VizEngine/Core.h"
+
+namespace VizEngine
 {
-public:
-    Shader(const std::string& filepath);
-    ~Shader();
-    
-    // Rule of 5 (delete copy, allow move)
-    
-    void Bind() const;
-    void Unbind() const;
-    
-    // Uniform setters
-    void SetInt(const std::string& name, int value);
-    void SetFloat(const std::string& name, float value);
-    void SetVec3(const std::string& name, const glm::vec3& value);
-    void SetVec4(const std::string& name, const glm::vec4& value);
-    void SetMatrix4fv(const std::string& name, const glm::mat4& matrix);
-    
-private:
-    unsigned int m_RendererID = 0;
-    std::string m_FilePath;
-    std::unordered_map<std::string, int> m_LocationCache;
-    
-    ShaderPrograms ParseShader(const std::string& filepath);
-    unsigned int CompileShader(unsigned int type, const std::string& source);
-    unsigned int CreateProgram(const std::string& vertexSrc, const std::string& fragmentSrc);
-    int GetUniformLocation(const std::string& name);
-};
+    struct ShaderPrograms
+    {
+        std::string VertexProgram;
+        std::string FragmentProgram;
+    };
+
+    class VizEngine_API Shader
+    {
+    public:
+        Shader(const std::string& shaderFile);
+        ~Shader();
+
+        // No copying
+        Shader(const Shader&) = delete;
+        Shader& operator=(const Shader&) = delete;
+
+        // Allow moving
+        Shader(Shader&& other) noexcept;
+        Shader& operator=(Shader&& other) noexcept;
+
+        void Bind() const;
+        void Unbind() const;
+
+        // Uniform setters
+        void SetBool(const std::string& name, bool value);
+        void SetInt(const std::string& name, int value);
+        void SetFloat(const std::string& name, float value);
+        void SetVec3(const std::string& name, const glm::vec3& value);
+        void SetVec4(const std::string& name, const glm::vec4& value);
+        void SetColor(const std::string& name, const glm::vec4& value);
+        void SetMatrix4fv(const std::string& name, const glm::mat4& matrix);
+
+    private:
+        std::string m_shaderPath;
+        unsigned int m_RendererID;
+        std::unordered_map<std::string, int> m_LocationCache;
+
+        ShaderPrograms ShaderParser(const std::string& shaderFile);
+        unsigned int CompileShader(unsigned int type, const std::string& source);
+        unsigned int CreateShader(const std::string& vert, const std::string& frag);
+        int GetUniformLocation(const std::string& name);
+        void CheckCompileErrors(unsigned int shader, std::string type);
+    };
+}
 ```
 
+> [!NOTE]
+> The main matrix uniform setter is `SetMatrix4fv()` (not `SetMat4`). Use `SetVec3` and `SetVec4` for vectors.
+
 ---
 
-## Shader Parsing
+## Step 2: Create Shader.cpp
+
+**Create `VizEngine/src/VizEngine/OpenGL/Shader.cpp`:**
 
 ```cpp
-struct ShaderPrograms
-{
-    std::string VertexSource;
-    std::string FragmentSource;
-};
+// VizEngine/src/VizEngine/OpenGL/Shader.cpp
 
-ShaderPrograms Shader::ParseShader(const std::string& filepath)
+#include "Shader.h"
+#include "VizEngine/Log.h"
+#include <gtc/type_ptr.hpp>
+
+namespace VizEngine
 {
-    std::ifstream file(filepath);
-    if (!file.is_open())
+    Shader::Shader(const std::string& shaderFile)
+        : m_shaderPath(shaderFile), m_RendererID(0)
     {
-        VP_CORE_ERROR("Failed to open shader: {}", filepath);
-        return {};
+        ShaderPrograms sources = ShaderParser(shaderFile);
+        m_RendererID = CreateShader(sources.VertexProgram, sources.FragmentProgram);
+        VP_CORE_INFO("Shader created: {} (ID={})", shaderFile, m_RendererID);
     }
-    
-    std::stringstream ss[2];  // [0] = vertex, [1] = fragment
-    enum class ShaderType { NONE = -1, VERTEX = 0, FRAGMENT = 1 };
-    ShaderType type = ShaderType::NONE;
-    
-    std::string line;
-    while (getline(file, line))
+
+    Shader::~Shader()
     {
-        if (line.find("#shader") != std::string::npos)
+        if (m_RendererID != 0)
         {
-            if (line.find("vertex") != std::string::npos)
-                type = ShaderType::VERTEX;
-            else if (line.find("fragment") != std::string::npos)
-                type = ShaderType::FRAGMENT;
+            glDeleteProgram(m_RendererID);
+            VP_CORE_TRACE("Shader deleted: {}", m_shaderPath);
         }
-        else if (type != ShaderType::NONE)
+    }
+
+    Shader::Shader(Shader&& other) noexcept
+        : m_shaderPath(std::move(other.m_shaderPath))
+        , m_RendererID(other.m_RendererID)
+        , m_LocationCache(std::move(other.m_LocationCache))
+    {
+        other.m_RendererID = 0;
+    }
+
+    Shader& Shader::operator=(Shader&& other) noexcept
+    {
+        if (this != &other)
         {
-            ss[(int)type] << line << '\n';
+            if (m_RendererID != 0)
+                glDeleteProgram(m_RendererID);
+
+            m_shaderPath = std::move(other.m_shaderPath);
+            m_RendererID = other.m_RendererID;
+            m_LocationCache = std::move(other.m_LocationCache);
+            other.m_RendererID = 0;
+        }
+        return *this;
+    }
+
+    void Shader::Bind() const { glUseProgram(m_RendererID); }
+    void Shader::Unbind() const { glUseProgram(0); }
+
+    ShaderPrograms Shader::ShaderParser(const std::string& shaderFile)
+    {
+        std::ifstream file(shaderFile);
+        if (!file.is_open())
+        {
+            VP_CORE_ERROR("Failed to open shader: {}", shaderFile);
+            return {};
+        }
+
+        enum class ShaderType { None = -1, Vertex = 0, Fragment = 1 };
+        ShaderType type = ShaderType::None;
+
+        std::stringstream ss[2];
+        std::string line;
+
+        while (std::getline(file, line))
+        {
+            if (line.find("#shader") != std::string::npos)
+            {
+                if (line.find("vertex") != std::string::npos)
+                    type = ShaderType::Vertex;
+                else if (line.find("fragment") != std::string::npos)
+                    type = ShaderType::Fragment;
+            }
+            else if (type != ShaderType::None)
+            {
+                ss[int(type)] << line << '\n';
+            }
+        }
+
+        return { ss[0].str(), ss[1].str() };
+    }
+
+    unsigned int Shader::CompileShader(unsigned int type, const std::string& source)
+    {
+        unsigned int shader = glCreateShader(type);
+        const char* src = source.c_str();
+        glShaderSource(shader, 1, &src, nullptr);
+        glCompileShader(shader);
+
+        int success;
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+        if (!success)
+        {
+            CheckCompileErrors(shader, type == GL_VERTEX_SHADER ? "VERTEX" : "FRAGMENT");
+            glDeleteShader(shader);
+            return 0;
+        }
+        return shader;
+    }
+
+    unsigned int Shader::CreateShader(const std::string& vert, const std::string& frag)
+    {
+        unsigned int program = glCreateProgram();
+        unsigned int vs = CompileShader(GL_VERTEX_SHADER, vert);
+        unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, frag);
+
+        glAttachShader(program, vs);
+        glAttachShader(program, fs);
+        glLinkProgram(program);
+
+        int success;
+        glGetProgramiv(program, GL_LINK_STATUS, &success);
+        if (!success)
+            CheckCompileErrors(program, "PROGRAM");
+
+        glDeleteShader(vs);
+        glDeleteShader(fs);
+
+        return program;
+    }
+
+    int Shader::GetUniformLocation(const std::string& name)
+    {
+        auto it = m_LocationCache.find(name);
+        if (it != m_LocationCache.end())
+            return it->second;
+
+        int location = glGetUniformLocation(m_RendererID, name.c_str());
+        if (location == -1)
+            VP_CORE_WARN("Uniform '{}' not found", name);
+
+        m_LocationCache[name] = location;
+        return location;
+    }
+
+    void Shader::CheckCompileErrors(unsigned int shader, std::string type)
+    {
+        char infoLog[1024];
+        if (type != "PROGRAM")
+        {
+            glGetShaderInfoLog(shader, 1024, NULL, infoLog);
+            VP_CORE_ERROR("{} Shader Error:\n{}", type, infoLog);
+        }
+        else
+        {
+            glGetProgramInfoLog(shader, 1024, NULL, infoLog);
+            VP_CORE_ERROR("Shader Linking Error:\n{}", infoLog);
         }
     }
-    
-    return { ss[0].str(), ss[1].str() };
-}
+
+    void Shader::SetBool(const std::string& name, bool value)
+    {
+        glUniform1i(GetUniformLocation(name), (int)value);
+    }
+
+    void Shader::SetInt(const std::string& name, int value)
+    {
+        glUniform1i(GetUniformLocation(name), value);
+    }
+
+    void Shader::SetFloat(const std::string& name, float value)
+    {
+        glUniform1f(GetUniformLocation(name), value);
+    }
+
+    void Shader::SetVec3(const std::string& name, const glm::vec3& value)
+    {
+        glUniform3fv(GetUniformLocation(name), 1, glm::value_ptr(value));
+    }
+
+    void Shader::SetVec4(const std::string& name, const glm::vec4& value)
+    {
+        glUniform4fv(GetUniformLocation(name), 1, glm::value_ptr(value));
+    }
+
+    void Shader::SetColor(const std::string& name, const glm::vec4& value)
+    {
+        SetVec4(name, value);
+    }
+
+    void Shader::SetMatrix4fv(const std::string& name, const glm::mat4& matrix)
+    {
+        glUniformMatrix4fv(GetUniformLocation(name), 1, GL_FALSE, glm::value_ptr(matrix));
+    }
+
+}  // namespace VizEngine
 ```
 
 ---
 
-## Shader Compilation
+## Usage Example
 
 ```cpp
-unsigned int Shader::CompileShader(unsigned int type, const std::string& source)
-{
-    unsigned int id = glCreateShader(type);
-    const char* src = source.c_str();
-    glShaderSource(id, 1, &src, nullptr);
-    glCompileShader(id);
-    
-    // Check for errors
-    int success;
-    glGetShaderiv(id, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        char infoLog[512];
-        glGetShaderInfoLog(id, 512, nullptr, infoLog);
-        VP_CORE_ERROR("Shader compilation failed: {}", infoLog);
-        glDeleteShader(id);
-        return 0;
-    }
-    
-    return id;
-}
+Shader shader("resources/shaders/lit.shader");
 
-unsigned int Shader::CreateProgram(const std::string& vertexSrc, 
-                                    const std::string& fragmentSrc)
-{
-    unsigned int program = glCreateProgram();
-    unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexSrc);
-    unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentSrc);
-    
-    glAttachShader(program, vs);
-    glAttachShader(program, fs);
-    glLinkProgram(program);
-    
-    // Check link status
-    int success;
-    glGetProgramiv(program, GL_LINK_STATUS, &success);
-    if (!success)
-    {
-        char infoLog[512];
-        glGetProgramInfoLog(program, 512, nullptr, infoLog);
-        VP_CORE_ERROR("Shader linking failed: {}", infoLog);
-    }
-    
-    // Shaders are linked, can delete
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-    
-    return program;
-}
+// In render loop
+shader.Bind();
+shader.SetMatrix4fv("u_MVP", mvpMatrix);
+shader.SetVec4("u_Color", glm::vec4(1.0f));
+shader.SetInt("u_UseTexture", 0);
+shader.SetVec3("u_LightDirection", light.GetDirection());
+
+// Draw calls...
 ```
 
 ---
 
-## Uniform Caching
+## Common Issues
 
-Getting uniform locations is expensive. We cache them:
-
-```cpp
-int Shader::GetUniformLocation(const std::string& name)
-{
-    // Check cache first
-    if (m_LocationCache.find(name) != m_LocationCache.end())
-        return m_LocationCache[name];
-    
-    // Not cached, query OpenGL
-    int location = glGetUniformLocation(m_RendererID, name.c_str());
-    
-    if (location == -1)
-        VP_CORE_WARN("Uniform '{}' not found in shader", name);
-    
-    m_LocationCache[name] = location;
-    return location;
-}
-
-void Shader::SetMatrix4fv(const std::string& name, const glm::mat4& matrix)
-{
-    int location = GetUniformLocation(name);
-    glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(matrix));
-}
-```
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| "Shader not found" | Wrong filepath | Use path relative to executable |
+| Uniform warning | Typo in uniform name | Check shader source matches C++ |
+| Black output | Shader not bound | Call `shader.Bind()` before draw |
 
 ---
 
-## The Renderer Class
+## Milestone
 
-Centralizes all draw operations:
+**Shader System Complete**
 
-```cpp
-// VizEngine/OpenGL/Renderer.h
-
-class VizEngine_API Renderer
-{
-public:
-    void Clear(const glm::vec4& color) const
-    {
-        glClearColor(color.r, color.g, color.b, color.a);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    }
-    
-    void Draw(const VertexArray& va, const IndexBuffer& ib, 
-              const Shader& shader) const
-    {
-        shader.Bind();
-        va.Bind();
-        glDrawElements(GL_TRIANGLES, ib.GetCount(), GL_UNSIGNED_INT, nullptr);
-    }
-};
-```
-
-### Why a Renderer Class?
-
-| Without Renderer | With Renderer |
-|------------------|---------------|
-| `glClearColor(...)` + `glClear(...)` | `renderer.Clear(color)` |
-| Manual VAO bind + `glDrawElements(...)` | `renderer.Draw(vao, ibo, shader)` |
-| OpenGL calls scattered everywhere | One place for all draw logic |
-
-**Future benefits:**
-- Draw call counting (profiling)
-- Automatic state management
-- Batching optimization
+You have:
+- Combined shader file format
+- Shader parsing and compilation
+- Uniform location caching
+- `SetMatrix4fv`, `SetVec3`, `SetVec4`, etc.
 
 ---
 
-## Complete Usage Example
+## What's Next
 
-```cpp
-// Setup
-VertexArray vao;
-VertexBuffer vbo(vertices, sizeof(vertices));
-IndexBuffer ibo(indices, indexCount);
+In **Chapter 10**, we'll add texture support with `stb_image`.
 
-VertexBufferLayout layout;
-layout.Push<float>(4);  // Position
-layout.Push<float>(4);  // Color
-layout.Push<float>(2);  // TexCoords
-vao.LinkVertexBuffer(vbo, layout);
-
-Shader shader("resources/shaders/basic.shader");
-Renderer renderer;
-
-// Render loop
-while (!window.ShouldClose())
-{
-    renderer.Clear({ 0.1f, 0.1f, 0.1f, 1.0f });
-    
-    shader.SetMatrix4fv("u_MVP", camera.GetViewProjectionMatrix());
-    renderer.Draw(vao, ibo, shader);
-    
-    window.SwapBuffers();
-}
-```
-
----
-
-## Common Pitfalls
-
-| Symptom | Likely Cause | Fix |
-|---------|--------------|-----|
-| "Uniform not found" warning | Typo in uniform name | Match shader exactly |
-| Black screen | Shader compile error | Check console for errors |
-| Shader link failed | Mismatched in/out | Verify vertex→fragment flow |
-| Performance issues | Querying uniforms every frame | Use location caching |
-
----
-
-## Key Takeaways
-
-1. **Combined shader files** - One file, `#shader` tags to separate
-2. **Compile + Link** - Two-step process with error checking
-3. **Uniform caching** - Cache locations for performance
-4. **Renderer class** - Centralizes draw operations
-5. **All use RAII** - Shader cleanup is automatic
-
----
-
-## Checkpoint
-
-**Files:**
-| File | Purpose |
-|------|---------|
-| `VizEngine/OpenGL/Shader.h/.cpp` | Shader loading and uniforms |
-| `VizEngine/OpenGL/Renderer.h/.cpp` | Draw call management |
-
-**Checkpoint:** Create Shader and Renderer classes, render a textured triangle.
-
----
-
-## Exercise
-
-1. Add `SetVec2` and `SetMat3` uniform methods
-2. Implement shader hot-reloading (detect file changes, recompile)
-3. Create a `ShaderLibrary` class to cache loaded shaders by name
-
----
-
-> **Next:** [Chapter 10: Textures](10_Textures.md) - Loading and using images on the GPU.
+> **Next:** [Chapter 10: Texture System](10_Textures.md)
 
 > **Previous:** [Chapter 8: Buffer Classes](08_BufferClasses.md)
-

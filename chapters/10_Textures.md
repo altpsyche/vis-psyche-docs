@@ -1,450 +1,415 @@
 \newpage
 
-# Chapter 10: Textures
+# Chapter 10: Texture System
 
-A 3D model without textures is like a coloring book without colors. Textures are images wrapped onto geometry, adding detail that would be impossible with just vertices.
-
-## What is a Texture?
-
-A texture is a 2D image that gets mapped onto 3D geometry. Each pixel in the texture is called a **texel** (texture element).
-
-![Texture Mapping](../images/10-texture-mapping.png)
+Add texture support by integrating **stb_image** and creating a `Texture` class. This is the first time we add a new library since Chapter 3.
 
 ---
 
-## Texture Coordinates (UV)
+## Adding stb_image
 
-Every vertex has **texture coordinates** (often called **UV coordinates**) that tell OpenGL which part of the texture maps to that vertex.
+stb_image is a single-header library for loading images.
 
-### The UV Space
+### Step 1: Create Vendor Directory
 
-![UV Coordinates](../images/10-uv-coordinates.png)
+```bash
+mkdir VizEngine/vendor/stb_image
+```
 
-- **U** = horizontal (0.0 = left, 1.0 = right)
-- **V** = vertical (0.0 = bottom, 1.0 = top)
+### Step 2: Download stb_image.h
 
-### Example: Triangle
+Download from: https://raw.githubusercontent.com/nothings/stb/master/stb_image.h
+
+Save to: `VizEngine/vendor/stb_image/stb_image.h`
+
+### Step 3: Create Implementation File
+
+**Create `VizEngine/vendor/stb_image/stb_image.cpp`:**
 
 ```cpp
-// Each vertex has: position + color + texcoord
+// VizEngine/vendor/stb_image/stb_image.cpp
+
+// This file contains the implementation of stb_image.
+// Only ONE file in the project should define this.
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+```
+
+### Step 4: Update CMakeLists.txt
+
+```cmake
+# Add to VENDOR_SOURCES (create this section if needed)
+set(VENDOR_SOURCES
+    vendor/stb_image/stb_image.cpp
+)
+
+# Update add_library to include vendor sources
+add_library(VizEngine SHARED
+    ${VIZENGINE_SOURCES}
+    ${VIZENGINE_HEADERS}
+    ${VENDOR_SOURCES}
+)
+
+# Add include directory
+target_include_directories(VizEngine
+    PRIVATE
+        # ... existing ...
+        ${CMAKE_CURRENT_SOURCE_DIR}/vendor/stb_image
+)
+```
+
+---
+
+## Step 5: Create Texture.h
+
+**Create `VizEngine/src/VizEngine/OpenGL/Texture.h`:**
+
+```cpp
+// VizEngine/src/VizEngine/OpenGL/Texture.h
+
+#pragma once
+
+#include "VizEngine/Core.h"
+#include <string>
+
+namespace VizEngine
+{
+    class VizEngine_API Texture
+    {
+    public:
+        Texture(const std::string& filepath);
+        ~Texture();
+
+        // No copying
+        Texture(const Texture&) = delete;
+        Texture& operator=(const Texture&) = delete;
+
+        // Allow moving
+        Texture(Texture&& other) noexcept;
+        Texture& operator=(Texture&& other) noexcept;
+
+        void Bind(unsigned int slot = 0) const;
+        void Unbind() const;
+
+        int GetWidth() const { return m_Width; }
+        int GetHeight() const { return m_Height; }
+        unsigned int GetID() const { return m_ID; }
+
+    private:
+        unsigned int m_ID = 0;
+        std::string m_Filepath;
+        int m_Width = 0;
+        int m_Height = 0;
+        int m_Channels = 0;
+    };
+
+}  // namespace VizEngine
+```
+
+---
+
+## Step 6: Create Texture.cpp
+
+**Create `VizEngine/src/VizEngine/OpenGL/Texture.cpp`:**
+
+```cpp
+// VizEngine/src/VizEngine/OpenGL/Texture.cpp
+
+#include "Texture.h"
+#include "Commons.h"
+#include "VizEngine/Log.h"
+
+#include <stb_image.h>
+
+namespace VizEngine
+{
+    Texture::Texture(const std::string& filepath)
+        : m_Filepath(filepath)
+    {
+        // Flip texture vertically (OpenGL expects bottom-left origin)
+        stbi_set_flip_vertically_on_load(true);
+
+        // Load image
+        unsigned char* data = stbi_load(
+            filepath.c_str(),
+            &m_Width, &m_Height, &m_Channels,
+            0  // Don't force channels
+        );
+
+        if (!data)
+        {
+            VP_CORE_ERROR("Failed to load texture: {}", filepath);
+            return;
+        }
+
+        VP_CORE_TRACE("Loaded texture: {}x{} ({} channels)", m_Width, m_Height, m_Channels);
+
+        // Determine format
+        GLenum internalFormat = GL_RGB8;
+        GLenum dataFormat = GL_RGB;
+
+        if (m_Channels == 4)
+        {
+            internalFormat = GL_RGBA8;
+            dataFormat = GL_RGBA;
+        }
+        else if (m_Channels == 1)
+        {
+            internalFormat = GL_R8;
+            dataFormat = GL_RED;
+        }
+
+        // Create texture
+        glGenTextures(1, &m_ID);
+        glBindTexture(GL_TEXTURE_2D, m_ID);
+
+        // Set parameters
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        // Upload to GPU
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,                  // Mipmap level
+            internalFormat,     // Internal format
+            m_Width, m_Height,
+            0,                  // Border (must be 0)
+            dataFormat,         // Source format
+            GL_UNSIGNED_BYTE,   // Source type
+            data
+        );
+
+        // Generate mipmaps
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        // Free CPU-side data
+        stbi_image_free(data);
+
+        VP_CORE_INFO("Texture created: {} (ID={})", filepath, m_ID);
+    }
+
+    Texture::~Texture()
+    {
+        if (m_ID != 0)
+        {
+            glDeleteTextures(1, &m_ID);
+            VP_CORE_TRACE("Texture deleted: {}", m_Filepath);
+        }
+    }
+
+    Texture::Texture(Texture&& other) noexcept
+        : m_ID(other.m_ID)
+        , m_Filepath(std::move(other.m_Filepath))
+        , m_Width(other.m_Width)
+        , m_Height(other.m_Height)
+        , m_Channels(other.m_Channels)
+    {
+        other.m_ID = 0;
+        other.m_Width = 0;
+        other.m_Height = 0;
+        other.m_Channels = 0;
+    }
+
+    Texture& Texture::operator=(Texture&& other) noexcept
+    {
+        if (this != &other)
+        {
+            if (m_ID != 0)
+                glDeleteTextures(1, &m_ID);
+
+            m_ID = other.m_ID;
+            m_Filepath = std::move(other.m_Filepath);
+            m_Width = other.m_Width;
+            m_Height = other.m_Height;
+            m_Channels = other.m_Channels;
+
+            other.m_ID = 0;
+            other.m_Width = 0;
+            other.m_Height = 0;
+            other.m_Channels = 0;
+        }
+        return *this;
+    }
+
+    void Texture::Bind(unsigned int slot) const
+    {
+        glActiveTexture(GL_TEXTURE0 + slot);
+        glBindTexture(GL_TEXTURE_2D, m_ID);
+    }
+
+    void Texture::Unbind() const
+    {
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+}  // namespace VizEngine
+```
+
+---
+
+## Step 7: Update CMakeLists.txt Sources
+
+```cmake
+set(VIZENGINE_SOURCES
+    # ... existing ...
+    src/VizEngine/OpenGL/Texture.cpp      # NEW
+)
+
+set(VIZENGINE_HEADERS
+    # ... existing ...
+    src/VizEngine/OpenGL/Texture.h        # NEW
+)
+```
+
+---
+
+## Texture Concepts
+
+### Texture Coordinates (UV)
+
+Vertices need UV coordinates (0-1 range) to map texture pixels:
+
+```cpp
+struct Vertex {
+    glm::vec3 Position;
+    glm::vec3 Color;
+    glm::vec2 TexCoords;  // NEW
+};
+
 float vertices[] = {
-    // Position           Color              TexCoords
-    -0.5f, -0.5f, 0.0f,   1,1,1,1,          0.0f, 0.0f,  // bottom-left
-     0.5f, -0.5f, 0.0f,   1,1,1,1,          1.0f, 0.0f,  // bottom-right
-     0.0f,  0.5f, 0.0f,   1,1,1,1,          0.5f, 1.0f,  // top-center
+    // Position           Color            TexCoords
+    -0.5f, -0.5f, 0.0f,   1.0f, 1.0f, 1.0f,  0.0f, 0.0f,  // Bottom-left
+     0.5f, -0.5f, 0.0f,   1.0f, 1.0f, 1.0f,  1.0f, 0.0f,  // Bottom-right
+     0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 1.0f,  1.0f, 1.0f,  // Top-right
+    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 1.0f,  0.0f, 1.0f,  // Top-left
 };
 ```
 
-The texture will be stretched to fit the triangle shape.
+### Texture Slots
+
+OpenGL has multiple texture slots (typically 16-32):
+
+```cpp
+texture1.Bind(0);  // GL_TEXTURE0
+texture2.Bind(1);  // GL_TEXTURE1
+
+shader.SetInt("u_Texture1", 0);  // Tell shader which slot
+shader.SetInt("u_Texture2", 1);
+```
+
+### Filtering
+
+| Mode | Use Case |
+|------|----------|
+| `GL_NEAREST` | Pixel art, sharp edges |
+| `GL_LINEAR` | Smooth scaling |
+| `GL_LINEAR_MIPMAP_LINEAR` | Best quality with mipmaps |
+
+### Wrapping
+
+| Mode | Effect |
+|------|--------|
+| `GL_REPEAT` | Tile the texture |
+| `GL_CLAMP_TO_EDGE` | Stretch edge pixels |
+| `GL_MIRRORED_REPEAT` | Tile with mirroring |
 
 ---
 
-## Loading Images with stb_image
-
-OpenGL doesn't load images - it just accepts raw pixel data. We use **stb_image** to decode image files.
-
-### The Loading Process
+## Usage Example
 
 ```cpp
-int width, height, channels;
-unsigned char* data = stbi_load("texture.png", &width, &height, &channels, 4);
-```
+// Load texture
+Texture texture("assets/textures/wood.png");
 
-Parameters:
-- `path` - File to load
-- `width`, `height` - Output: image dimensions
-- `channels` - Output: color channels in file (3=RGB, 4=RGBA)
-- `4` - Request 4 channels (we always want RGBA)
+// In render loop
+texture.Bind(0);
 
-### Flipping for OpenGL
+shader.Bind();
+shader.SetInt("u_Texture", 0);
+shader.SetInt("u_UseTexture", 1);
 
-Most image formats store pixels top-to-bottom, but OpenGL expects bottom-to-top:
+vao.Bind();
+glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-```cpp
-stbi_set_flip_vertically_on_load(1);  // Call BEFORE loading
-```
-
-Without this, textures appear upside-down!
-
----
-
-## Creating an OpenGL Texture
-
-Once we have pixel data, we upload it to the GPU:
-
-```cpp
-// Generate texture ID
-unsigned int textureID;
-glGenTextures(1, &textureID);
-
-// Bind texture (make it active)
-glBindTexture(GL_TEXTURE_2D, textureID);
-
-// Set texture parameters
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-// Upload pixel data
-glTexImage2D(
-    GL_TEXTURE_2D,      // Target
-    0,                  // Mipmap level
-    GL_RGBA8,           // Internal format (GPU storage)
-    width, height,      // Dimensions
-    0,                  // Border (must be 0)
-    GL_RGBA,            // Format of input data
-    GL_UNSIGNED_BYTE,   // Type of input data
-    data                // Pixel data pointer
-);
-
-// Free CPU-side data (GPU has it now)
-stbi_image_free(data);
+texture.Unbind();
 ```
 
 ---
 
-## Texture Parameters
+## Shader Update
 
-### Filtering: What Happens at Different Sizes
-
-When a texture is bigger or smaller than the area it's drawn to, OpenGL must **filter** it.
-
-#### Minification (Texture → Smaller)
-
-```cpp
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-```
-
-| Filter | Result | Performance |
-|--------|--------|-------------|
-| `GL_NEAREST` | Pixelated, blocky | Fastest |
-| `GL_LINEAR` | Smooth, blurry | Fast |
-| `GL_LINEAR_MIPMAP_LINEAR` | Smooth, uses mipmaps | Best quality |
-
-#### Magnification (Texture → Larger)
-
-```cpp
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-```
-
-| Filter | Result |
-|--------|--------|
-| `GL_NEAREST` | Pixelated (Minecraft-style) |
-| `GL_LINEAR` | Smooth |
-
-### Wrapping: What Happens Outside 0-1
-
-UV coordinates can go outside 0-1 range. Wrapping controls what happens:
-
-```cpp
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);  // U axis
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);  // V axis
-```
-
-| Mode | Effect | Visual |
-|------|--------|--------|
-| `GL_REPEAT` | Tile the texture | `ABCABC` |
-| `GL_MIRRORED_REPEAT` | Tile, flipping each time | `ABCCBA` |
-| `GL_CLAMP_TO_EDGE` | Stretch edge pixels | `ABCCC` |
-| `GL_CLAMP_TO_BORDER` | Use border color | `ABC...` |
-
----
-
-## Our Texture Class
-
-We wrap all this in a clean RAII class:
-
-```cpp
-class Texture
-{
-public:
-    Texture(const std::string& path);
-    ~Texture();
-
-    // Prevent copying (GPU resource)
-    Texture(const Texture&) = delete;
-    Texture& operator=(const Texture&) = delete;
-
-    // Allow moving
-    Texture(Texture&& other) noexcept;
-    Texture& operator=(Texture&& other) noexcept;
-
-    void Bind(unsigned int slot = 0) const;
-    void Unbind() const;
-
-    int GetWidth() const { return m_Width; }
-    int GetHeight() const { return m_Height; }
-
-private:
-    unsigned int m_RendererID;
-    std::string m_FilePath;
-    int m_Width, m_Height, m_BPP;
-};
-```
-
-### Constructor: Load and Upload
-
-```cpp
-Texture::Texture(const std::string& path)
-    : m_RendererID(0), m_FilePath(path), 
-      m_Width(0), m_Height(0), m_BPP(0)
-{
-    stbi_set_flip_vertically_on_load(1);
-    unsigned char* data = stbi_load(path.c_str(), &m_Width, &m_Height, &m_BPP, 4);
-
-    if (!data)
-    {
-        VP_CORE_ERROR("Failed to load texture: {}", path);
-        return;
-    }
-
-    glGenTextures(1, &m_RendererID);
-    glBindTexture(GL_TEXTURE_2D, m_RendererID);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_Width, m_Height, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    stbi_image_free(data);
-}
-```
-
-### Destructor: Cleanup
-
-```cpp
-Texture::~Texture()
-{
-    if (m_RendererID != 0)
-    {
-        glDeleteTextures(1, &m_RendererID);
-    }
-}
-```
-
----
-
-## Texture Slots (Units)
-
-GPUs have multiple **texture slots** (units). You can have many textures bound at once:
-
-```cpp
-// Slot 0: diffuse texture
-texture1.Bind(0);
-
-// Slot 1: normal map
-texture2.Bind(1);
-
-// Slot 2: specular map
-texture3.Bind(2);
-```
-
-### How Binding Works
-
-```cpp
-void Texture::Bind(unsigned int slot) const
-{
-    glActiveTexture(GL_TEXTURE0 + slot);  // Select slot
-    glBindTexture(GL_TEXTURE_2D, m_RendererID);  // Bind to slot
-}
-```
-
-- `glActiveTexture(GL_TEXTURE0 + slot)` - Select which slot to use
-- `glBindTexture(...)` - Bind texture to the active slot
-
-Most GPUs have at least 16 texture slots (0-15).
-
----
-
-## Using Textures in Shaders
-
-### Sampler Uniform
-
-In your fragment shader:
+Ensure your shader samples the texture:
 
 ```glsl
-uniform sampler2D u_MainTex;  // Texture sampler
+#shader fragment
+#version 460 core
 
-in vec2 v_TexCoords;  // From vertex shader
+in vec2 texCoord;
+out vec4 FragColor;
+
+uniform sampler2D u_Texture;
+uniform int u_UseTexture;
+uniform vec4 u_Color;
 
 void main()
 {
-    vec4 texColor = texture(u_MainTex, v_TexCoords);
-    FragColor = texColor;
+    if (u_UseTexture == 1)
+        FragColor = texture(u_Texture, texCoord) * u_Color;
+    else
+        FragColor = u_Color;
 }
-```
-
-### Setting the Sampler
-
-The sampler uniform takes an **integer** - the texture slot number:
-
-```cpp
-Texture tex("brick.png");
-tex.Bind(0);  // Bind to slot 0
-
-shader.Bind();
-shader.SetInt("u_MainTex", 0);  // Tell shader: u_MainTex is in slot 0
 ```
 
 ---
 
-## Move Semantics
+## Project Structure After This Chapter
 
-Our Texture class supports moving (but not copying):
-
-```cpp
-// Move constructor
-Texture::Texture(Texture&& other) noexcept
-    : m_RendererID(other.m_RendererID),
-      m_FilePath(std::move(other.m_FilePath)),
-      m_Width(other.m_Width),
-      m_Height(other.m_Height),
-      m_BPP(other.m_BPP)
-{
-    other.m_RendererID = 0;  // Prevent double-delete
-}
 ```
-
-Why no copying?
-- GPU resources shouldn't be duplicated accidentally
-- Copying would require `glCopyTexSubImage2D` - expensive!
-- Move transfers ownership cleanly
+VizEngine/
+├── vendor/
+│   ├── glfw/
+│   ├── glm/
+│   ├── spdlog/
+│   └── stb_image/          # NEW
+│       ├── stb_image.h
+│       └── stb_image.cpp
+└── src/VizEngine/OpenGL/
+    ├── Texture.cpp         # NEW
+    └── Texture.h           # NEW
+```
 
 ---
 
 ## Common Issues
 
-### Black Texture
-
-**Symptom:** Object renders black instead of textured.
-
-**Causes:**
-1. Texture didn't load (check path)
-2. Forgot to bind texture before drawing
-3. Shader sampler not set correctly
-4. UV coordinates wrong (all 0,0)
-
-### Upside-Down Texture
-
-**Cause:** Forgot `stbi_set_flip_vertically_on_load(1)`.
-
-### Texture Bleeding
-
-**Symptom:** Colors from adjacent texels appear at edges.
-
-**Fix:** Use `GL_CLAMP_TO_EDGE` or add padding in texture atlas.
-
-### Wrong Colors
-
-**Symptom:** Colors are swapped (red/blue reversed).
-
-**Cause:** Format mismatch. If image is BGR, use `GL_BGR` not `GL_RGB`.
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| Texture upside down | Different coordinate origin | `stbi_set_flip_vertically_on_load(true)` |
+| Black texture | Texture not bound | Call `texture.Bind()` before draw |
+| Wrong texture shows | Slot mismatch | Ensure `Bind(N)` matches `SetInt("u_Texture", N)` |
+| Blurry texture | Linear filtering on pixel art | Use `GL_NEAREST` filter |
 
 ---
 
-## Mipmaps
+## Milestone
 
-**Mipmaps** are pre-computed smaller versions of a texture:
+**Texture System Complete**
 
-```
-256×256 → 128×128 → 64×64 → 32×32 → 16×16 → 8×8 → 4×4 → 2×2 → 1×1
-```
-
-When an object is far away, the GPU uses a smaller mipmap (faster, less aliasing).
-
-### Generating Mipmaps
-
-```cpp
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-glGenerateMipmap(GL_TEXTURE_2D);
-
-// Use mipmapped filtering
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-```
+You have:
+- stb_image integrated
+- RAII-compliant `Texture` class
+- Texture slot support
+- Proper filtering and wrapping
 
 ---
 
-## Complete Usage Example
+## What's Next
 
-```cpp
-// Load texture
-Texture brickTexture("src/resources/textures/brick.png");
+In **Chapter 11**, we'll create a `Renderer` class to centralize draw calls.
 
-// In render loop:
-brickTexture.Bind(0);
+> **Next:** [Chapter 11: Renderer Class](11_Renderer.md)
 
-shader.Bind();
-shader.SetInt("u_MainTex", 0);
-shader.SetMat4("u_MVP", mvp);
-
-mesh.Bind();
-glDrawElements(GL_TRIANGLES, mesh.GetIndexCount(), GL_UNSIGNED_INT, nullptr);
-```
-
----
-
-## Key Takeaways
-
-1. **UV coordinates map textures to vertices** - Range 0-1, origin at bottom-left
-2. **stb_image loads files** - Returns raw pixel data
-3. **Flip for OpenGL** - Call `stbi_set_flip_vertically_on_load(1)`
-4. **Texture parameters control behavior** - Filtering and wrapping
-5. **Texture slots allow multiple textures** - Bind to different slots
-6. **Samplers are integers** - They hold the slot number
-7. **RAII for cleanup** - Destructor calls `glDeleteTextures`
-8. **Mipmaps improve quality and performance** - Use for textures viewed at varying distances
-
----
-
-## Common Pitfalls
-
-| Symptom | Likely Cause | Fix |
-|---------|--------------|-----|
-| Texture appears upside-down | stb_image Y origin | `stbi_set_flip_vertically_on_load(1)` |
-| Texture is black | Wrong texture slot | Verify `shader.SetInt("u_Texture", slot)` |
-| Texture is white | Failed to load file | Check file path and console for errors |
-| Pixelated when close | Wrong min filter | Use `GL_LINEAR` or `GL_LINEAR_MIPMAP_LINEAR` |
-| Blurry when far | No mipmaps | Call `glGenerateMipmap()` |
-
----
-
-## Checkpoint
-
-This chapter covered textures:
-
-**Key Concepts:**
-- **UV coords** — Map 2D texture to 3D vertices (0,0 = bottom-left)
-- **stb_image** — Loads PNG, JPG, BMP to raw pixel data
-- **Texture slots** — Multiple textures bound simultaneously
-- **Filtering** — `NEAREST` (pixelated) vs `LINEAR` (smooth)
-- **Mipmaps** — Pre-computed smaller versions
-
-**Files:**
-- `VizEngine/OpenGL/Texture.h/cpp`
-
-**Checkpoint:** Create `Texture.h/.cpp`, add stb_image to vendor, load a texture, and verify it displays on geometry.
-
----
-
-## Exercise
-
-1. Load a different texture format (JPG instead of PNG)
-2. Try `GL_NEAREST` filtering for a pixelated look
-3. Use `GL_MIRRORED_REPEAT` wrapping with UV > 1.0
-4. Add a second texture and blend them in the shader
-5. Implement mipmap generation in the Texture class
-
----
-
-> **Next:** [Chapter 11: Dear ImGui](11_DearImGui.md) - Building debug UI for development.
-
-> **Previous:** [Chapter 9: Shader & Renderer](09_ShaderAndRenderer.md)
-
-
-
+> **Previous:** [Chapter 9: Shader System](09_ShaderAndRenderer.md)

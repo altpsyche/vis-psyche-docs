@@ -2,322 +2,553 @@
 
 # Chapter 8: Buffer Classes
 
-## Applying RAII to OpenGL Buffers
-
-In the previous chapter, we learned RAII and the Rule of 5. Now we apply these patterns to create clean wrappers for OpenGL buffer objects.
-
-> [!NOTE]
-> **Prerequisites:** You should understand RAII and Rule of 5 from [Chapter 7](07_RAIIAndResourceManagement.md).
+Apply the RAII patterns from Chapter 7 to create OpenGL buffer wrappers. By the end, you'll have `VertexBuffer`, `IndexBuffer`, `VertexArray`, and `VertexBufferLayout` classes.
 
 ---
 
-## VertexBuffer
+## What We're Building
 
-Wraps `GL_ARRAY_BUFFER` - stores vertex data (positions, colors, UVs):
+| Class | Purpose |
+|-------|---------|
+| `VertexBuffer` | Wraps VBO, stores vertex data |
+| `IndexBuffer` | Wraps IBO/EBO, stores indices |
+| `VertexBufferLayout` | Describes vertex attribute layout |
+| `VertexArray` | Wraps VAO, links buffers to layout |
+
+---
+
+## Step 1: Create VertexBuffer
+
+**Create `VizEngine/src/VizEngine/OpenGL/VertexBuffer.h`:**
 
 ```cpp
-// VizEngine/OpenGL/VertexBuffer.h
+// VizEngine/src/VizEngine/OpenGL/VertexBuffer.h
 
-class VizEngine_API VertexBuffer
+#pragma once
+
+#include "VizEngine/Core.h"
+
+namespace VizEngine
 {
-public:
-    VertexBuffer(const void* vertices, unsigned int size)
+    class VizEngine_API VertexBuffer
+    {
+    public:
+        VertexBuffer(const void* data, size_t size);
+        ~VertexBuffer();
+
+        // No copying
+        VertexBuffer(const VertexBuffer&) = delete;
+        VertexBuffer& operator=(const VertexBuffer&) = delete;
+
+        // Allow moving
+        VertexBuffer(VertexBuffer&& other) noexcept;
+        VertexBuffer& operator=(VertexBuffer&& other) noexcept;
+
+        void Bind() const;
+        void Unbind() const;
+
+        unsigned int GetID() const { return m_ID; }
+
+    private:
+        unsigned int m_ID = 0;
+    };
+
+}  // namespace VizEngine
+```
+
+**Create `VizEngine/src/VizEngine/OpenGL/VertexBuffer.cpp`:**
+
+```cpp
+// VizEngine/src/VizEngine/OpenGL/VertexBuffer.cpp
+
+#include "VertexBuffer.h"
+#include "Commons.h"
+#include "VizEngine/Log.h"
+
+namespace VizEngine
+{
+    VertexBuffer::VertexBuffer(const void* data, size_t size)
     {
         glGenBuffers(1, &m_ID);
         glBindBuffer(GL_ARRAY_BUFFER, m_ID);
-        glBufferData(GL_ARRAY_BUFFER, size, vertices, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+        VP_CORE_TRACE("VertexBuffer created: ID={}", m_ID);
     }
-    
-    ~VertexBuffer()
+
+    VertexBuffer::~VertexBuffer()
     {
         if (m_ID != 0)
+        {
             glDeleteBuffers(1, &m_ID);
+            VP_CORE_TRACE("VertexBuffer deleted: ID={}", m_ID);
+        }
     }
-    
-    // Rule of 5
-    VertexBuffer(const VertexBuffer&) = delete;
-    VertexBuffer& operator=(const VertexBuffer&) = delete;
-    VertexBuffer(VertexBuffer&& other) noexcept;
-    VertexBuffer& operator=(VertexBuffer&& other) noexcept;
-    
-    void Bind() const { glBindBuffer(GL_ARRAY_BUFFER, m_ID); }
-    void Unbind() const { glBindBuffer(GL_ARRAY_BUFFER, 0); }
-    
-    unsigned int GetID() const { return m_ID; }
-    
-private:
-    unsigned int m_ID = 0;
-};
-```
 
-### Usage
+    VertexBuffer::VertexBuffer(VertexBuffer&& other) noexcept
+        : m_ID(other.m_ID)
+    {
+        other.m_ID = 0;
+    }
 
-```cpp
-float vertices[] = {
-    // Position (x, y, z)    Color (r, g, b, a)
-    -0.5f, -0.5f, 0.0f,      1.0f, 0.0f, 0.0f, 1.0f,
-     0.5f, -0.5f, 0.0f,      0.0f, 1.0f, 0.0f, 1.0f,
-     0.0f,  0.5f, 0.0f,      0.0f, 0.0f, 1.0f, 1.0f
-};
+    VertexBuffer& VertexBuffer::operator=(VertexBuffer&& other) noexcept
+    {
+        if (this != &other)
+        {
+            if (m_ID != 0)
+                glDeleteBuffers(1, &m_ID);
+            m_ID = other.m_ID;
+            other.m_ID = 0;
+        }
+        return *this;
+    }
 
-VertexBuffer vbo(vertices, sizeof(vertices));
-vbo.Bind();
-// Draw...
-// Destructor cleans up automatically
+    void VertexBuffer::Bind() const
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, m_ID);
+    }
+
+    void VertexBuffer::Unbind() const
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+
+}  // namespace VizEngine
 ```
 
 ---
 
-## IndexBuffer
+## Step 2: Create IndexBuffer
 
-Wraps `GL_ELEMENT_ARRAY_BUFFER` - stores indices for indexed drawing:
+**Create `VizEngine/src/VizEngine/OpenGL/IndexBuffer.h`:**
 
 ```cpp
-// VizEngine/OpenGL/IndexBuffer.h
+// VizEngine/src/VizEngine/OpenGL/IndexBuffer.h
 
-class VizEngine_API IndexBuffer
+#pragma once
+
+#include "VizEngine/Core.h"
+
+namespace VizEngine
 {
-public:
-    IndexBuffer(const unsigned int* indices, unsigned int count)
+    class VizEngine_API IndexBuffer
+    {
+    public:
+        IndexBuffer(const unsigned int* data, unsigned int count);
+        ~IndexBuffer();
+
+        // No copying
+        IndexBuffer(const IndexBuffer&) = delete;
+        IndexBuffer& operator=(const IndexBuffer&) = delete;
+
+        // Allow moving
+        IndexBuffer(IndexBuffer&& other) noexcept;
+        IndexBuffer& operator=(IndexBuffer&& other) noexcept;
+
+        void Bind() const;
+        void Unbind() const;
+
+        unsigned int GetCount() const { return m_Count; }
+        unsigned int GetID() const { return m_ID; }
+
+    private:
+        unsigned int m_ID = 0;
+        unsigned int m_Count = 0;
+    };
+
+}  // namespace VizEngine
+```
+
+**Create `VizEngine/src/VizEngine/OpenGL/IndexBuffer.cpp`:**
+
+```cpp
+// VizEngine/src/VizEngine/OpenGL/IndexBuffer.cpp
+
+#include "IndexBuffer.h"
+#include "Commons.h"
+#include "VizEngine/Log.h"
+
+namespace VizEngine
+{
+    IndexBuffer::IndexBuffer(const unsigned int* data, unsigned int count)
         : m_Count(count)
     {
         glGenBuffers(1, &m_ID);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ID);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, count * sizeof(unsigned int), 
-                     indices, GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, count * sizeof(unsigned int), data, GL_STATIC_DRAW);
+        VP_CORE_TRACE("IndexBuffer created: ID={}, Count={}", m_ID, m_Count);
     }
-    
-    ~IndexBuffer()
+
+    IndexBuffer::~IndexBuffer()
     {
         if (m_ID != 0)
+        {
             glDeleteBuffers(1, &m_ID);
+            VP_CORE_TRACE("IndexBuffer deleted: ID={}", m_ID);
+        }
     }
-    
-    // Rule of 5 (same as VertexBuffer)
-    
-    void Bind() const { glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ID); }
-    void Unbind() const { glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); }
-    
-    unsigned int GetCount() const { return m_Count; }  // For glDrawElements
-    
-private:
-    unsigned int m_ID = 0;
-    unsigned int m_Count;
-};
-```
 
-### Why Index Buffers?
+    IndexBuffer::IndexBuffer(IndexBuffer&& other) noexcept
+        : m_ID(other.m_ID), m_Count(other.m_Count)
+    {
+        other.m_ID = 0;
+        other.m_Count = 0;
+    }
 
-Without indices (6 vertices for a quad):
-```
-Triangle 1: v0, v1, v2
-Triangle 2: v0, v2, v3  ← v0 and v2 duplicated!
-```
+    IndexBuffer& IndexBuffer::operator=(IndexBuffer&& other) noexcept
+    {
+        if (this != &other)
+        {
+            if (m_ID != 0)
+                glDeleteBuffers(1, &m_ID);
+            m_ID = other.m_ID;
+            m_Count = other.m_Count;
+            other.m_ID = 0;
+            other.m_Count = 0;
+        }
+        return *this;
+    }
 
-With indices (4 vertices + 6 indices):
-```
-Vertices: v0, v1, v2, v3
-Indices: 0, 1, 2, 0, 2, 3  ← Reuse vertices!
-```
+    void IndexBuffer::Bind() const
+    {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ID);
+    }
 
-**Result:** Less GPU memory, better cache performance.
+    void IndexBuffer::Unbind() const
+    {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
 
----
-
-## VertexBufferLayout
-
-Describes how vertex data is organized in memory:
-
-```cpp
-// VizEngine/OpenGL/VertexBufferLayout.h
-
-struct VertexBufferElement
-{
-    unsigned int type;       // GL_FLOAT, GL_UNSIGNED_INT, etc.
-    unsigned int count;      // Number of components (3 for vec3, 4 for vec4)
-    unsigned char normalised;
-};
-
-class VizEngine_API VertexBufferLayout
-{
-public:
-    template<typename T>
-    void Push(unsigned int count);  // Add an attribute
-    
-    const std::vector<VertexBufferElement>& GetElements() const 
-    { return m_Elements; }
-    
-    unsigned int GetStride() const { return m_Stride; }
-    
-private:
-    std::vector<VertexBufferElement> m_Elements;
-    unsigned int m_Stride = 0;
-};
-
-// Template specializations
-template<>
-void VertexBufferLayout::Push<float>(unsigned int count)
-{
-    m_Elements.push_back({ GL_FLOAT, count, GL_FALSE });
-    m_Stride += count * sizeof(float);
-}
-
-template<>
-void VertexBufferLayout::Push<unsigned int>(unsigned int count)
-{
-    m_Elements.push_back({ GL_UNSIGNED_INT, count, GL_FALSE });
-    m_Stride += count * sizeof(unsigned int);
-}
-```
-
-### Usage
-
-```cpp
-VertexBufferLayout layout;
-layout.Push<float>(4);  // Position: vec4
-layout.Push<float>(3);  // Normal: vec3
-layout.Push<float>(4);  // Color: vec4
-layout.Push<float>(2);  // TexCoords: vec2
-
-// Stride = (4 + 3 + 4 + 2) * sizeof(float) = 52 bytes per vertex
+}  // namespace VizEngine
 ```
 
 ---
 
-## VertexArray
+## Step 3: Create VertexBufferLayout
 
-The VAO stores the configuration of vertex attributes:
+Describes vertex attributes without needing OpenGL calls.
+
+**Create `VizEngine/src/VizEngine/OpenGL/VertexBufferLayout.h`:**
 
 ```cpp
-// VizEngine/OpenGL/VertexArray.h
+// VizEngine/src/VizEngine/OpenGL/VertexBufferLayout.h
 
-class VizEngine_API VertexArray
+#pragma once
+
+#include "VizEngine/Core.h"
+#include <vector>
+#include <glad/glad.h>
+
+namespace VizEngine
 {
-public:
-    VertexArray()
+    struct VertexBufferElement
+    {
+        unsigned int Type;
+        unsigned int Count;
+        unsigned char Normalized;
+
+        static unsigned int GetSizeOfType(unsigned int type)
+        {
+            switch (type)
+            {
+                case GL_FLOAT:         return sizeof(float);
+                case GL_UNSIGNED_INT:  return sizeof(unsigned int);
+                case GL_UNSIGNED_BYTE: return sizeof(unsigned char);
+            }
+            return 0;
+        }
+    };
+
+    class VizEngine_API VertexBufferLayout
+    {
+    public:
+        VertexBufferLayout() : m_Stride(0) {}
+
+        template<typename T>
+        void Push(unsigned int count);
+
+        const std::vector<VertexBufferElement>& GetElements() const { return m_Elements; }
+        unsigned int GetStride() const { return m_Stride; }
+
+    private:
+        std::vector<VertexBufferElement> m_Elements;
+        unsigned int m_Stride;
+    };
+
+    // Template specializations
+    template<>
+    inline void VertexBufferLayout::Push<float>(unsigned int count)
+    {
+        m_Elements.push_back({ GL_FLOAT, count, GL_FALSE });
+        m_Stride += count * sizeof(float);
+    }
+
+    template<>
+    inline void VertexBufferLayout::Push<unsigned int>(unsigned int count)
+    {
+        m_Elements.push_back({ GL_UNSIGNED_INT, count, GL_FALSE });
+        m_Stride += count * sizeof(unsigned int);
+    }
+
+    template<>
+    inline void VertexBufferLayout::Push<unsigned char>(unsigned int count)
+    {
+        m_Elements.push_back({ GL_UNSIGNED_BYTE, count, GL_TRUE });
+        m_Stride += count * sizeof(unsigned char);
+    }
+
+}  // namespace VizEngine
+```
+
+---
+
+## Step 4: Create VertexArray
+
+**Create `VizEngine/src/VizEngine/OpenGL/VertexArray.h`:**
+
+```cpp
+// VizEngine/src/VizEngine/OpenGL/VertexArray.h
+
+#pragma once
+
+#include "VizEngine/Core.h"
+#include "VertexBuffer.h"
+#include "VertexBufferLayout.h"
+
+namespace VizEngine
+{
+    class VizEngine_API VertexArray
+    {
+    public:
+        VertexArray();
+        ~VertexArray();
+
+        // No copying
+        VertexArray(const VertexArray&) = delete;
+        VertexArray& operator=(const VertexArray&) = delete;
+
+        // Allow moving
+        VertexArray(VertexArray&& other) noexcept;
+        VertexArray& operator=(VertexArray&& other) noexcept;
+
+        void Bind() const;
+        void Unbind() const;
+
+        void LinkVertexBuffer(const VertexBuffer& vb, const VertexBufferLayout& layout);
+
+        unsigned int GetID() const { return m_ID; }
+
+    private:
+        unsigned int m_ID = 0;
+    };
+
+}  // namespace VizEngine
+```
+
+**Create `VizEngine/src/VizEngine/OpenGL/VertexArray.cpp`:**
+
+```cpp
+// VizEngine/src/VizEngine/OpenGL/VertexArray.cpp
+
+#include "VertexArray.h"
+#include "Commons.h"
+#include "VizEngine/Log.h"
+
+namespace VizEngine
+{
+    VertexArray::VertexArray()
     {
         glGenVertexArrays(1, &m_ID);
+        VP_CORE_TRACE("VertexArray created: ID={}", m_ID);
     }
-    
-    ~VertexArray()
+
+    VertexArray::~VertexArray()
     {
         if (m_ID != 0)
+        {
             glDeleteVertexArrays(1, &m_ID);
+            VP_CORE_TRACE("VertexArray deleted: ID={}", m_ID);
+        }
     }
-    
-    // Rule of 5 (same pattern)
-    
-    void LinkVertexBuffer(const VertexBuffer& vb, 
-                          const VertexBufferLayout& layout) const
+
+    VertexArray::VertexArray(VertexArray&& other) noexcept
+        : m_ID(other.m_ID)
+    {
+        other.m_ID = 0;
+    }
+
+    VertexArray& VertexArray::operator=(VertexArray&& other) noexcept
+    {
+        if (this != &other)
+        {
+            if (m_ID != 0)
+                glDeleteVertexArrays(1, &m_ID);
+            m_ID = other.m_ID;
+            other.m_ID = 0;
+        }
+        return *this;
+    }
+
+    void VertexArray::Bind() const
+    {
+        glBindVertexArray(m_ID);
+    }
+
+    void VertexArray::Unbind() const
+    {
+        glBindVertexArray(0);
+    }
+
+    void VertexArray::LinkVertexBuffer(const VertexBuffer& vb, const VertexBufferLayout& layout)
     {
         Bind();
         vb.Bind();
-        
+
         const auto& elements = layout.GetElements();
-        unsigned int offset = 0;
-        
+        size_t offset = 0;
+
         for (unsigned int i = 0; i < elements.size(); i++)
         {
             const auto& element = elements[i];
-            glEnableVertexAttribArray(i);
             glVertexAttribPointer(
-                i,                          // Attribute index
-                element.count,              // Number of components
-                element.type,               // Data type
-                element.normalised,         // Normalize?
-                layout.GetStride(),         // Stride (bytes between vertices)
-                (const void*)offset         // Offset to this attribute
+                i,
+                element.Count,
+                element.Type,
+                element.Normalized,
+                layout.GetStride(),
+                reinterpret_cast<const void*>(offset)
             );
-            offset += element.count * sizeof(float);
+            glEnableVertexAttribArray(i);
+            offset += element.Count * VertexBufferElement::GetSizeOfType(element.Type);
         }
     }
-    
-    void Bind() const { glBindVertexArray(m_ID); }
-    void Unbind() const { glBindVertexArray(0); }
-    
-private:
-    unsigned int m_ID = 0;
-};
-```
 
-### Why Use VAO?
-
-Without VAO, you'd need to call `glVertexAttribPointer` every frame.  
-With VAO, you configure once, then just `Bind()` to restore the configuration.
-
-```cpp
-// Setup (once)
-VertexArray vao;
-VertexBuffer vbo(vertices, sizeof(vertices));
-vao.LinkVertexBuffer(vbo, layout);
-
-// Render loop (every frame)
-vao.Bind();  // Restores all attribute configuration!
-glDrawElements(...);
+}  // namespace VizEngine
 ```
 
 ---
 
-## Putting It All Together
+## Step 5: Update CMakeLists.txt
+
+**Update `VizEngine/CMakeLists.txt` to add the new files:**
+
+```cmake
+set(VIZENGINE_SOURCES
+    src/VizEngine/Application.cpp
+    src/VizEngine/Log.cpp
+    # OpenGL
+    src/VizEngine/OpenGL/ErrorHandling.cpp
+    src/VizEngine/OpenGL/GLFWManager.cpp
+    src/VizEngine/OpenGL/VertexBuffer.cpp    # NEW
+    src/VizEngine/OpenGL/IndexBuffer.cpp     # NEW
+    src/VizEngine/OpenGL/VertexArray.cpp     # NEW
+    src/glad.c
+)
+
+set(VIZENGINE_HEADERS
+    src/VizEngine.h
+    src/VizEngine/Application.h
+    src/VizEngine/Core.h
+    src/VizEngine/EntryPoint.h
+    src/VizEngine/Log.h
+    # OpenGL
+    src/VizEngine/OpenGL/Commons.h
+    src/VizEngine/OpenGL/ErrorHandling.h
+    src/VizEngine/OpenGL/GLFWManager.h
+    src/VizEngine/OpenGL/VertexBuffer.h       # NEW
+    src/VizEngine/OpenGL/IndexBuffer.h        # NEW
+    src/VizEngine/OpenGL/VertexArray.h        # NEW
+    src/VizEngine/OpenGL/VertexBufferLayout.h # NEW
+    include/glad/glad.h
+    include/KHR/khrplatform.h
+)
+```
+
+---
+
+## Step 6: Usage Example
 
 ```cpp
-// Create geometry
-float vertices[] = { /* position, color, uvs */ };
-unsigned int indices[] = { 0, 1, 2, 0, 2, 3 };
+// Create vertex data
+float vertices[] = {
+    // Position          Color
+    -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,
+     0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,
+     0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f,
+    -0.5f,  0.5f, 0.0f,  1.0f, 1.0f, 0.0f,
+};
 
-// Create buffers
-VertexArray vao;
+unsigned int indices[] = {
+    0, 1, 2,
+    2, 3, 0
+};
+
+// Create buffer objects
 VertexBuffer vbo(vertices, sizeof(vertices));
 IndexBuffer ibo(indices, 6);
 
-// Configure layout
+// Define layout
 VertexBufferLayout layout;
-layout.Push<float>(4);  // Position
-layout.Push<float>(4);  // Color
-layout.Push<float>(2);  // TexCoords
+layout.Push<float>(3);  // Position
+layout.Push<float>(3);  // Color
 
+// Create and configure VAO
+VertexArray vao;
 vao.LinkVertexBuffer(vbo, layout);
 
-// Render
+// Later, to draw:
 vao.Bind();
-glDrawElements(GL_TRIANGLES, ibo.GetCount(), GL_UNSIGNED_INT, nullptr);
+ibo.Bind();
+glDrawElements(GL_TRIANGLES, ibo.GetCount(), GL_UNSIGNED_INT, 0);
 ```
 
 ---
 
-## Key Takeaways
+## Project Structure After This Chapter
 
-1. **VertexBuffer** - Stores vertex data on GPU
-2. **IndexBuffer** - Enables vertex reuse
-3. **VertexBufferLayout** - Describes attribute structure
-4. **VertexArray** - Stores the complete configuration
-5. **All use RAII** - Automatic cleanup, no leaks
-
----
-
-## Checkpoint
-
-**Files:**
-| File | Purpose |
-|------|---------|
-| `VizEngine/OpenGL/VertexBuffer.h/.cpp` | VBO wrapper |
-| `VizEngine/OpenGL/IndexBuffer.h/.cpp` | IBO wrapper |
-| `VizEngine/OpenGL/VertexArray.h/.cpp` | VAO wrapper |
-| `VizEngine/OpenGL/VertexBufferLayout.h` | Attribute layout |
-
-**Checkpoint:** Create all buffer classes, render a colored triangle using the new wrappers.
+```
+VizEngine/src/VizEngine/OpenGL/
+├── Commons.h
+├── ErrorHandling.cpp
+├── ErrorHandling.h
+├── GLFWManager.cpp
+├── GLFWManager.h
+├── IndexBuffer.cpp      # NEW
+├── IndexBuffer.h        # NEW
+├── VertexArray.cpp      # NEW
+├── VertexArray.h        # NEW
+├── VertexBuffer.cpp     # NEW
+├── VertexBuffer.h       # NEW
+└── VertexBufferLayout.h # NEW
+```
 
 ---
 
-## Exercise
+## Common Issues
 
-1. Add a `SetData()` method to VertexBuffer for dynamic updates
-2. Create an `InstanceBuffer` class for instanced rendering
-3. Add validation that checks if VAO is bound before drawing
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| Nothing renders | VAO not bound | Call `vao.Bind()` before draw |
+| Crash after move | Using moved-from object | Don't use object after `std::move` |
+| Attributes wrong | Layout doesn't match data | Verify Push order matches vertex struct |
 
 ---
 
-> **Next:** [Chapter 9: Shader & Renderer](09_ShaderAndRenderer.md) - Compiling shaders and managing draw calls.
+## Milestone
+
+**Buffer Classes Complete**
+
+You have:
+- RAII-compliant `VertexBuffer`
+- RAII-compliant `IndexBuffer`
+- `VertexBufferLayout` for describing attributes
+- `VertexArray` that links them together
+
+---
+
+## What's Next
+
+In **Chapter 9**, we'll create a `Shader` class for compiling and managing GLSL programs.
+
+> **Next:** [Chapter 9: Shader System](09_ShaderAndRenderer.md)
 
 > **Previous:** [Chapter 7: RAII & Resource Management](07_RAIIAndResourceManagement.md)
-

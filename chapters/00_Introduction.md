@@ -4,109 +4,237 @@
 
 ## What is VizPsyche?
 
-VizPsyche is a 3D rendering engine built from scratch using C++17 and OpenGL 4.6. The name combines "Viz" (visualization) with "Psyche" (the mind/soul) - representing the goal of understanding the soul of graphics programming.
+**VizPsyche** is a 3D rendering engine built from scratch using **C++17** and **OpenGL 4.6**. The name combines "Viz" (visualization) with "Psyche" (the mind/soul)—representing the goal of understanding the soul of graphics programming.
+
+This book takes you from an empty folder to a working engine capable of:
+
+- Rendering textured, lit 3D models
+- Loading industry-standard glTF files
+- Interactive camera controls
+- Real-time debug UI
+
+---
 
 ## Why Build an Engine from Scratch?
 
-1. **Deep Understanding** - Using Unity or Unreal hides the fundamentals
-2. **Complete Control** - Every line of code is yours to understand and modify
-3. **Industry Knowledge** - Game studios value engineers who understand the "how"
-4. **Problem Solving** - Debugging becomes easier when you know the internals
+| Reason | Benefit |
+|--------|---------|
+| **Deep Understanding** | Using Unity or Unreal hides the fundamentals |
+| **Complete Control** | Every line of code is yours to understand and modify |
+| **Industry Knowledge** | Game studios value engineers who understand the "how" |
+| **Problem Solving** | Debugging becomes easier when you know the internals |
 
-## What You'll Learn
+> [!NOTE]
+> This book is not about building a production-ready engine. It's about **learning** the concepts that power production engines.
 
-By the end of this book, you'll understand:
+---
 
-- **Build Systems** - CMake, DLLs, linking, and project organization
-- **Third-Party Libraries** - GLFW, GLAD, GLM, ImGui, spdlog, stb_image, tinygltf
-- **Graphics Pipeline** - How pixels get from code to screen
-- **OpenGL** - Modern OpenGL 4.6 with VAOs, VBOs, shaders
-- **Engine Architecture** - How professional engines are structured
-- **Memory Management** - RAII, move semantics, resource lifetime
-- **Lighting** - Blinn-Phong lighting model
-- **Model Loading** - Loading 3D assets from glTF files with PBR materials
+## What You'll Build
 
-## Prerequisites
-
-- Basic C++ knowledge (classes, pointers, references)
-- Basic math (vectors, matrices - we'll explain as we go)
-- A Windows PC with Visual Studio 2022+
-
-## Project Structure Overview
+By the end of this book, you will have built:
 
 ```
 VizPsyche/
-├── CMakeLists.txt          ← Root build configuration
-├── VizEngine/              ← The engine (compiled as DLL)
-│   ├── CMakeLists.txt
-│   ├── src/
-│   │   ├── VizEngine.h     ← Public API header
-│   │   └── VizEngine/      ← Engine source code
-│   ├── include/            ← Third-party headers (GLAD)
-│   └── vendor/             ← Dependencies (GLFW, GLM, ImGui, spdlog)
-├── Sandbox/                ← Test application (uses the engine)
-│   ├── CMakeLists.txt
-│   └── src/
-│       └── SandboxApp.cpp
-└── build/                  ← Generated build files
+├── VizEngine/                 ← The engine (DLL)
+│   ├── src/VizEngine/
+│   │   ├── Core/              ← Camera, Mesh, Scene, Model
+│   │   ├── OpenGL/            ← Buffer, Shader, Texture wrappers
+│   │   └── GUI/               ← ImGui integration
+│   ├── vendor/                ← Third-party libraries
+│   └── resources/             ← Shaders, textures
+├── Sandbox/                   ← Your application (uses the engine)
+└── CMakeLists.txt             ← Build system
 ```
+
+---
+
+## What You'll Learn
+
+### Foundation
+- **Build Systems** — CMake project organization
+- **DLL Architecture** — Separating engine from application
+- **Logging** — Debugging with structured output
+
+### Graphics
+- **OpenGL Pipeline** — How pixels get from code to screen
+- **Buffers & Shaders** — GPU memory and programs
+- **Textures** — Image loading and mapping
+
+### Engine Architecture
+- **Transforms** — Position, rotation, scale
+- **Camera** — View and projection matrices
+- **Scene Management** — Managing multiple objects
+
+### Advanced Topics
+- **Lighting** — Blinn-Phong illumination model
+- **Model Loading** — glTF format with PBR materials
+- **Input** — Keyboard, mouse, camera controls
+
+---
+
+## Prerequisites
+
+Before starting, ensure you have:
+
+| Requirement | Version | Check Command |
+|-------------|---------|---------------|
+| **Windows** | 10 or 11 | – |
+| **Visual Studio** | 2022 (17.0+) | Open VS Installer |
+| **CMake** | 3.16+ | `cmake --version` |
+| **Git** | 2.30+ | `git --version` |
+
+> [!IMPORTANT]
+> **Visual Studio Workload Required:** During installation, select **"Desktop development with C++"** workload.
+
+If you're missing any of these, **Chapter 1** walks through installation.
+
+---
 
 ## How to Use This Book
 
-This book is a **companion**, not a prescription. It explains how VizPsyche works so you *can* build along if you choose.
+### For Those Building Along
 
-### Two Paths
+Each chapter:
+1. Explains the **concepts**
+2. Shows **complete, copy-paste ready** code
+3. Ends with a **milestone** you can verify
+4. Lists **common pitfalls** and solutions
 
-**Reading to Understand:**
-Browse the documentation, understand how the engine works, and reference it when modifying the codebase. No need to type anything.
+**Build and test after every chapter.** Don't skip ahead—each chapter builds on the previous.
 
-**Building Along:**
-Follow chapter by chapter, implementing each piece. Each chapter ends with a **Checkpoint** section listing the files you should have and what you should see running.
+### For Those Reading to Understand
+
+Browse the documentation and reference it when modifying the existing codebase. Use **Appendix A** as a quick lookup for class structures and file locations.
 
 > **Either path is valid.** The book enables; it doesn't demand.
 
-### Reading Order
+---
 
-Each chapter builds on the previous. The concepts stack:
+## Milestones Overview
 
-### Part 1: Foundation
-1. **[Build System](01_BuildSystem.md)** - CMake and project setup
-2. **[DLL Architecture](02_DLLArchitecture.md)** - Why we separate engine and app
-3. **[Third-Party Libraries](03_ThirdPartyLibraries.md)** - The libraries we use and why
+| After Part | What Works |
+|------------|------------|
+| **Part I** (Ch 0–4) | DLL compiles, logging works |
+| **Part II** (Ch 5–7) | Window opens, understand OpenGL concepts |
+| **Part III** (Ch 8–11) | Textured geometry renders |
+| **Part IV** (Ch 12–15) | Multiple objects with ImGui controls |
+| **Part V** (Ch 16) | Lit scene with Blinn-Phong shading |
+| **Part VI** (Ch 17–19) | glTF models load and display |
+| **Part VII** (Ch 20–21) | Fly-camera with WASD + mouse |
 
-### Part 2: Infrastructure
-4. **[Logging System](04_LoggingSystem.md)** - Tracking what happens in the engine
-5. **[Window & Context](05_WindowAndContext.md)** - GLFW and OpenGL context
-6. **[OpenGL Fundamentals](06_OpenGLFundamentals.md)** - The graphics pipeline
+---
 
-### Part 3: C++ Patterns
-7. **[RAII & Resource Management](07_RAIIAndResourceManagement.md)** - Constructor/destructor patterns
+## Platform Note
 
-### Part 4: OpenGL Wrappers
-8. **[Buffer Classes](08_BufferClasses.md)** - VBO, IBO, VAO wrappers
-9. **[Shader & Renderer](09_ShaderAndRenderer.md)** - Shader compilation, draw calls
-10. **[Textures](10_Textures.md)** - Loading and using images
+> [!CAUTION]
+> **This book targets Windows with Visual Studio 2022.** The engine architecture (CMake, OpenGL) supports cross-platform development, but platform-specific code is Windows-only for now. Future appendices may cover Linux and macOS.
 
-### Part 5: Editor
-11. **[Dear ImGui](11_DearImGui.md)** - Debug UI for development
+---
 
-### Part 6: Engine Architecture
-12. **[Transform & Mesh](12_TransformAndMesh.md)** - Position, rotation, scale, geometry
-13. **[Camera System](13_CameraSystem.md)** - View and projection matrices
-14. **[Scene Management](14_SceneManagement.md)** - Managing multiple objects
+## Reading Order
 
-### Part 7: Graphics II
-15. **[Lighting](15_Lighting.md)** - Blinn-Phong lighting model
+Chapters are designed to be read **in order**. Each builds on concepts from the previous:
 
-### Part 8: Assets
-16. **[Model Loading](16_ModelLoading.md)** - Loading glTF models with PBR materials
+```
+Part I: Getting Started
+├── Ch 0: Introduction (you are here)
+├── Ch 1: Environment Setup
+├── Ch 2: Hello Triangle
+├── Ch 3: Project Structure
+└── Ch 4: Logging System
 
-### Part 9: Input
-17. **[Input System](17_InputSystem.md)** - Keyboard, mouse, polling
-18. **[Camera Controller](18_CameraController.md)** - WASD movement, mouse look
+Part II: OpenGL Foundations
+├── Ch 5: Window & Context
+├── Ch 6: OpenGL Fundamentals
+└── Ch 7: RAII & Resource Management
 
-### Appendices
-- **[Appendix A: Code Reference](A_Reference.md)** - Class diagrams, file reference
+Part III: GPU Abstractions
+├── Ch 8: Buffer Classes
+├── Ch 9: Shader System
+├── Ch 10: Texture System
+└── Ch 11: Renderer Class
 
-Ready to start.
+Part IV: Engine Architecture
+├── Ch 12: Transform & Mesh
+├── Ch 13: Camera System
+├── Ch 14: Scene Management
+└── Ch 15: Dear ImGui
 
+Part V: Lighting
+└── Ch 16: Blinn-Phong Lighting
+
+Part VI: Assets
+├── Ch 17: glTF Format
+├── Ch 18: Model Loader (Geometry)
+└── Ch 19: Model Loader (Materials)
+
+Part VII: Input & Controls
+├── Ch 20: Input System
+└── Ch 21: Camera Controller
+
+Appendices
+└── A: Code Reference
+```
+
+---
+
+## Conventions Used
+
+### Code Blocks
+
+Complete files are shown with the path as a comment:
+
+```cpp
+// VizEngine/src/VizEngine/Core.h
+
+#pragma once
+
+#ifdef VP_PLATFORM_WINDOWS
+    // ...
+#endif
+```
+
+### Incremental Changes
+
+When modifying existing files, we show `diff` blocks:
+
+```diff
+ set(VIZENGINE_SOURCES
+     src/VizEngine/Application.cpp
++    src/VizEngine/Log.cpp           # NEW: Added this chapter
+ )
+```
+
+### Commands
+
+Terminal commands are shown with the shell prompt:
+
+```bash
+cmake -B build -G "Visual Studio 17 2022"
+cmake --build build --config Debug
+```
+
+### Callouts
+
+> [!NOTE]
+> Background information or helpful context.
+
+> [!TIP]
+> Performance advice or best practices.
+
+> [!IMPORTANT]
+> Critical information you shouldn't skip.
+
+> [!WARNING]
+> Potential issues that could cause problems.
+
+> [!CAUTION]
+> Dangerous operations that could break things.
+
+---
+
+## Let's Begin
+
+You have everything you need to start. **Chapter 1** ensures your development environment is ready.
+
+> **Next:** [Chapter 1: Environment Setup](01_EnvironmentSetup.md)

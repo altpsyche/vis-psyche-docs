@@ -2,74 +2,194 @@
 
 # Chapter 4: Logging System
 
-Logging is the engine developer's best friend. When something goes wrong (and it will), logs tell you what happened. Our logging system wraps spdlog to provide clean, categorized, performant logging.
-
-## Why Not Just Use std::cout?
-
-```cpp
-// This works, but...
-std::cout << "Loading texture: " << filename << std::endl;
-std::cout << "ERROR: Failed to load texture!" << std::endl;
-```
-
-Problems with `std::cout`:
-
-| Issue | Impact |
-|-------|--------|
-| No timestamps | When did it happen? |
-| No log levels | Can't filter debug vs errors |
-| No categories | Engine vs game messages? |
-| Slow (synchronous) | Blocks while writing |
-| No color | Errors look like info |
-
-Our logging system solves all of these.
+Replace `std::cout` with a proper logging system. Good logging is essential for debugging—it tells you what's happening inside your engine without stepping through with a debugger.
 
 ---
 
-## Creating the Log Class
+## Why Not std::cout?
 
-We need a static wrapper around spdlog with two separate loggers — one for engine internals, one for game code.
+| Problem with std::cout | Solution with Logging |
+|------------------------|----------------------|
+| No log levels | Filter by severity (trace, info, warn, error) |
+| No color | Colored output for quick scanning |
+| Hard to disable | Compile-time or runtime level control |
+| No formatting | Type-safe `{}` placeholder formatting |
+| No source separation | Separate engine vs. client logs |
 
-Create **`VizEngine/src/VizEngine/Log.h`**:
+---
+
+## Our Approach
+
+We wrap the **spdlog** library (already added as a submodule in Chapter 3) with our own API:
+
+- `VP_CORE_INFO("message")` — Engine logging
+- `VP_INFO("message")` — Application logging
+
+---
+
+## Step 1: Update VizEngine CMakeLists.txt
+
+Add the Log source file and spdlog include directory.
+
+**Update `VizEngine/CMakeLists.txt`:**
+
+```cmake
+# VizEngine/CMakeLists.txt
+
+project(VizEngine)
+
+# =============================================================================
+# Source Files
+# =============================================================================
+set(VIZENGINE_SOURCES
+    src/VizEngine/Application.cpp
+    src/VizEngine/Log.cpp              # NEW
+    src/glad.c
+)
+
+set(VIZENGINE_HEADERS
+    src/VizEngine.h
+    src/VizEngine/Application.h
+    src/VizEngine/Core.h
+    src/VizEngine/EntryPoint.h
+    src/VizEngine/Log.h                # NEW
+    include/glad/glad.h
+    include/KHR/khrplatform.h
+)
+
+# =============================================================================
+# Library Target (DLL)
+# =============================================================================
+add_library(VizEngine SHARED
+    ${VIZENGINE_SOURCES}
+    ${VIZENGINE_HEADERS}
+)
+
+source_group("Source Files" FILES ${VIZENGINE_SOURCES})
+source_group("Header Files" FILES ${VIZENGINE_HEADERS})
+
+# =============================================================================
+# Include Directories
+# =============================================================================
+target_include_directories(VizEngine
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/vendor/glm>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/vendor/spdlog/include>  # NEW
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/vendor/glfw/include
+)
+
+# =============================================================================
+# Compile Definitions
+# =============================================================================
+target_compile_definitions(VizEngine
+    PUBLIC
+        $<$<PLATFORM_ID:Windows>:VP_PLATFORM_WINDOWS>
+    PRIVATE
+        VP_BUILD_DLL
+        _CRT_SECURE_NO_WARNINGS
+)
+
+# =============================================================================
+# Compiler Warnings
+# =============================================================================
+if(MSVC)
+    target_compile_options(VizEngine PRIVATE
+        /W4
+        /utf-8
+        /wd4251
+        /wd4275
+    )
+else()
+    target_compile_options(VizEngine PRIVATE
+        -Wall -Wextra -Wpedantic
+    )
+endif()
+
+# =============================================================================
+# Link Libraries
+# =============================================================================
+target_link_libraries(VizEngine
+    PRIVATE
+        glfw
+        $<$<PLATFORM_ID:Windows>:opengl32>
+)
+```
+
+---
+
+## Step 2: Create Log.h
+
+**Create `VizEngine/src/VizEngine/Log.h`:**
 
 ```cpp
+// VizEngine/src/VizEngine/Log.h
+
 #pragma once
-#include <memory>
+
 #include "Core.h"
-#include "spdlog/spdlog.h"
+
+// Silence MSVC warnings in spdlog headers
+#ifdef _MSC_VER
+    #pragma warning(push)
+    #pragma warning(disable: 4189 4996)
+#endif
+
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+
+#ifdef _MSC_VER
+    #pragma warning(pop)
+#endif
+
+#include <memory>
 
 namespace VizEngine
 {
+    /// @brief Logging system with separate core and client loggers.
+    /// 
+    /// Usage:
+    ///   VP_CORE_INFO("Engine message: {}", value);  // Engine logs
+    ///   VP_INFO("Application message: {}", value);  // Client logs
     class VizEngine_API Log
     {
     public:
-        enum class LogLevel
-        {
-            Trace, Debug, Info, Warn, Error, Critical, Off
-        };
-
+        /// @brief Initialize the logging system. Call once at startup.
         static void Init();
-        static void SetCoreLogLevel(LogLevel level);
-        static void SetClientLogLevel(LogLevel level);
 
-        inline static std::shared_ptr<spdlog::logger>& GetCoreLogger() { return s_CoreLogger; }
-        inline static std::shared_ptr<spdlog::logger>& GetClientLogger() { return s_ClientLogger; }
+        /// @brief Set log level for core (engine) logger.
+        static void SetCoreLogLevel(spdlog::level::level_enum level);
+
+        /// @brief Set log level for client (application) logger.
+        static void SetClientLogLevel(spdlog::level::level_enum level);
+
+        /// @brief Get the core logger instance.
+        static std::shared_ptr<spdlog::logger>& GetCoreLogger() { return s_CoreLogger; }
+
+        /// @brief Get the client logger instance.
+        static std::shared_ptr<spdlog::logger>& GetClientLogger() { return s_ClientLogger; }
 
     private:
-        static spdlog::level::level_enum EnumToLogLevel(LogLevel level);
         static std::shared_ptr<spdlog::logger> s_CoreLogger;
         static std::shared_ptr<spdlog::logger> s_ClientLogger;
     };
-}
 
-// Core logging macros
+}  // namespace VizEngine
+
+// =============================================================================
+// Logging Macros - Core (Engine)
+// =============================================================================
 #define VP_CORE_TRACE(...)    ::VizEngine::Log::GetCoreLogger()->trace(__VA_ARGS__)
 #define VP_CORE_INFO(...)     ::VizEngine::Log::GetCoreLogger()->info(__VA_ARGS__)
 #define VP_CORE_WARN(...)     ::VizEngine::Log::GetCoreLogger()->warn(__VA_ARGS__)
 #define VP_CORE_ERROR(...)    ::VizEngine::Log::GetCoreLogger()->error(__VA_ARGS__)
 #define VP_CORE_CRITICAL(...) ::VizEngine::Log::GetCoreLogger()->critical(__VA_ARGS__)
 
-// Client logging macros
+// =============================================================================
+// Logging Macros - Client (Application)
+// =============================================================================
 #define VP_TRACE(...)    ::VizEngine::Log::GetClientLogger()->trace(__VA_ARGS__)
 #define VP_INFO(...)     ::VizEngine::Log::GetClientLogger()->info(__VA_ARGS__)
 #define VP_WARN(...)     ::VizEngine::Log::GetClientLogger()->warn(__VA_ARGS__)
@@ -77,194 +197,211 @@ namespace VizEngine
 #define VP_CRITICAL(...) ::VizEngine::Log::GetClientLogger()->critical(__VA_ARGS__)
 ```
 
-### Two Loggers: Core vs Client
-
-| Logger | Purpose | Prefix |
-|--------|---------|--------|
-| **Core** | Engine internals | `[VizPsyche]` |
-| **Client** | Game/application | `[Client]` |
-
-This separation matters:
-- Engine developers see core messages
-- Game developers see client messages
-- You can filter each independently
-
-```cpp
-// In engine code:
-VP_CORE_INFO("Shader compiled successfully");
-
-// In game code:
-VP_INFO("Player spawned at position {}", pos);
-```
-
-### Why Macros?
-
-1. **Shorter code**: `VP_INFO("x")` vs `VizEngine::Log::GetClientLogger()->info("x")`
-2. **Compile-time removal**: In release builds, we could `#define VP_TRACE(...)` to nothing
-3. **Automatic file/line**: Could add `__FILE__` and `__LINE__` to the macro
-
-The `__VA_ARGS__` is a special macro that captures "everything passed in":
-
-```cpp
-VP_INFO("Player {} scored {} points", name, score);
-// Expands to:
-::VizEngine::Log::GetClientLogger()->info("Player {} scored {} points", name, score);
-```
-
 ---
 
-## Initializing the Loggers
+## Step 3: Create Log.cpp
 
-Create **`VizEngine/src/VizEngine/Log.cpp`**:
+**Create `VizEngine/src/VizEngine/Log.cpp`:**
 
 ```cpp
+// VizEngine/src/VizEngine/Log.cpp
+
 #include "Log.h"
-#include <spdlog/sinks/stdout_color_sinks.h>
 
 namespace VizEngine
 {
+    // Static member definitions
     std::shared_ptr<spdlog::logger> Log::s_CoreLogger;
     std::shared_ptr<spdlog::logger> Log::s_ClientLogger;
 
     void Log::Init()
     {
-        // Set the global log pattern
-        spdlog::set_pattern("%^[%T] %n: %v%$");
+        // Set global pattern: [timestamp] [logger] [level] message
+        // %^...%$ applies color to the level
+        spdlog::set_pattern("%^[%T] [%n] [%l]%$ %v");
 
-        // Initialize Core Logger
-        s_CoreLogger = spdlog::stdout_color_mt("VizPsyche");
+        // Create core logger (for engine messages)
+        s_CoreLogger = spdlog::stdout_color_mt("VizEngine");
         s_CoreLogger->set_level(spdlog::level::trace);
 
-        // Initialize Client Logger
-        s_ClientLogger = spdlog::stdout_color_mt("Client");
+        // Create client logger (for application messages)
+        s_ClientLogger = spdlog::stdout_color_mt("App");
         s_ClientLogger->set_level(spdlog::level::trace);
     }
-}
+
+    void Log::SetCoreLogLevel(spdlog::level::level_enum level)
+    {
+        s_CoreLogger->set_level(level);
+    }
+
+    void Log::SetClientLogLevel(spdlog::level::level_enum level)
+    {
+        s_ClientLogger->set_level(level);
+    }
+
+}  // namespace VizEngine
 ```
-
-### Understanding the Pattern
-
-The pattern string `"%^[%T] %n: %v%$"` controls output format:
-
-| Pattern | Meaning | Example |
-|---------|---------|---------|
-| `%T` | Time | 10:30:45 |
-| `%n` | Logger name | VizPsyche |
-| `%^`...`%$` | Colored section | (colors the level) |
-| `%v` | The actual message | Your text here |
-
-### stdout_color_mt
-
-`spdlog::stdout_color_mt("name")` creates:
-- A logger that outputs to **stdout**
-- With **color** support
-- Thread-safe (**mt** = multi-threaded)
-- Named "VizPsyche" or "Client"
 
 ---
 
-## Adding Logging to EntryPoint
+## Step 4: Update VizEngine.h
 
-Now we need to initialize the logging system before anything else runs.
+Add Log.h to the public includes.
 
-Update **`VizEngine/src/VizEngine/EntryPoint.h`**:
+**Update `VizEngine/src/VizEngine.h`:**
 
 ```cpp
-#pragma once
-#ifdef VP_PLATFORM_WINDOWS
+// VizEngine/src/VizEngine.h
 
-namespace VizEngine
-{
-    extern Application* CreateApplication();
-}
+#pragma once
+
+// =============================================================================
+// VizEngine Public API
+// =============================================================================
+
+#include "VizEngine/Application.h"
+#include "VizEngine/Log.h"         // NEW
+
+// EntryPoint must be included LAST
+#include "VizEngine/EntryPoint.h"
+```
+
+---
+
+## Step 5: Update EntryPoint.h
+
+Initialize logging before creating the application.
+
+**Update `VizEngine/src/VizEngine/EntryPoint.h`:**
+
+```cpp
+// VizEngine/src/VizEngine/EntryPoint.h
+
+#pragma once
+
+#include "Application.h"
+#include "Log.h"
+
+extern VizEngine::Application* VizEngine::CreateApplication();
 
 int main(int argc, char** argv)
 {
-    VizEngine::Log::Init();  // Initialize logging first
+    (void)argc;
+    (void)argv;
+
+    // Initialize logging FIRST
+    VizEngine::Log::Init();
+    VP_CORE_INFO("VizEngine initialized");
+
+    // Create and run application
     auto app = VizEngine::CreateApplication();
     app->Run();
     delete app;
+
+    VP_CORE_INFO("VizEngine shutdown");
+    return 0;
 }
-
-#endif
-```
-
-Also add `Log.cpp` to **`VizEngine/CMakeLists.txt`**:
-
-```cmake
-add_library(VizEngine SHARED
-    src/VizEngine/Log.cpp
-    # ... other files
-)
 ```
 
 ---
 
-## Log Levels
+## Step 6: Update Application.cpp
 
-Not all messages are equal:
+Replace `std::cout` with logging macros.
 
-| Level | Use For | Example |
-|-------|---------|---------|
-| **Trace** | Very detailed debug info | "Entering function X" |
-| **Debug** | Developer info | "Loaded 42 textures" |
-| **Info** | General information | "Engine started" |
-| **Warn** | Something unexpected | "Texture not found, using default" |
-| **Error** | Errors that were handled | "Failed to open file" |
-| **Critical** | Fatal errors | "Out of memory, shutting down" |
-
-### Filtering by Level
-
-Setting a log level filters out less severe messages:
+**Update `VizEngine/src/VizEngine/Application.cpp`:**
 
 ```cpp
-Log::SetCoreLogLevel(LogLevel::Warn);
+// VizEngine/src/VizEngine/Application.cpp
 
-VP_CORE_TRACE("This won't appear");
-VP_CORE_DEBUG("This won't appear");
-VP_CORE_INFO("This won't appear");
-VP_CORE_WARN("This WILL appear");     // YES
-VP_CORE_ERROR("This WILL appear");    // YES
-VP_CORE_CRITICAL("This WILL appear"); // YES
+#include "Application.h"
+#include "Log.h"
+
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
+namespace VizEngine
+{
+    Application::Application()
+    {
+        VP_CORE_TRACE("Application constructor");
+    }
+
+    Application::~Application()
+    {
+        VP_CORE_TRACE("Application destructor");
+    }
+
+    void Application::Run()
+    {
+        VP_CORE_INFO("Starting main loop...");
+
+        // Initialize GLFW
+        if (!glfwInit())
+        {
+            VP_CORE_CRITICAL("Failed to initialize GLFW!");
+            return;
+        }
+        VP_CORE_TRACE("GLFW initialized");
+
+        // OpenGL hints
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+        // Create window
+        GLFWwindow* window = glfwCreateWindow(1280, 720, "VizEngine", nullptr, nullptr);
+        if (!window)
+        {
+            VP_CORE_CRITICAL("Failed to create window!");
+            glfwTerminate();
+            return;
+        }
+        VP_CORE_INFO("Window created: 1280x720");
+
+        glfwMakeContextCurrent(window);
+
+        // Load OpenGL functions
+        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+        {
+            VP_CORE_CRITICAL("Failed to initialize GLAD!");
+            return;
+        }
+        VP_CORE_INFO("OpenGL {}", (const char*)glGetString(GL_VERSION));
+
+        // Main loop
+        while (!glfwWindowShouldClose(window))
+        {
+            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            {
+                glfwSetWindowShouldClose(window, true);
+            }
+
+            glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+        }
+
+        glfwTerminate();
+        VP_CORE_INFO("Main loop ended");
+    }
+
+}  // namespace VizEngine
 ```
-
-Common configurations:
-- **Development**: `Trace` - see everything
-- **Testing**: `Debug` - skip trace spam
-- **Release**: `Warn` - only problems
 
 ---
 
-## Format Strings
+## Step 7: Update SandboxApp.cpp
 
-spdlog uses the `{fmt}` library for formatting:
+Use client logging macros.
 
-```cpp
-// Basic substitution
-VP_INFO("Value is {}", 42);                    // Value is 42
-
-// Multiple values
-VP_INFO("{} + {} = {}", 1, 2, 3);              // 1 + 2 = 3
-
-// Formatting
-VP_INFO("Hex: {:x}", 255);                     // Hex: ff
-VP_INFO("Float: {:.2f}", 3.14159);             // Float: 3.14
-```
-
-| Specifier | Meaning | Example |
-|-----------|---------|---------|
-| `{:d}` | Decimal integer | 42 |
-| `{:x}` | Hexadecimal | 2a |
-| `{:.2f}` | Float, 2 decimals | 3.14 |
-
----
-
-## Using Logging in Your Game
-
-Test the logging system in your Sandbox application:
+**Update `Sandbox/src/SandboxApp.cpp`:**
 
 ```cpp
 // Sandbox/src/SandboxApp.cpp
+
 #include <VizEngine.h>
 
 class Sandbox : public VizEngine::Application
@@ -272,12 +409,14 @@ class Sandbox : public VizEngine::Application
 public:
     Sandbox()
     {
-        VP_INFO("Sandbox application created!");
+        VP_INFO("Sandbox created!");
+        VP_TRACE("This is a trace message");
+        VP_WARN("This is a warning");
     }
-    
+
     ~Sandbox()
     {
-        VP_INFO("Sandbox shutting down");
+        VP_INFO("Sandbox destroyed!");
     }
 };
 
@@ -287,61 +426,139 @@ VizEngine::Application* VizEngine::CreateApplication()
 }
 ```
 
-Rebuild and run. You should see colored output:
+---
 
-```
-[10:30:45] VizPsyche: Engine initialized
-[10:30:45] Client: Sandbox application created!
+## Step 8: Build and Run
+
+```bash
+cmake --build build --config Debug
+.\build\bin\Debug\Sandbox.exe
 ```
 
 ---
 
-## Best Practices
+## Expected Output
 
-### Do Log
+Colored console output:
+
+```
+[HH:MM:SS] [VizEngine] [info] VizEngine initialized
+[HH:MM:SS] [VizEngine] [trace] Application constructor
+[HH:MM:SS] [App] [info] Sandbox created!
+[HH:MM:SS] [App] [trace] This is a trace message
+[HH:MM:SS] [App] [warning] This is a warning
+[HH:MM:SS] [VizEngine] [info] Starting main loop...
+[HH:MM:SS] [VizEngine] [trace] GLFW initialized
+[HH:MM:SS] [VizEngine] [info] Window created: 1280x720
+[HH:MM:SS] [VizEngine] [info] OpenGL 4.6.0 NVIDIA ...
+```
+
+After pressing Escape:
+
+```
+[HH:MM:SS] [VizEngine] [info] Main loop ended
+[HH:MM:SS] [VizEngine] [trace] Application destructor
+[HH:MM:SS] [App] [info] Sandbox destroyed!
+[HH:MM:SS] [VizEngine] [info] VizEngine shutdown
+```
+
+---
+
+## Log Levels
+
+| Level | Macro | Use Case |
+|-------|-------|----------|
+| **trace** | `VP_CORE_TRACE` | Detailed debugging info |
+| **info** | `VP_CORE_INFO` | General information |
+| **warn** | `VP_CORE_WARN` | Something unexpected, not fatal |
+| **error** | `VP_CORE_ERROR` | Error, operation failed |
+| **critical** | `VP_CORE_CRITICAL` | Fatal error, must stop |
+
+### Controlling Output
+
 ```cpp
-VP_CORE_INFO("Loaded {} textures in {:.2f}ms", count, time);
-VP_CORE_ERROR("Failed to compile shader: {}", errorMessage);
-VP_CORE_WARN("Deprecated function called: {}", funcName);
+// Show only warnings and above
+VizEngine::Log::SetCoreLogLevel(spdlog::level::warn);
 ```
 
-### Don't Log
+---
+
+## Formatting
+
+spdlog uses `{}` placeholders (similar to Python's f-strings):
+
 ```cpp
-// Too spammy - every frame!
-VP_CORE_TRACE("Rendering frame...");  // Bad: thousands per second
-
-// Sensitive data
-VP_INFO("User password: {}", password);  // Bad: security issue
-```
-
-### Log on State Changes
-```cpp
-if (newState != oldState)
-{
-    VP_INFO("State changed from {} to {}", oldState, newState);
-}
+VP_INFO("Player {} scored {} points", playerName, score);
+VP_INFO("Position: ({:.2f}, {:.2f})", x, y);  // 2 decimal places
+VP_INFO("Hex: {:#x}", value);                 // Hexadecimal
 ```
 
 ---
 
-## Checkpoint
+## Project Structure After This Chapter
 
-- Created `Log.h` with Log class and macros  
-- Created `Log.cpp` with initialization  
-- Updated `EntryPoint.h` to call `Log::Init()`  
-- Tested with VP_INFO in Sandbox  
-
-**Verify:** Rebuild and run. Colored log messages appear in console.
+```
+VizPsyche/
+├── VizEngine/
+│   ├── CMakeLists.txt
+│   ├── src/
+│   │   ├── VizEngine.h
+│   │   ├── glad.c
+│   │   └── VizEngine/
+│   │       ├── Application.cpp
+│   │       ├── Application.h
+│   │       ├── Core.h
+│   │       ├── EntryPoint.h
+│   │       ├── Log.cpp          ← NEW
+│   │       └── Log.h            ← NEW
+│   └── vendor/
+│       ├── glfw/
+│       ├── glm/
+│       └── spdlog/              ← Used for the first time
+├── Sandbox/
+│   └── src/
+│       └── SandboxApp.cpp
+└── CMakeLists.txt
+```
 
 ---
 
-## Exercise
+## Commit Your Progress
 
-1. Add a new log level macro `VP_CORE_DEBUG` that's removed in release builds
-2. Add file logging to capture errors to `error.log`
-3. Add a timestamp to the log pattern showing milliseconds
-4. Create a custom logger for a subsystem (e.g., "Physics", "Audio")
+```bash
+git add .
+git commit -m "Chapter 4: Logging system with spdlog"
+```
 
 ---
 
-> **Next:** [Chapter 5: Window & Context](05_WindowAndContext.md) - Creating a window and OpenGL context.
+## Common Issues
+
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| "spdlog/spdlog.h not found" | Include path wrong | Check spdlog submodule and CMake include dirs |
+| No output / blank console | Log not initialized | Ensure `Log::Init()` called in EntryPoint |
+| "unresolved external symbol Log" | Static members not defined | Ensure Log.cpp has static member definitions |
+| Colors don't show | Windows terminal issue | Use Windows Terminal or enable ANSI in cmd |
+
+---
+
+## Milestone
+
+**Milestone: Logging System Working**
+
+You have:
+- Colored, formatted logging output
+- Separate engine (`VP_CORE_*`) and client (`VP_*`) loggers
+- Log level control
+- spdlog integrated and working
+
+---
+
+## What's Next
+
+In **Chapter 5**, we'll wrap GLFW into a `GLFWManager` class for cleaner window and context management.
+
+> **Next:** [Chapter 5: Window & Context](05_WindowAndContext.md)
+
+> **Previous:** [Chapter 3: Project Structure](03_ProjectStructure.md)
