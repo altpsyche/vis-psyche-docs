@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 8: Textures
+# Chapter 10: Textures
 
 A 3D model without textures is like a coloring book without colors. Textures are images wrapped onto geometry, adding detail that would be impossible with just vertices.
 
@@ -442,7 +442,9 @@ This chapter covered textures:
 
 ---
 
-> **Next:** [Chapter 9: Editor I - Dear ImGui](09_DearImGui.md) - Building debug UI for development.
+> **Next:** [Chapter 11: Dear ImGui](11_DearImGui.md) - Building debug UI for development.
+
+> **Previous:** [Chapter 9: Shader & Renderer](09_ShaderAndRenderer.md)
 
 
 

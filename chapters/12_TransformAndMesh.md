@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 10: Transform & Mesh
+# Chapter 12: Transform & Mesh
 
 ## Building Blocks for 3D Objects
 

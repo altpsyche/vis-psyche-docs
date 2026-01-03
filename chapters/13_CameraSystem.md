@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 11: Camera System
+# Chapter 13: Camera System
 
 ## What is a Camera?
 

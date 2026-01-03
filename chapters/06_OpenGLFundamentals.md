@@ -508,7 +508,7 @@ CPU Data → VBO → Vertex Shader → Rasterizer → Fragment Shader → Pixels
 
 ---
 
-> **Next:** [Chapter 7: Abstractions](07_Abstractions.md) - Wrapping OpenGL in clean C++ classes.
+> **Next:** [Chapter 7: RAII & Resource Management](07_RAIIAndResourceManagement.md) - The C++ patterns that make clean OpenGL code possible.
 
 > **Reference:** For a complete list of all OpenGL wrapper classes and their methods, see [Appendix A: Code Reference](A_Reference.md#opengl).
 

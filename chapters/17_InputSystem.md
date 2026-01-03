@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 15: Input System
+# Chapter 17: Input System
 
 ## The Problem
 

@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 16: Camera Controller
+# Chapter 18: Camera Controller
 
 ## Building on the Input System
 

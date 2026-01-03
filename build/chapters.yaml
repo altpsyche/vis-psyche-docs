@@ -10,16 +10,18 @@ chapters:
   - chapters/04_LoggingSystem.md
   - chapters/05_WindowAndContext.md
   - chapters/06_OpenGLFundamentals.md
-  - chapters/07_Abstractions.md
-  - chapters/08_Textures.md
-  - chapters/09_DearImGui.md
-  - chapters/10_TransformAndMesh.md
-  - chapters/11_CameraSystem.md
-  - chapters/12_SceneManagement.md
-  - chapters/13_Lighting.md
-  - chapters/14_ModelLoading.md
-  - chapters/15_InputSystem.md
-  - chapters/16_CameraController.md
+  - chapters/07_RAIIAndResourceManagement.md
+  - chapters/08_BufferClasses.md
+  - chapters/09_ShaderAndRenderer.md
+  - chapters/10_Textures.md
+  - chapters/11_DearImGui.md
+  - chapters/12_TransformAndMesh.md
+  - chapters/13_CameraSystem.md
+  - chapters/14_SceneManagement.md
+  - chapters/15_Lighting.md
+  - chapters/16_ModelLoading.md
+  - chapters/17_InputSystem.md
+  - chapters/18_CameraController.md
 
 appendices:
   - chapters/A_Reference.md

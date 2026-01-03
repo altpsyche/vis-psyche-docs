@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 13: Lighting (Blinn-Phong)
+# Chapter 15: Lighting (Blinn-Phong)
 
 ## The Problem: Flat Objects
 
@@ -21,6 +21,30 @@ In the real world, we see objects because light bounces off them into our eyes:
 3. **Eye** receives reflected light
 
 We can't simulate every photon (that's ray tracing). Instead, we use mathematical approximations.
+
+---
+
+## The Rendering Equation (Conceptual)
+
+All lighting models approximate this fundamental equation from computer graphics research:
+
+```
+L_o = L_e + ∫ f_r(ω_i, ω_o) · L_i(ω_i) · cos(θ_i) dω_i
+```
+
+**In plain English:** Light leaving a point = emitted light + (all incoming light × how the surface reflects it).
+
+### What Blinn-Phong Approximates
+
+| Term | Blinn-Phong Equivalent |
+|------|------------------------|
+| `L_e` (emission) | Not included (we skip this) |
+| `f_r` (BRDF) | Ambient + Diffuse + Specular |
+| `cos(θ)` | `dot(N, L)` in our shader |
+| `∫ dω` | We only consider one light direction |
+
+> [!NOTE]
+> **Future:** PBR lighting (planned Advanced Lighting chapter) uses more physically accurate BRDF models like Cook-Torrance.
 
 ---
 
@@ -375,7 +399,9 @@ This chapter covered Blinn-Phong lighting:
 
 ---
 
-> **Next:** [Chapter 14: Model Loading](14_ModelLoading.md) - Loading external 3D models with glTF.
+> **Next:** [Chapter 16: Model Loading](16_ModelLoading.md) - Loading external 3D models with glTF.
+
+> **Previous:** [Chapter 14: Scene Management](14_SceneManagement.md)
 
 > **Reference:** For class diagrams and file locations, see [Appendix A: Code Reference](A_Reference.md).
 

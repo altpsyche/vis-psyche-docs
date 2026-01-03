@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 12: Scene Management
+# Chapter 14: Scene Management
 
 ## The Problem
 

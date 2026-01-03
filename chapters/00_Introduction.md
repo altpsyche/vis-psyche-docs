@@ -77,29 +77,33 @@ Each chapter builds on the previous. The concepts stack:
 ### Part 2: Infrastructure
 4. **[Logging System](04_LoggingSystem.md)** - Tracking what happens in the engine
 5. **[Window & Context](05_WindowAndContext.md)** - GLFW and OpenGL context
-
-### Part 3: Graphics
 6. **[OpenGL Fundamentals](06_OpenGLFundamentals.md)** - The graphics pipeline
-7. **[Abstractions](07_Abstractions.md)** - Wrapping OpenGL in clean C++
-8. **[Textures](08_Textures.md)** - Loading and using images
 
-### Part 4: Editor I
-9. **[Dear ImGui](09_DearImGui.md)** - Debug UI for development
+### Part 3: C++ Patterns
+7. **[RAII & Resource Management](07_RAIIAndResourceManagement.md)** - Constructor/destructor patterns
 
-### Part 5: Engine Architecture
-10. **[Transform & Mesh](10_TransformAndMesh.md)** - Position, rotation, scale, geometry
-11. **[Camera System](11_CameraSystem.md)** - View and projection matrices
-12. **[Scene Management](12_SceneManagement.md)** - Managing multiple objects
+### Part 4: OpenGL Wrappers
+8. **[Buffer Classes](08_BufferClasses.md)** - VBO, IBO, VAO wrappers
+9. **[Shader & Renderer](09_ShaderAndRenderer.md)** - Shader compilation, draw calls
+10. **[Textures](10_Textures.md)** - Loading and using images
 
-### Part 6: Graphics II
-13. **[Lighting](13_Lighting.md)** - Blinn-Phong lighting model
+### Part 5: Editor
+11. **[Dear ImGui](11_DearImGui.md)** - Debug UI for development
 
-### Part 7: Assets
-14. **[Model Loading](14_ModelLoading.md)** - Loading glTF models with PBR materials
+### Part 6: Engine Architecture
+12. **[Transform & Mesh](12_TransformAndMesh.md)** - Position, rotation, scale, geometry
+13. **[Camera System](13_CameraSystem.md)** - View and projection matrices
+14. **[Scene Management](14_SceneManagement.md)** - Managing multiple objects
 
-### Part 8: Input
-15. **[Input System](15_InputSystem.md)** - Keyboard, mouse, polling
-16. **[Camera Controller](16_CameraController.md)** - WASD movement, mouse look
+### Part 7: Graphics II
+15. **[Lighting](15_Lighting.md)** - Blinn-Phong lighting model
+
+### Part 8: Assets
+16. **[Model Loading](16_ModelLoading.md)** - Loading glTF models with PBR materials
+
+### Part 9: Input
+17. **[Input System](17_InputSystem.md)** - Keyboard, mouse, polling
+18. **[Camera Controller](18_CameraController.md)** - WASD movement, mouse look
 
 ### Appendices
 - **[Appendix A: Code Reference](A_Reference.md)** - Class diagrams, file reference

@@ -16,35 +16,38 @@ A hands-on guide to building a 3D rendering engine from scratch.
 5. **[Logging System](04_LoggingSystem.md)** - spdlog wrapper, log levels, macros
 6. **[Window & Context](05_WindowAndContext.md)** - GLFWManager, OpenGL context, input
 
-### Part 3: Graphics I
-7. **[OpenGL Fundamentals](06_OpenGLFundamentals.md)** - Pipeline, buffers, shaders, coordinates
-8. **[Abstractions](07_Abstractions.md)** - RAII wrappers, Rule of 5, clean APIs
-9. **[Textures](08_Textures.md)** - Image loading, GPU textures, UV mapping
+### Part 3: C++ Patterns
+7. **[RAII & Resource Management](07_RAIIAndResourceManagement.md)** - Constructor/destructor patterns, Rule of 5
 
-### Part 4: Editor I
-10. **[Dear ImGui](09_DearImGui.md)** - Immediate mode GUI, widgets, UIManager wrapper
+### Part 4: OpenGL Wrappers
+8. **[Buffer Classes](08_BufferClasses.md)** - VertexBuffer, IndexBuffer, VertexArray, Layout
+9. **[Shader & Renderer](09_ShaderAndRenderer.md)** - Shader parsing, uniforms, draw calls
+10. **[Textures](10_Textures.md)** - Image loading, GPU textures, UV mapping
 
-### Part 5: Engine Architecture
-11. **[Transform & Mesh](10_TransformAndMesh.md)** - Position, rotation, scale, geometry factories
-12. **[Camera System](11_CameraSystem.md)** - View/projection matrices, camera movement
-13. **[Scene Management](12_SceneManagement.md)** - SceneObject, shared resources, object selection
+### Part 5: Editor
+11. **[Dear ImGui](11_DearImGui.md)** - Immediate mode GUI, widgets, UIManager wrapper
 
-### Part 6: Graphics II
-14. **[Lighting](13_Lighting.md)** - Blinn-Phong model, normals, directional lights
+### Part 6: Engine Architecture
+12. **[Transform & Mesh](12_TransformAndMesh.md)** - Position, rotation, scale, geometry factories
+13. **[Camera System](13_CameraSystem.md)** - View/projection matrices, camera movement
+14. **[Scene Management](14_SceneManagement.md)** - SceneObject, shared resources, object selection
 
-### Part 7: Assets
-15. **[Model Loading](14_ModelLoading.md)** - glTF format, tinygltf, PBR materials
+### Part 7: Graphics II
+15. **[Lighting](15_Lighting.md)** - Blinn-Phong model, normals, directional lights
 
-### Part 8: Input
-16. **[Input System](15_InputSystem.md)** - Keyboard, mouse, polling vs events, edge detection
-17. **[Camera Controller](16_CameraController.md)** - WASD movement, mouse look, scroll zoom
+### Part 8: Assets
+16. **[Model Loading](16_ModelLoading.md)** - glTF format, tinygltf, PBR materials
 
-### Part 9: Graphics III *(planned)*
-18. **[Advanced OpenGL](17_AdvancedOpenGL.md)** - Framebuffers, depth/stencil, cubemaps
-19. **[Advanced Lighting](18_AdvancedLighting.md)** - Shadows, PBR, HDR, bloom
+### Part 9: Input
+17. **[Input System](17_InputSystem.md)** - Keyboard, mouse, polling vs events, edge detection
+18. **[Camera Controller](18_CameraController.md)** - WASD movement, mouse look, scroll zoom
 
-### Part 10: Engine II *(planned)*
-20. **[Entity Component System](19_ECS.md)** - Components, systems, queries
+### Part 10: Graphics III *(planned)*
+19. **[Advanced OpenGL](19_AdvancedOpenGL.md)** - Framebuffers, depth/stencil, cubemaps
+20. **[Advanced Lighting](20_AdvancedLighting.md)** - Shadows, PBR, HDR, bloom
+
+### Part 11: Engine II *(planned)*
+21. **[Entity Component System](21_ECS.md)** - Components, systems, queries
 
 ### Appendices
 - **[Appendix A: Code Reference](A_Reference.md)** - Class diagrams, file reference, debugging tips
@@ -70,25 +73,29 @@ Read chapters in order. Each builds on the previous:
       ↓
 06 OpenGL Fundamentals ←── Understand graphics basics
       ↓
-07 Abstractions ←── Understand our C++ patterns
+07 RAII & Resource Management ←── C++ resource patterns
       ↓
-08 Textures ←── Add images to geometry
+08 Buffer Classes ←── Apply RAII to OpenGL
       ↓
-09 Dear ImGui ←── Debug UI for development
+09 Shader & Renderer ←── Compile shaders, centralize drawing
       ↓
-10 Transform & Mesh ←── Geometry and positioning
+10 Textures ←── Add images to geometry
       ↓
-11 Camera System ←── View the 3D world
+11 Dear ImGui ←── Debug UI for development
       ↓
-12 Scene Management ←── Manage multiple objects
+12 Transform & Mesh ←── Geometry and positioning
       ↓
-13 Lighting ←── Make it look 3D
+13 Camera System ←── View the 3D world
       ↓
-14 Model Loading ←── Load external 3D models
+14 Scene Management ←── Manage multiple objects
       ↓
-15 Input System ←── Handle user interaction
+15 Lighting ←── Make it look 3D
       ↓
-16 Camera Controller ←── WASD movement, mouse look
+16 Model Loading ←── Load external 3D models
+      ↓
+17 Input System ←── Handle user interaction
+      ↓
+18 Camera Controller ←── WASD movement, mouse look
       ↓
 Appendix A ←── Reference material
 ```
@@ -122,7 +129,7 @@ Use [Appendix A](A_Reference.md) as a quick reference for class diagrams and fil
 This is a **living document**. As the engine grows, new chapters will be added:
 
 - [x] Model Loading
-- [x] Editor I (Dear ImGui)
+- [x] Dear ImGui
 - [x] Input System
 - [x] Camera Controller
 - [ ] Advanced OpenGL *(next)*
