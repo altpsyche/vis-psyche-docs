@@ -78,7 +78,7 @@ This is why we:
 
 Before building abstractions, here is the **absolute minimum** needed to render pixels. This is the "Hello World" of graphics programming.
 
-> **Note:** This code is intentionally ugly - raw OpenGL with no wrappers. We'll clean it up in [Chapter 7: Abstractions](07_Abstractions.md). The goal here is understanding, not elegance.
+> **Note:** This code is intentionally ugly - raw OpenGL with no wrappers. We'll clean it up in [Chapter 7: RAII & Resource Management](07_RAIIAndResourceManagement.md). The goal here is understanding, not elegance.
 
 ### The 3-Vertex Triangle
 

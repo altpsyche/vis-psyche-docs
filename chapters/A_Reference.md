@@ -355,16 +355,21 @@ cmake --build build --config Debug
 | CMake, build system | [01 Build System](01_BuildSystem.md) |
 | DLL exports, __declspec | [02 DLL Architecture](02_DLLArchitecture.md) |
 | GLFW, GLAD, GLM, ImGui, spdlog, tinygltf | [03 Third-Party Libraries](03_ThirdPartyLibraries.md) |
-| GLFWManager, context | [04 Window & Context](04_WindowAndContext.md) |
-| Log class, VP_* macros | [05 Logging System](05_LoggingSystem.md) |
-| Buffers, shaders, pipeline | [06 OpenGL Fundamentals](06_OpenGLFundamentals.md) |
-| RAII, Rule of 5, wrappers | [07 Abstractions](07_Abstractions.md) |
-| Texture class, stb_image | [08 Textures](08_Textures.md) |
-| UIManager, ImGui widgets | [09 Editor I](09_DearImGui.md) |
-| Camera, Transform, Mesh | [10 Engine Architecture](10_EngineArchitecture.md) |
-| Scene, SceneObject | [11 Multiple Objects](11_MultipleObjects.md) |
-| DirectionalLight, Blinn-Phong | [12 Lighting](12_Lighting.md) |
-| Model, Material, glTF, tinygltf | [13 Model Loading](13_ModelLoading.md) |
+| Log class, VP_* macros | [04 Logging System](04_LoggingSystem.md) |
+| GLFWManager, context | [05 Window & Context](05_WindowAndContext.md) |
+| Buffers, shaders, pipeline, GPU architecture | [06 OpenGL Fundamentals](06_OpenGLFundamentals.md) |
+| RAII, Rule of 5, move semantics | [07 RAII & Resource Management](07_RAIIAndResourceManagement.md) |
+| VertexBuffer, IndexBuffer, VertexArray, Layout | [08 Buffer Classes](08_BufferClasses.md) |
+| Shader class, uniform caching, Renderer | [09 Shader & Renderer](09_ShaderAndRenderer.md) |
+| Texture class, stb_image, mipmaps | [10 Textures](10_Textures.md) |
+| UIManager, ImGui widgets | [11 Dear ImGui](11_DearImGui.md) |
+| Transform, Vertex, Mesh, factory methods | [12 Transform & Mesh](12_TransformAndMesh.md) |
+| Camera, view/projection matrices | [13 Camera System](13_CameraSystem.md) |
+| Scene, SceneObject, shared resources | [14 Scene Management](14_SceneManagement.md) |
+| DirectionalLight, Blinn-Phong, normals | [15 Lighting](15_Lighting.md) |
+| Model, PBRMaterial, glTF, tinygltf | [16 Model Loading](16_ModelLoading.md) |
+| Input class, keyboard, mouse, edge detection | [17 Input System](17_InputSystem.md) |
+| WASD movement, mouse look, zoom | [18 Camera Controller](18_CameraController.md) |
 
 ---
 

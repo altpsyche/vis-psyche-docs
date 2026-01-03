@@ -100,7 +100,7 @@ Defines what data each vertex contains:
 struct Vertex
 {
     glm::vec4 Position;
-    glm::vec3 Normal;      // For lighting (Chapter 13)
+    glm::vec3 Normal;      // For lighting (Chapter 15)
     glm::vec4 Color;
     glm::vec2 TexCoords;
 

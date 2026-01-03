@@ -43,7 +43,7 @@ glTF (GL Transmission Format) was designed by Khronos Group (the same people beh
 - **Two formats** - `.gltf` (JSON + binary) or `.glb` (single binary file)
 
 > [!NOTE]
-> **About PBR Materials:** glTF uses Physically-Based Rendering (PBR) with metallic-roughness workflow. Our engine currently uses Blinn-Phong shading (from Chapter 11). In this chapter, we'll parse and store the PBR material data from glTF files, but render using our existing Blinn-Phong shader. The base color texture works directly, and we approximate roughness by converting it to shininess. Full PBR rendering will be covered in a future **Advanced Lighting** chapter.
+> **About PBR Materials:** glTF uses Physically-Based Rendering (PBR) with metallic-roughness workflow. Our engine currently uses Blinn-Phong shading (from Chapter 15). In this chapter, we'll parse and store the PBR material data from glTF files, but render using our existing Blinn-Phong shader. The base color texture works directly, and we approximate roughness by converting it to shininess. Full PBR rendering will be covered in a future **Advanced Lighting** chapter.
 
 ---
 
@@ -191,7 +191,7 @@ This gives you access to many test models:
 Here's how to load the Duck model:
 
 > [!NOTE]
-> **Integration with Scene Management:** This code uses the `Scene` class from [Chapter 12](12_SceneManagement.md). The key connection:
+> **Integration with Scene Management:** This code uses the `Scene` class from [Chapter 14](14_SceneManagement.md). The key connection:
 > - `Model::LoadFromFile()` returns a Model containing `shared_ptr<Mesh>` objects
 > - `Scene::Add()` accepts a `shared_ptr<Mesh>` (same type!)
 > - `SceneObject::TexturePtr` stores the model's embedded texture
@@ -954,7 +954,7 @@ struct SceneObject
 
 ## What About PBR?
 
-glTF uses **Physically-Based Rendering (PBR)** with the metallic-roughness workflow. Our engine uses **Blinn-Phong** shading (from Chapter 11) but with a **Roughness** parameter that maps directly from glTF:
+glTF uses **Physically-Based Rendering (PBR)** with the metallic-roughness workflow. Our engine uses **Blinn-Phong** shading (from Chapter 15) but with a **Roughness** parameter that maps directly from glTF:
 
 | glTF PBR Property | How We Handle It |
 |-------------------|------------------|

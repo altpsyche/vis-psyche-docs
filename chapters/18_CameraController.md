@@ -16,7 +16,7 @@ By the end of this chapter, you'll have:
 
 ## The Camera Class
 
-Our Camera class (from Chapter 10) already has movement methods:
+Our Camera class (from Chapter 13) already has movement methods:
 
 ```cpp
 // VizEngine/Core/Camera.h

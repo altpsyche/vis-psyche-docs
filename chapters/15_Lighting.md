@@ -144,10 +144,10 @@ A **normal** is a vector perpendicular to a surface. Lighting calculations depen
 
 ### Adding Normals to Vertices
 
-We need to add a `Normal` field to the `Vertex` struct (from [Chapter 10: Transform & Mesh](10_TransformAndMesh.md)):
+We need to add a `Normal` field to the `Vertex` struct (from [Chapter 12: Transform & Mesh](12_TransformAndMesh.md)):
 
 > [!NOTE]
-> **Vertex Struct Recap:** This is the same `Vertex` struct from [Chapter 10](10_TransformAndMesh.md). The `Normal` field was already included in anticipation of lighting. If you're building along, you should already have this.
+> **Vertex Struct Recap:** This is the same `Vertex` struct from [Chapter 12](12_TransformAndMesh.md). The `Normal` field was already included in anticipation of lighting. If you're building along, you should already have this.
 
 ```cpp
 // Update Vertex in VizEngine/Core/Mesh.h

@@ -31,7 +31,7 @@ Why start simple?
 Bundles everything that makes an "object" in our scene:
 
 > [!NOTE]
-> **Prerequisites:** This struct uses `Mesh` from [Chapter 10](10_TransformAndMesh.md), `Texture` from [Chapter 8](08_Textures.md), and `Transform` from [Chapter 10](10_TransformAndMesh.md).
+> **Prerequisites:** This struct uses `Mesh` from [Chapter 12](12_TransformAndMesh.md), `Texture` from [Chapter 10](10_Textures.md), and `Transform` from [Chapter 12](12_TransformAndMesh.md).
 
 ```cpp
 // VizEngine/Core/SceneObject.h
@@ -186,7 +186,7 @@ int Application::Run()
 
 ## UI for Object Selection
 
-Use ImGui (from [Chapter 9](09_DearImGui.md)) to select and edit objects:
+Use ImGui (from [Chapter 11](11_DearImGui.md)) to select and edit objects:
 
 ```cpp
 ui.StartWindow("Scene Objects");
