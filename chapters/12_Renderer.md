@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 11: Renderer Class
+# Chapter 12: Renderer Class
 
 Create a `Renderer` class to centralize drawing operations and OpenGL state management.
 
@@ -159,8 +159,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 12**, we'll create `Transform` and `Mesh` classes.
+In **Chapter 13**, we'll create `Transform` and `Mesh` classes.
 
-> **Next:** [Chapter 12: Transform & Mesh](12_TransformAndMesh.md)
+> **Next:** [Chapter 13: Transform & Mesh](13_TransformAndMesh.md)
 
-> **Previous:** [Chapter 10: Texture System](10_Textures.md)
+> **Previous:** [Chapter 11: Texture System](11_Textures.md)

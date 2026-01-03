@@ -1,11 +1,11 @@
 \newpage
 
-# Chapter 7: RAII & Resource Management
+# Chapter 8: RAII & Resource Management
 
 OpenGL resources (buffers, shaders, textures) must be explicitly deleted. C++ gives us tools to automate this and prevent leaks.
 
 > [!NOTE]
-> This chapter explains C++ patterns. No new files yet—we'll apply these patterns in Chapters 8-11.
+> This chapter explains C++ patterns. No new files yet—we'll apply these patterns in Chapters 9-12.
 
 ---
 
@@ -286,8 +286,8 @@ Even if an exception is thrown, destructors run and resources are freed.
 
 ## What's Next
 
-In **Chapter 8**, we'll apply these patterns to create `VertexBuffer`, `IndexBuffer`, and `VertexArray` classes.
+In **Chapter 9**, we'll apply these patterns to create `VertexBuffer`, `IndexBuffer`, and `VertexArray` classes.
 
-> **Next:** [Chapter 8: Buffer Classes](08_BufferClasses.md)
+> **Next:** [Chapter 9: Buffer Classes](09_BufferClasses.md)
 
-> **Previous:** [Chapter 6: OpenGL Fundamentals](06_OpenGLFundamentals.md)
+> **Previous:** [Chapter 7: OpenGL Fundamentals](07_OpenGLFundamentals.md)

@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 13: Camera System
+# Chapter 14: Camera System
 
 Create a `Camera` class that generates view and projection matrices. This lets you look at your 3D scene from any angle.
 
@@ -291,8 +291,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 14**, we'll create a `Scene` class to manage multiple objects.
+In **Chapter 15**, we'll create a `Scene` class to manage multiple objects.
 
-> **Next:** [Chapter 14: Scene Management](14_SceneManagement.md)
+> **Next:** [Chapter 15: Scene Management](15_SceneManagement.md)
 
-> **Previous:** [Chapter 12: Transform & Mesh](12_TransformAndMesh.md)
+> **Previous:** [Chapter 13: Transform & Mesh](13_TransformAndMesh.md)

@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 5: Window & Context
+# Chapter 6: Window & Context
 
 Refactor the OpenGL window setup from `Application.cpp` into a dedicated `GLFWManager` class. This separation makes the code cleaner and prepares for future features like resize callbacks.
 
@@ -423,8 +423,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 6**, we'll learn the fundamental concepts of OpenGL—the graphics pipeline, shaders, buffers, and how they work together.
+In **Chapter 7**, we'll learn the fundamental concepts of OpenGL—the graphics pipeline, shaders, buffers, and how they work together.
 
-> **Next:** [Chapter 6: OpenGL Fundamentals](06_OpenGLFundamentals.md)
+> **Next:** [Chapter 7: OpenGL Fundamentals](07_OpenGLFundamentals.md)
 
-> **Previous:** [Chapter 4: Logging System](04_LoggingSystem.md)
+> **Previous:** [Chapter 5: Logging System](05_LoggingSystem.md)

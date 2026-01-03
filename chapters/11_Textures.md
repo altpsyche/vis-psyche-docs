@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 10: Texture System
+# Chapter 11: Texture System
 
 Add texture support by integrating **stb_image** and creating a `Texture` class. This is the first time we add a new library since Chapter 3.
 
@@ -408,8 +408,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 11**, we'll create a `Renderer` class to centralize draw calls.
+In **Chapter 12**, we'll create a `Renderer` class to centralize draw calls.
 
-> **Next:** [Chapter 11: Renderer Class](11_Renderer.md)
+> **Next:** [Chapter 12: Renderer Class](12_Renderer.md)
 
-> **Previous:** [Chapter 9: Shader System](09_ShaderAndRenderer.md)
+> **Previous:** [Chapter 10: Shader System](10_ShaderAndRenderer.md)

@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 15: Dear ImGui
+# Chapter 16: Dear ImGui
 
 Add **Dear ImGui** for debug UI. ImGui is an immediate-mode GUI library.
 
@@ -302,8 +302,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 16**, we'll add Blinn-Phong lighting.
+In **Chapter 17**, we'll add Blinn-Phong lighting.
 
-> **Next:** [Chapter 16: Blinn-Phong Lighting](16_Lighting.md)
+> **Next:** [Chapter 17: Lighting](17_Lighting.md)
 
-> **Previous:** [Chapter 14: Scene Management](14_SceneManagement.md)
+> **Previous:** [Chapter 15: Scene Management](15_SceneManagement.md)

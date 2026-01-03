@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 9: Shader System
+# Chapter 10: Shader System
 
 Create a `Shader` class that handles loading, compiling, and using GLSL shader programs.
 
@@ -363,8 +363,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 10**, we'll add texture support with `stb_image`.
+In **Chapter 11**, we'll add texture support with `stb_image`.
 
-> **Next:** [Chapter 10: Texture System](10_Textures.md)
+> **Next:** [Chapter 11: Texture System](11_Textures.md)
 
-> **Previous:** [Chapter 8: Buffer Classes](08_BufferClasses.md)
+> **Previous:** [Chapter 9: Buffer Classes](09_BufferClasses.md)

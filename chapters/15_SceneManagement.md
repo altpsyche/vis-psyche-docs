@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 14: Scene Management
+# Chapter 15: Scene Management
 
 Create a `Scene` class to manage multiple objects. Each object has a mesh, transform, optional texture, and material properties.
 
@@ -271,8 +271,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 15**, we'll add Dear ImGui for debug UI.
+In **Chapter 16**, we'll add Dear ImGui for debug UI.
 
-> **Next:** [Chapter 15: Dear ImGui](15_DearImGui.md)
+> **Next:** [Chapter 16: Dear ImGui](16_DearImGui.md)
 
-> **Previous:** [Chapter 13: Camera System](13_CameraSystem.md)
+> **Previous:** [Chapter 14: Camera System](14_CameraSystem.md)

@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 12: Transform & Mesh
+# Chapter 13: Transform & Mesh
 
 Create `Transform` and `Mesh` classes to represent 3D objects with position, rotation, scale, and geometry.
 
@@ -305,8 +305,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 13**, we'll add a `Camera` class for view and projection matrices.
+In **Chapter 14**, we'll add a `Camera` class for view and projection matrices.
 
-> **Next:** [Chapter 13: Camera System](13_CameraSystem.md)
+> **Next:** [Chapter 14: Camera System](14_CameraSystem.md)
 
-> **Previous:** [Chapter 11: Renderer Class](11_Renderer.md)
+> **Previous:** [Chapter 12: Renderer Class](12_Renderer.md)

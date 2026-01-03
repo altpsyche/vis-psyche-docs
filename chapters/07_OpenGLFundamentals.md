@@ -1,11 +1,11 @@
 \newpage
 
-# Chapter 6: OpenGL Fundamentals
+# Chapter 7: OpenGL Fundamentals
 
 Before we abstract OpenGL into clean C++ classes, we need to understand what's happening at the GPU level. This chapter explains the core concepts that power everything we'll build.
 
 > [!NOTE]
-> This chapter is conceptual. No new files are created—we're building understanding. Implementation starts in Chapter 8.
+> This chapter is conceptual. No new files are created—we're building understanding. Implementation starts in Chapter 9.
 
 ---
 
@@ -332,8 +332,8 @@ Subsequent calls operate on whatever is currently bound. This is why we "bind be
 
 ## What's Next
 
-In **Chapter 7**, we'll learn about RAII and C++ patterns for safely managing these OpenGL resources.
+In **Chapter 8**, we'll learn about RAII and C++ patterns for safely managing these OpenGL resources.
 
-> **Next:** [Chapter 7: RAII & Resource Management](07_RAIIAndResourceManagement.md)
+> **Next:** [Chapter 8: RAII & Resource Management](08_RAIIAndResourceManagement.md)
 
-> **Previous:** [Chapter 5: Window & Context](05_WindowAndContext.md)
+> **Previous:** [Chapter 6: Window & Context](06_WindowAndContext.md)

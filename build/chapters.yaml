@@ -4,24 +4,28 @@
 
 chapters:
   - chapters/00_Introduction.md
-  - chapters/01_BuildSystem.md
-  - chapters/02_DLLArchitecture.md
-  - chapters/03_ThirdPartyLibraries.md
-  - chapters/04_LoggingSystem.md
-  - chapters/05_WindowAndContext.md
-  - chapters/06_OpenGLFundamentals.md
-  - chapters/07_RAIIAndResourceManagement.md
-  - chapters/08_BufferClasses.md
-  - chapters/09_ShaderAndRenderer.md
-  - chapters/10_Textures.md
-  - chapters/11_DearImGui.md
-  - chapters/12_TransformAndMesh.md
-  - chapters/13_CameraSystem.md
-  - chapters/14_SceneManagement.md
-  - chapters/15_Lighting.md
-  - chapters/16_ModelLoading.md
-  - chapters/17_InputSystem.md
-  - chapters/18_CameraController.md
+  - chapters/01_EnvironmentSetup.md
+  - chapters/02_HelloTriangle.md
+  - chapters/03_ProjectStructure.md
+  - chapters/04_DLLArchitecture.md
+  - chapters/05_LoggingSystem.md
+  - chapters/06_WindowAndContext.md
+  - chapters/07_OpenGLFundamentals.md
+  - chapters/08_RAIIAndResourceManagement.md
+  - chapters/09_BufferClasses.md
+  - chapters/10_ShaderAndRenderer.md
+  - chapters/11_Textures.md
+  - chapters/12_Renderer.md
+  - chapters/13_TransformAndMesh.md
+  - chapters/14_CameraSystem.md
+  - chapters/15_SceneManagement.md
+  - chapters/16_DearImGui.md
+  - chapters/17_Lighting.md
+  - chapters/18_glTFFormat.md
+  - chapters/19_ModelLoaderGeometry.md
+  - chapters/20_ModelLoaderMaterials.md
+  - chapters/21_InputSystem.md
+  - chapters/22_CameraController.md
 
 appendices:
   - chapters/A_Reference.md

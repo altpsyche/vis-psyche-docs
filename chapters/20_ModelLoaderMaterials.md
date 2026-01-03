@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 19: Model Loader (Materials)
+# Chapter 20: Model Loader (Materials)
 
 Extend the model loader to extract glTF materials and textures.
 
@@ -147,8 +147,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 20**, we'll add an Input system.
+In **Chapter 21**, we'll add an Input system.
 
-> **Next:** [Chapter 20: Input System](20_InputSystem.md)
+> **Next:** [Chapter 21: Input System](21_InputSystem.md)
 
-> **Previous:** [Chapter 18: Model Loader (Geometry)](18_ModelLoaderGeometry.md)
+> **Previous:** [Chapter 19: Model Loader (Geometry)](19_ModelLoaderGeometry.md)

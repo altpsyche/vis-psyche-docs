@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 18: Model Loader (Geometry)
+# Chapter 19: Model Loader (Geometry)
 
 Create a `Model` class that loads glTF geometry using a static factory pattern.
 
@@ -267,8 +267,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 19**, we'll look at the material extraction in more detail.
+In **Chapter 20**, we'll look at the material extraction in more detail.
 
-> **Next:** [Chapter 19: Model Loader (Materials)](19_ModelLoaderMaterials.md)
+> **Next:** [Chapter 20: Model Loader (Materials)](20_ModelLoaderMaterials.md)
 
-> **Previous:** [Chapter 17: glTF Format](17_glTFFormat.md)
+> **Previous:** [Chapter 18: glTF Format](18_glTFFormat.md)

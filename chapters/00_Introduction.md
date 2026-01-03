@@ -141,6 +141,7 @@ Part I: Getting Started
 ├── Ch 1: Environment Setup
 ├── Ch 2: Hello Triangle
 ├── Ch 3: Project Structure
+├── Ch 3b: DLL Architecture
 └── Ch 4: Logging System
 
 Part II: OpenGL Foundations

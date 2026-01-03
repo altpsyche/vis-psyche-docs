@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 17: glTF Format
+# Chapter 18: glTF Format
 
 Add **tinygltf** to load 3D models in the glTF format. This chapter covers the format and integration.
 
@@ -200,8 +200,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 18**, we'll create a `Model` class to load glTF geometry.
+In **Chapter 19**, we'll create a `Model` class to load glTF geometry.
 
-> **Next:** [Chapter 18: Model Loader (Geometry)](18_ModelLoaderGeometry.md)
+> **Next:** [Chapter 19: Model Loader (Geometry)](19_ModelLoaderGeometry.md)
 
-> **Previous:** [Chapter 16: Blinn-Phong Lighting](16_Lighting.md)
+> **Previous:** [Chapter 17: Lighting](17_Lighting.md)

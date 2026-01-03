@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 4: Logging System
+# Chapter 5: Logging System
 
 Replace `std::cout` with a proper logging system. Good logging is essential for debugging—it tells you what's happening inside your engine without stepping through with a debugger.
 
@@ -527,7 +527,7 @@ VizPsyche/
 
 ```bash
 git add .
-git commit -m "Chapter 4: Logging system with spdlog"
+git commit -m "Chapter 5: Logging system with spdlog"
 ```
 
 ---
@@ -557,8 +557,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 5**, we'll wrap GLFW into a `GLFWManager` class for cleaner window and context management.
+In **Chapter 6**, we'll wrap GLFW into a `GLFWManager` class for cleaner window and context management.
 
-> **Next:** [Chapter 5: Window & Context](05_WindowAndContext.md)
+> **Next:** [Chapter 6: Window & Context](06_WindowAndContext.md)
 
-> **Previous:** [Chapter 3: Project Structure](03_ProjectStructure.md)
+> **Previous:** [Chapter 4: DLL Architecture](04_DLLArchitecture.md)

@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 21: Camera Controller
+# Chapter 22: Camera Controller
 
 Use the Input system to create a fly camera with WASD movement and mouse look.
 
@@ -198,4 +198,4 @@ Congratulations! You've built a complete 3D rendering engine:
 
 > **Appendix:** [Code Reference](A_Reference.md)
 
-> **Previous:** [Chapter 20: Input System](20_InputSystem.md)
+> **Previous:** [Chapter 21: Input System](21_InputSystem.md)

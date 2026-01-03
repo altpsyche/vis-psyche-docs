@@ -1,8 +1,8 @@
 \newpage
 
-# Chapter 8: Buffer Classes
+# Chapter 9: Buffer Classes
 
-Apply the RAII patterns from Chapter 7 to create OpenGL buffer wrappers. By the end, you'll have `VertexBuffer`, `IndexBuffer`, `VertexArray`, and `VertexBufferLayout` classes.
+Apply the RAII patterns from Chapter 8 to create OpenGL buffer wrappers. By the end, you'll have `VertexBuffer`, `IndexBuffer`, `VertexArray`, and `VertexBufferLayout` classes.
 
 ---
 
@@ -547,8 +547,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 9**, we'll create a `Shader` class for compiling and managing GLSL programs.
+In **Chapter 10**, we'll create a `Shader` class for compiling and managing GLSL programs.
 
-> **Next:** [Chapter 9: Shader System](09_ShaderAndRenderer.md)
+> **Next:** [Chapter 10: Shader System](10_ShaderAndRenderer.md)
 
-> **Previous:** [Chapter 7: RAII & Resource Management](07_RAIIAndResourceManagement.md)
+> **Previous:** [Chapter 8: RAII & Resource Management](08_RAIIAndResourceManagement.md)

@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 16: Blinn-Phong Lighting
+# Chapter 17: Lighting
 
 Add realistic lighting with the Blinn-Phong illumination model.
 
@@ -242,8 +242,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 17**, we'll cover glTF format and add `tinygltf`.
+In **Chapter 18**, we'll cover glTF format and add `tinygltf`.
 
-> **Next:** [Chapter 17: glTF Format](17_glTFFormat.md)
+> **Next:** [Chapter 18: glTF Format](18_glTFFormat.md)
 
-> **Previous:** [Chapter 15: Dear ImGui](15_DearImGui.md)
+> **Previous:** [Chapter 16: Dear ImGui](16_DearImGui.md)

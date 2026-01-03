@@ -11,36 +11,37 @@ A step-by-step guide to building a 3D rendering engine from scratch using C++ an
 - [Chapter 1: Environment Setup](01_EnvironmentSetup.md)
 - [Chapter 2: Hello Triangle](02_HelloTriangle.md)
 - [Chapter 3: Project Structure](03_ProjectStructure.md)
-- [Chapter 4: Logging System](04_LoggingSystem.md)
+- [Chapter 4: DLL Architecture](04_DLLArchitecture.md)
+- [Chapter 5: Logging System](05_LoggingSystem.md)
 
 ### Part II: OpenGL Foundations
-- [Chapter 5: Window & Context](05_WindowAndContext.md)
-- [Chapter 6: OpenGL Fundamentals](06_OpenGLFundamentals.md)
-- [Chapter 7: RAII & Resource Management](07_RAIIAndResourceManagement.md)
+- [Chapter 6: Window & Context](06_WindowAndContext.md)
+- [Chapter 7: OpenGL Fundamentals](07_OpenGLFundamentals.md)
+- [Chapter 8: RAII & Resource Management](08_RAIIAndResourceManagement.md)
 
 ### Part III: GPU Abstractions
-- [Chapter 8: Buffer Classes](08_BufferClasses.md)
-- [Chapter 9: Shader System](09_ShaderAndRenderer.md)
-- [Chapter 10: Texture System](10_Textures.md)
-- [Chapter 11: Renderer Class](11_Renderer.md)
+- [Chapter 9: Buffer Classes](09_BufferClasses.md)
+- [Chapter 10: Shader System](10_ShaderAndRenderer.md)
+- [Chapter 11: Texture System](11_Textures.md)
+- [Chapter 12: Renderer Class](12_Renderer.md)
 
 ### Part IV: Engine Architecture
-- [Chapter 12: Transform & Mesh](12_TransformAndMesh.md)
-- [Chapter 13: Camera System](13_CameraSystem.md)
-- [Chapter 14: Scene Management](14_SceneManagement.md)
-- [Chapter 15: Dear ImGui](15_DearImGui.md)
+- [Chapter 13: Transform & Mesh](13_TransformAndMesh.md)
+- [Chapter 14: Camera System](14_CameraSystem.md)
+- [Chapter 15: Scene Management](15_SceneManagement.md)
+- [Chapter 16: Dear ImGui](16_DearImGui.md)
 
 ### Part V: Lighting
-- [Chapter 16: Blinn-Phong Lighting](16_Lighting.md)
+- [Chapter 17: Blinn-Phong Lighting](17_Lighting.md)
 
 ### Part VI: Asset Loading
-- [Chapter 17: glTF Format](17_glTFFormat.md)
-- [Chapter 18: Model Loader (Geometry)](18_ModelLoaderGeometry.md)
-- [Chapter 19: Model Loader (Materials)](19_ModelLoaderMaterials.md)
+- [Chapter 18: glTF Format](18_glTFFormat.md)
+- [Chapter 19: Model Loader (Geometry)](19_ModelLoaderGeometry.md)
+- [Chapter 20: Model Loader (Materials)](20_ModelLoaderMaterials.md)
 
 ### Part VII: Input & Controls
-- [Chapter 20: Input System](20_InputSystem.md)
-- [Chapter 21: Camera Controller](21_CameraController.md)
+- [Chapter 21: Input System](21_InputSystem.md)
+- [Chapter 22: Camera Controller](22_CameraController.md)
 
 ### Appendices
 - [Appendix A: Code Reference](A_Reference.md)
@@ -53,9 +54,9 @@ A step-by-step guide to building a 3D rendering engine from scratch using C++ an
 |---------|---------|--------|
 | 2 | GLAD | Downloaded |
 | 3 | GLFW, GLM, spdlog | Git submodules |
-| 10 | stb_image | Downloaded |
-| 15 | Dear ImGui | Git submodule |
-| 17 | tinygltf | Git submodule |
+| 11 | stb_image | Downloaded |
+| 16 | Dear ImGui | Git submodule |
+| 18 | tinygltf | Git submodule |
 
 ---
 

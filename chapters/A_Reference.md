@@ -352,24 +352,27 @@ cmake --build build --config Debug
 
 | Topic | Chapter |
 |-------|---------|
-| CMake, build system | [01 Build System](01_BuildSystem.md) |
-| DLL exports, __declspec | [02 DLL Architecture](02_DLLArchitecture.md) |
-| GLFW, GLAD, GLM, ImGui, spdlog, tinygltf | [03 Third-Party Libraries](03_ThirdPartyLibraries.md) |
-| Log class, VP_* macros | [04 Logging System](04_LoggingSystem.md) |
-| GLFWManager, context | [05 Window & Context](05_WindowAndContext.md) |
-| Buffers, shaders, pipeline, GPU architecture | [06 OpenGL Fundamentals](06_OpenGLFundamentals.md) |
-| RAII, Rule of 5, move semantics | [07 RAII & Resource Management](07_RAIIAndResourceManagement.md) |
-| VertexBuffer, IndexBuffer, VertexArray, Layout | [08 Buffer Classes](08_BufferClasses.md) |
-| Shader class, uniform caching, Renderer | [09 Shader & Renderer](09_ShaderAndRenderer.md) |
-| Texture class, stb_image, mipmaps | [10 Textures](10_Textures.md) |
-| UIManager, ImGui widgets | [11 Dear ImGui](11_DearImGui.md) |
-| Transform, Vertex, Mesh, factory methods | [12 Transform & Mesh](12_TransformAndMesh.md) |
-| Camera, view/projection matrices | [13 Camera System](13_CameraSystem.md) |
-| Scene, SceneObject, shared resources | [14 Scene Management](14_SceneManagement.md) |
-| DirectionalLight, Blinn-Phong, normals | [15 Lighting](15_Lighting.md) |
-| Model, PBRMaterial, glTF, tinygltf | [16 Model Loading](16_ModelLoading.md) |
-| Input class, keyboard, mouse, edge detection | [17 Input System](17_InputSystem.md) |
-| WASD movement, mouse look, zoom | [18 Camera Controller](18_CameraController.md) |
+| CMake, build system | [01 Environment Setup](01_EnvironmentSetup.md) |
+| GLFW, GLAD, GLM, spdlog | [03 Project Structure](03_ProjectStructure.md) |
+| DLL exports, __declspec | [04 DLL Architecture](04_DLLArchitecture.md) |
+| Log class, VP_* macros | [05 Logging System](05_LoggingSystem.md) |
+| GLFWManager, context | [06 Window & Context](06_WindowAndContext.md) |
+| Buffers, shaders, pipeline, GPU architecture | [07 OpenGL Fundamentals](07_OpenGLFundamentals.md) |
+| RAII, Rule of 5, move semantics | [08 RAII & Resource Management](08_RAIIAndResourceManagement.md) |
+| VertexBuffer, IndexBuffer, VertexArray, Layout | [09 Buffer Classes](09_BufferClasses.md) |
+| Shader class, uniform caching, Renderer | [10 Shader & Renderer](10_ShaderAndRenderer.md) |
+| Texture class, stb_image, mipmaps | [11 Textures](11_Textures.md) |
+| Renderer class, simplified API | [12 Renderer](12_Renderer.md) |
+| Transform, Vertex, Mesh, factory methods | [13 Transform & Mesh](13_TransformAndMesh.md) |
+| Camera, view/projection matrices | [14 Camera System](14_CameraSystem.md) |
+| Scene, SceneObject, shared resources | [15 Scene Management](15_SceneManagement.md) |
+| UIManager, ImGui widgets | [16 Dear ImGui](16_DearImGui.md) |
+| DirectionalLight, Blinn-Phong, normals | [17 Lighting](17_Lighting.md) |
+| glTF format, tinygltf integration | [18 glTF Format](18_glTFFormat.md) |
+| Model, PBRMaterial, glTF geometry | [19 Model Loading (Geometry)](19_ModelLoaderGeometry.md) |
+| Material textures, PBR properties | [20 Model Loading (Materials)](20_ModelLoaderMaterials.md) |
+| Input class, keyboard, mouse, edge detection | [21 Input System](21_InputSystem.md) |
+| WASD movement, mouse look, zoom | [22 Camera Controller](22_CameraController.md) |
 
 ---
 

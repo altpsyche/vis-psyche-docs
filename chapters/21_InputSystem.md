@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 20: Input System
+# Chapter 21: Input System
 
 Create an `Input` class with keyboard and mouse polling using typed enums for key codes.
 
@@ -334,8 +334,8 @@ You have:
 
 ## What's Next
 
-In **Chapter 21**, we'll use Input to create a fly camera controller.
+In **Chapter 22**, we'll use Input to create a fly camera controller.
 
-> **Next:** [Chapter 21: Camera Controller](21_CameraController.md)
+> **Next:** [Chapter 22: Camera Controller](22_CameraController.md)
 
-> **Previous:** [Chapter 19: Model Loader (Materials)](19_ModelLoaderMaterials.md)
+> **Previous:** [Chapter 20: Model Loader (Materials)](20_ModelLoaderMaterials.md)
