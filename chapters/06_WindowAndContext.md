@@ -48,9 +48,10 @@ namespace VizEngine
         GLFWManager(unsigned int width, unsigned int height, const std::string& title);
         ~GLFWManager();
 
+        void PollEvents();
         void ProcessInput();
         bool WindowShouldClose();
-        void SwapBuffersAndPollEvents();
+        void SwapBuffers();
         GLFWwindow* GetWindow() const;
 
     private:
@@ -147,10 +148,14 @@ namespace VizEngine
         return glfwWindowShouldClose(m_Window);
     }
 
-    void GLFWManager::SwapBuffersAndPollEvents()
+    void GLFWManager::PollEvents()
+    {
+        glfwPollEvents();
+    }
+
+    void GLFWManager::SwapBuffers()
     {
         glfwSwapBuffers(m_Window);
-        glfwPollEvents();
     }
 
     GLFWwindow* GLFWManager::GetWindow() const
@@ -343,6 +348,7 @@ int Application::Run()
     // Main loop
     while (!window.WindowShouldClose())
     {
+        window.PollEvents();
         window.ProcessInput();
 
         glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
@@ -350,7 +356,7 @@ int Application::Run()
 
         // Rendering goes here
 
-        window.SwapBuffersAndPollEvents();
+        window.SwapBuffers();
     }
 
     return 0;

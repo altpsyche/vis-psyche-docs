@@ -93,7 +93,7 @@ int Application::Run()
         // ... ImGui panels ...
         uiManager.Render();
 
-        window.SwapBuffersAndPollEvents();
+        window.SwapBuffers();
     }
 
     return 0;

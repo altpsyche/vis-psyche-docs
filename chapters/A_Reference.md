@@ -216,9 +216,10 @@ VizEngine (namespace)
 │   └── Renderer: Clear(), Draw()
 │
 ├── GLFWManager
+│   ├── PollEvents()
 │   ├── ProcessInput()
 │   ├── WindowShouldClose()
-│   ├── SwapBuffersAndPollEvents()
+│   ├── SwapBuffers()
 │   ├── SetEventCallback()
 │   ├── GetWidth(), GetHeight()
 │   └── GetWindow()

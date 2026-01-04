@@ -179,6 +179,7 @@ int Application::Run()
 
     while (!window.WindowShouldClose())
     {
+        window.PollEvents();
         window.ProcessInput();
 
         // Clear
@@ -200,7 +201,7 @@ int Application::Run()
         // Render ImGui
         uiManager.Render();
 
-        window.SwapBuffersAndPollEvents();
+        window.SwapBuffers();
     }
 
     return 0;

@@ -222,6 +222,9 @@ namespace VizEngine
 				m_DeltaTime = static_cast<float>(currentTime - prevTime);
 				prevTime = currentTime;
 
+				// Poll events first (fresh input for this frame)
+				m_Window->PollEvents();
+
 				// Input phase
 				m_Window->ProcessInput();
 				m_UIManager->BeginFrame();
@@ -233,7 +236,8 @@ namespace VizEngine
 
 				// Present phase
 				m_UIManager->Render();
-				m_Window->SwapBuffersAndPollEvents();
+				m_Window->SwapBuffers();
+				Input::EndFrame();  // Reset scroll delta for next frame
 			}
 
 			// Application cleanup
