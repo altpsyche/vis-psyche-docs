@@ -43,6 +43,9 @@ A step-by-step guide to building a 3D rendering engine from scratch using C++ an
 - [Chapter 21: Input System](21_InputSystem.md)
 - [Chapter 22: Camera Controller](22_CameraController.md)
 
+### Part VIII: Application Lifecycle
+- [Chapter 23: Engine and Game Loop](23_EngineAndGameLoop.md)
+
 ### Appendices
 - [Appendix A: Code Reference](A_Reference.md)
 

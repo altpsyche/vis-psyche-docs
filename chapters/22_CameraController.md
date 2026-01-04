@@ -184,7 +184,7 @@ You have:
 
 ---
 
-## Book Complete!
+## Part Complete!
 
 Congratulations! You've built a complete 3D rendering engine:
 
@@ -196,6 +196,14 @@ Congratulations! You've built a complete 3D rendering engine:
 - **UI**: Dear ImGui integration
 - **Input**: Keyboard + mouse controls
 
-> **Appendix:** [Code Reference](A_Reference.md)
+---
+
+## What's Next
+
+In **Chapter 23**, we'll refactor the engine to cleanly separate infrastructure from game logic with a proper game loop architecture.
+
+> **Next:** [Chapter 23: Engine and Game Loop](23_EngineAndGameLoop.md)
 
 > **Previous:** [Chapter 21: Input System](21_InputSystem.md)
+
+> **Appendix:** [Code Reference](A_Reference.md)
