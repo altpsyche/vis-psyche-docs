@@ -12,6 +12,10 @@ As of now, VizPsyche has:
 - Logging system (spdlog wrapper)
 - Entry point abstraction
 - Window and context management (GLFWManager)
+- Engine singleton with game loop
+- Application lifecycle (OnCreate, OnUpdate, OnRender, OnImGuiRender, OnEvent, OnDestroy)
+- Input system (keyboard, mouse, scroll polling)
+- Event system (window, key, mouse events with dispatcher)
 
 ### Third-Party Libraries {#libraries}
 - **GLFW** - Window creation, input, OpenGL context
@@ -67,7 +71,8 @@ As of now, VizPsyche has:
 | `VizEngine.h` | Single include for users |
 | `Core.h` | Export macros, platform detection |
 | `EntryPoint.h` | Defines main(), calls CreateApplication |
-| `Application.h` | Base class for applications |
+| `Application.h` | Base class with lifecycle methods |
+| `Engine.h` | Engine singleton, game loop, subsystem access |
 | `Log.h` | Logging macros |
 
 ### Core
@@ -82,7 +87,17 @@ As of now, VizPsyche has:
 | `Core/Light.h` | DirectionalLight, PointLight |
 | `Core/Model.h` | glTF model loader (meshes + materials) |
 | `Core/Material.h` | PBRMaterial struct (baseColor, metallic, roughness, emissive, alpha, textures) |
+| `Core/Input.h` | Keyboard, mouse, scroll polling with edge detection |
 | `Core/TinyGLTF.cpp` | tinygltf implementation (defines TINYGLTF_IMPLEMENTATION) |
+
+### Events
+
+| File | Purpose |
+|------|---------|
+| `Events/Event.h` | Base Event class, EventDispatcher, macros |
+| `Events/ApplicationEvent.h` | WindowResize, WindowClose, Focus events |
+| `Events/KeyEvent.h` | KeyPressed, KeyReleased, KeyTyped events |
+| `Events/MouseEvent.h` | MouseMoved, MouseScrolled, MouseButton events |
 
 ### OpenGL
 
@@ -117,11 +132,30 @@ As of now, VizPsyche has:
 
 ## Class Diagram {#class-diagram}
 
-```
 VizEngine (namespace)
 │
-├── Application (base class, virtual destructor)
-│   └── Run() → Main loop
+├── Engine (singleton)
+│   ├── Get() → singleton access
+│   ├── Run() → main game loop
+│   ├── Quit() → request shutdown
+│   ├── GetWindow(), GetRenderer(), GetUIManager()
+│   ├── GetDeltaTime()
+│   └── OnEvent() → routes to Application
+│
+├── Application (base class)
+│   ├── OnCreate() → initialization
+│   ├── OnUpdate(deltaTime) → game logic
+│   ├── OnRender() → rendering
+│   ├── OnImGuiRender() → UI
+│   ├── OnEvent() → event handling
+│   └── OnDestroy() → cleanup
+│
+├── Input (static)
+│   ├── Init(), Update()
+│   ├── IsKeyPressed/Held/Released()
+│   ├── IsMouseButtonPressed/Held/Released()
+│   ├── GetMousePosition(), GetMouseDelta()
+│   └── GetScrollDelta()
 │
 ├── Log (static)
 │   ├── Init()
@@ -185,7 +219,16 @@ VizEngine (namespace)
 │   ├── ProcessInput()
 │   ├── WindowShouldClose()
 │   ├── SwapBuffersAndPollEvents()
+│   ├── SetEventCallback()
+│   ├── GetWidth(), GetHeight()
 │   └── GetWindow()
+│
+├── Events
+│   ├── Event (base): GetEventType(), GetName(), IsInCategory(), Handled
+│   ├── EventDispatcher: Dispatch<T>(handler)
+│   ├── WindowResizeEvent, WindowCloseEvent, WindowFocusEvent
+│   ├── KeyPressedEvent, KeyReleasedEvent, KeyTypedEvent
+│   └── MouseMovedEvent, MouseScrolledEvent, MouseButtonPressed/Released
 │
 ├── UIManager
 │   ├── BeginFrame(), EndFrame()
@@ -207,7 +250,7 @@ All OpenGL wrappers acquire resources in constructor, release in destructor.
 `Mesh::CreatePyramid()`, `Mesh::CreateCube()` create preconfigured objects.
 
 ### Singleton-ish
-`Log` uses static methods and static logger instances.
+`Log` and `Engine` use static methods / Meyer's singleton pattern.
 
 ### State Machine Wrapper
 All OpenGL wrappers have `Bind()`/`Unbind()` to manage OpenGL's state machine.
@@ -374,6 +417,8 @@ cmake --build build --config Debug
 | Input class, keyboard, mouse, edge detection | [21 Input System](21_InputSystem.md) |
 | WASD movement, mouse look, zoom | [22 Camera Controller](22_CameraController.md) |
 | Engine class, game loop, lifecycle methods | [23 Engine and Game Loop](23_EngineAndGameLoop.md) |
+| Sandbox refactoring, CreateApplication | [24 Sandbox Migration](24_SandboxMigration.md) |
+| Event dispatcher, window/input events | [25 Event System](25_EventSystem.md) |
 
 ---
 

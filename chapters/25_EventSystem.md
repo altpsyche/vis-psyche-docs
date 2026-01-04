@@ -469,6 +469,8 @@ Add event callback storage and update callbacks to fire events.
 +        static void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 +        static void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 +        static void WindowCloseCallback(GLFWwindow* window);
++        static void WindowFocusCallback(GLFWwindow* window, int focused);
++        static void CharCallback(GLFWwindow* window, unsigned int codepoint);
      };
  }
 ```
@@ -495,10 +497,12 @@ void GLFWManager::Init(unsigned int width, unsigned int height, const std::strin
     // Register callbacks
     glfwSetFramebufferSizeCallback(m_Window, FramebufferSizeCallback);
     glfwSetKeyCallback(m_Window, KeyCallback);
+    glfwSetCharCallback(m_Window, CharCallback);
     glfwSetMouseButtonCallback(m_Window, MouseButtonCallback);
     glfwSetScrollCallback(m_Window, ScrollCallback);
     glfwSetCursorPosCallback(m_Window, CursorPosCallback);
     glfwSetWindowCloseCallback(m_Window, WindowCloseCallback);
+    glfwSetWindowFocusCallback(m_Window, WindowFocusCallback);
     
     // ... rest of init ...
 }
@@ -610,10 +614,35 @@ void GLFWManager::WindowCloseCallback(GLFWwindow* window)
         manager->m_EventCallback(event);
     }
 }
-```
 
-> [!NOTE]
-> Previously, the scroll callback was registered in `Input::Init()`. Now that GLFWManager handles all GLFW callbacks for event dispatch, we centralize callback registration here. To maintain polling support (`Input::GetScrollDelta()`), GLFWManager should also forward scroll data to `Input::ScrollCallback()`.
+void GLFWManager::WindowFocusCallback(GLFWwindow* window, int focused)
+{
+    auto* manager = static_cast<GLFWManager*>(glfwGetWindowUserPointer(window));
+    if (manager && manager->m_EventCallback)
+    {
+        if (focused)
+        {
+            WindowFocusEvent event;
+            manager->m_EventCallback(event);
+        }
+        else
+        {
+            WindowLostFocusEvent event;
+            manager->m_EventCallback(event);
+        }
+    }
+}
+
+void GLFWManager::CharCallback(GLFWwindow* window, unsigned int codepoint)
+{
+    auto* manager = static_cast<GLFWManager*>(glfwGetWindowUserPointer(window));
+    if (manager && manager->m_EventCallback)
+    {
+        KeyTypedEvent event(static_cast<KeyCode>(codepoint));
+        manager->m_EventCallback(event);
+    }
+}
+```
 
 ---
 
