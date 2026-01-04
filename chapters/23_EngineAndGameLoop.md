@@ -115,10 +115,10 @@ namespace VizEngine
 
 		/**
 		 * Run the game loop with the given application.
-		 * @param app The application to run (must not be null)
+		 * @param app The application to run (ownership transferred via unique_ptr)
 		 * @param config Engine configuration settings
 		 */
-		void Run(Application* app, const EngineConfig& config = {});
+		void Run(std::unique_ptr<Application> app, const EngineConfig& config = {});
 
 		/**
 		 * Request the engine to quit at the end of the current frame.
@@ -191,9 +191,8 @@ namespace VizEngine
 		return instance;
 	}
 
-	void Engine::Run(Application* app, const EngineConfig& config)
+	void Engine::Run(std::unique_ptr<Application> app, const EngineConfig& config)
 	{
-		// Note: Caller retains ownership of app pointer (see EntryPoint.h)
 		if (!app)
 		{
 			VP_CORE_ERROR("Engine::Run called with null application!");
@@ -346,6 +345,7 @@ The Application class becomes an abstract base with virtual lifecycle methods.
 
 #pragma once
 
+#include <memory>
 #include "Core.h"
 
 namespace VizEngine
@@ -402,9 +402,9 @@ namespace VizEngine
 	/**
 	 * Factory function implemented by client applications.
 	 * @param config Engine configuration that the application can modify.
-	 * @return A new Application instance.
+	 * @return A new Application instance (ownership transferred via unique_ptr).
 	 */
-	Application* CreateApplication(EngineConfig& config);
+	std::unique_ptr<Application> CreateApplication(EngineConfig& config);
 }
 ```
 
@@ -449,17 +449,14 @@ The entry point now uses the Engine singleton.
 #include "Engine.h"
 #include "Application.h"  // For CreateApplication declaration
 
-int main(int argc, char** argv)
+int main()
 {
-	(void)argc;
-	(void)argv;
-
 	VizEngine::Log::Init();
 
 	VizEngine::EngineConfig config;
 	auto app = VizEngine::CreateApplication(config);
-	VizEngine::Engine::Get().Run(app, config);
-	delete app;
+	VizEngine::Engine::Get().Run(std::move(app), config);
+	// No delete needed - unique_ptr ownership transferred to Engine
 
 	return 0;
 }

@@ -207,7 +207,7 @@ namespace VizEngine
     #define VP_CORE_ASSERT(condition, ...) \
         do { \
             if (!(condition)) { \
-                VP_CORE_ERROR("Check failed: {} - {}", #condition, __VA_ARGS__); \
+                VP_CORE_ERROR("Check failed: {}" __VA_OPT__(" - {}"), #condition __VA_OPT__(,) __VA_ARGS__); \
                 VP_DEBUG_BREAK(); \
             } \
         } while (0)
@@ -215,7 +215,7 @@ namespace VizEngine
     #define VP_ASSERT(condition, ...) \
         do { \
             if (!(condition)) { \
-                VP_ERROR("Check failed: {} - {}", #condition, __VA_ARGS__); \
+                VP_ERROR("Check failed: {}" __VA_OPT__(" - {}"), #condition __VA_OPT__(,) __VA_ARGS__); \
                 VP_DEBUG_BREAK(); \
             } \
         } while (0)
@@ -230,21 +230,25 @@ The logging system includes assertion macros for enforcing invariants during dev
 
 | Macro | Use Case |
 |-------|----------|
-| `VP_CORE_ASSERT(cond, msg)` | Engine-level precondition checks |
-| `VP_ASSERT(cond, msg)` | Application-level precondition checks |
+| `VP_CORE_ASSERT(cond)` or `VP_CORE_ASSERT(cond, msg)` | Engine-level precondition checks |
+| `VP_ASSERT(cond)` or `VP_ASSERT(cond, msg)` | Application-level precondition checks |
 
 **Example usage:**
 ```cpp
-GLFWManager& Engine::GetWindow()
+Renderer& Engine::GetRenderer()
 {
-    VP_CORE_ASSERT(m_Window, "GetWindow() called before successful Init()");
-    return *m_Window;
+    VP_CORE_ASSERT(m_Renderer, "Renderer not initialized. Call Init() and verify success.");
+    return *m_Renderer;
 }
+
+// Can also be used without message:
+VP_CORE_ASSERT(m_Window);
 ```
 
 **Key behaviors:**
 - **Debug builds**: Logs the error message (including the failed condition) and triggers `VP_DEBUG_BREAK()` to halt in the debugger
 - **Release builds**: Completely stripped out (zero overhead) when `NDEBUG` is defined
+- **C++20 `__VA_OPT__`**: Message parameter is optional—macros adapt format string automatically
 - **Cross-platform**: Works on MSVC, GCC, and Clang
 
 Use assertions for programming errors that should never happen in correct code—not for recoverable runtime errors.
@@ -350,21 +354,18 @@ Initialize logging before creating the application.
 #include "Application.h"
 #include "Log.h"
 
-extern VizEngine::Application* VizEngine::CreateApplication();
+std::unique_ptr<VizEngine::Application> VizEngine::CreateApplication();
 
-int main(int argc, char** argv)
+int main()
 {
-    (void)argc;
-    (void)argv;
-
     // Initialize logging FIRST
     VizEngine::Log::Init();
     VP_CORE_INFO("VizEngine initialized");
 
-    // Create and run application
+    // Create and run application (ownership transferred via unique_ptr)
     auto app = VizEngine::CreateApplication();
     app->Run();
-    delete app;
+    // No delete needed - unique_ptr handles cleanup automatically
 
     VP_CORE_INFO("VizEngine shutdown");
     return 0;
@@ -488,9 +489,9 @@ public:
     }
 };
 
-VizEngine::Application* VizEngine::CreateApplication()
+std::unique_ptr<VizEngine::Application> VizEngine::CreateApplication()
 {
-    return new Sandbox();
+    return std::make_unique<Sandbox>();
 }
 ```
 

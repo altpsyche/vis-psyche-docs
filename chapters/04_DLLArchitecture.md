@@ -92,8 +92,10 @@ target_link_libraries(VizEngine
     #else
         #define VizEngine_API __declspec(dllimport)
     #endif
+#elif defined(__GNUC__) || defined(__clang__)
+    #define VizEngine_API __attribute__((visibility("default")))
 #else
-    #error VizEngine only supports Windows!
+    #define VizEngine_API  // Fallback for unknown compilers
 #endif
 ```
 
@@ -121,7 +123,7 @@ namespace VizEngine
     };
 
     // Users implement this factory function
-    Application* CreateApplication();
+    std::unique_ptr<Application> CreateApplication();
 
 }  // namespace VizEngine
 ```
@@ -215,16 +217,13 @@ namespace VizEngine
 
 #include "Application.h"
 
-extern VizEngine::Application* VizEngine::CreateApplication();
+std::unique_ptr<VizEngine::Application> VizEngine::CreateApplication();
 
-int main(int argc, char** argv)
+int main()
 {
-    (void)argc;
-    (void)argv;
-
     auto app = VizEngine::CreateApplication();
     int result = app->Run();
-    delete app;
+    // No delete needed - unique_ptr handles cleanup automatically
 
     return result;
 }
@@ -290,9 +289,9 @@ public:
     ~Sandbox() {}
 };
 
-VizEngine::Application* VizEngine::CreateApplication()
+std::unique_ptr<VizEngine::Application> VizEngine::Create Application()
 {
-    return new Sandbox();
+    return std::make_unique<Sandbox>();
 }
 ```
 
@@ -328,7 +327,7 @@ Press Escape to close.
 │  │ SandboxApp.cpp                                       │ │
 │  │   - #include <VizEngine.h>                           │ │
 │  │   - class Sandbox : public Application               │ │
-│  │   - CreateApplication() returns new Sandbox()        │ │
+│  │   - CreateApplication() returns make_unique<Sandbox>() │ │
 │  └─────────────────────────────────────────────────────┘ │
 │                           │ links to                     │
 │                           ▼                              │

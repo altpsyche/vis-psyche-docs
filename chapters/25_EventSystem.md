@@ -225,6 +225,7 @@ Keyboard events for press, release, and typed characters.
 
 #include "Event.h"
 #include "VizEngine/Core/Input.h"
+#include <sstream>
 
 namespace VizEngine
 {
@@ -277,12 +278,25 @@ namespace VizEngine
         EVENT_CLASS_TYPE(KeyReleased)
     };
 
-    class VizEngine_API KeyTypedEvent : public KeyEvent
+    class VizEngine_API KeyTypedEvent : public Event
     {
     public:
-        KeyTypedEvent(KeyCode keycode) : KeyEvent(keycode) {}
+        KeyTypedEvent(uint32_t codepoint) : m_Codepoint(codepoint) {}
+
+        uint32_t GetCodepoint() const { return m_Codepoint; }
+
+        std::string ToString() const override
+        {
+            std::stringstream ss;
+            ss << "KeyTypedEvent: U+" << std::hex << std::uppercase << m_Codepoint;
+            return ss.str();
+        }
 
         EVENT_CLASS_TYPE(KeyTyped)
+        EVENT_CLASS_CATEGORY(EventCategoryKeyboard | EventCategoryInput)
+
+    private:
+        uint32_t m_Codepoint;
     };
 }
 ```
@@ -302,6 +316,7 @@ Mouse movement, scroll, and button events.
 
 #include "Event.h"
 #include "VizEngine/Core/Input.h"
+#include <sstream>
 
 namespace VizEngine
 {
@@ -367,6 +382,13 @@ namespace VizEngine
     public:
         MouseButtonPressedEvent(MouseCode button) : MouseButtonEvent(button) {}
 
+        std::string ToString() const override
+        {
+            std::stringstream ss;
+            ss << "MouseButtonPressedEvent: " << static_cast<int>(m_Button);
+            return ss.str();
+        }
+
         EVENT_CLASS_TYPE(MouseButtonPressed)
     };
 
@@ -374,6 +396,13 @@ namespace VizEngine
     {
     public:
         MouseButtonReleasedEvent(MouseCode button) : MouseButtonEvent(button) {}
+
+        std::string ToString() const override
+        {
+            std::stringstream ss;
+            ss << "MouseButtonReleasedEvent: " << static_cast<int>(m_Button);
+            return ss.str();
+        }
 
         EVENT_CLASS_TYPE(MouseButtonReleased)
     };
@@ -415,7 +444,7 @@ Add `OnEvent()` to the application lifecycle.
          virtual void OnDestroy() {}
      };
  
-     Application* CreateApplication(EngineConfig& config);
+     std::unique_ptr<Application> CreateApplication(EngineConfig& config);
  }
 ```
 
@@ -639,7 +668,7 @@ void GLFWManager::CharCallback(GLFWwindow* window, unsigned int codepoint)
     auto* manager = static_cast<GLFWManager*>(glfwGetWindowUserPointer(window));
     if (manager && manager->m_EventCallback)
     {
-        KeyTypedEvent event(static_cast<KeyCode>(codepoint));
+        KeyTypedEvent event(codepoint);  // Pass uint32_t directly, no cast
         manager->m_EventCallback(event);
     }
 }
@@ -685,7 +714,7 @@ Store the application pointer and wire events.
 #include "Events/Event.h"
 
 // Update Run() to store app and set callback
-void Engine::Run(Application* app, const EngineConfig& config)
+void Engine::Run(std::unique_ptr<Application> app, const EngineConfig& config)
 {
     if (!app)
     {
@@ -693,7 +722,7 @@ void Engine::Run(Application* app, const EngineConfig& config)
         return;
     }
     
-    m_App = app;  // Store for event routing
+    m_App = app.get();  // Store raw pointer for event routing
     
     if (!Init(config))
     {

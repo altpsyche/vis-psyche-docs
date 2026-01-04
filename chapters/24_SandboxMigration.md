@@ -359,12 +359,12 @@ private:
 	float m_LookSensitivity = 0.003f;
 };
 
-VizEngine::Application* VizEngine::CreateApplication(VizEngine::EngineConfig& config)
+std::unique_ptr<VizEngine::Application> VizEngine::CreateApplication(VizEngine::EngineConfig& config)
 {
 	config.Title = "Sandbox - VizPsyche";
 	config.Width = 800;
 	config.Height = 800;
-	return new Sandbox();
+	return std::make_unique<Sandbox>();
 }
 ```
 

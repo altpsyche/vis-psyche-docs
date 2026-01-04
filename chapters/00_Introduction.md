@@ -4,7 +4,7 @@
 
 ## What is VizPsyche?
 
-**VizPsyche** is a 3D rendering engine built from scratch using **C++17** and **OpenGL 4.6**. The name combines "Viz" (visualization) with "Psyche" (the mind/soul)—representing the goal of understanding the soul of graphics programming.
+**VizPsyche** is a 3D rendering engine built from scratch using **C++20** and **OpenGL 4.6**. The name combines "Viz" (visualization) with "Psyche" (the mind/soul)—representing the goal of understanding the soul of graphics programming.
 
 This book takes you from an empty folder to a working engine capable of:
 
