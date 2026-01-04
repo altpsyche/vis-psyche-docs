@@ -612,6 +612,9 @@ void GLFWManager::WindowCloseCallback(GLFWwindow* window)
 }
 ```
 
+> [!NOTE]
+> Previously, the scroll callback was registered in `Input::Init()`. Now that GLFWManager handles all GLFW callbacks for event dispatch, we centralize callback registration here. To maintain polling support (`Input::GetScrollDelta()`), GLFWManager should also forward scroll data to `Input::ScrollCallback()`.
+
 ---
 
 ## Step 7: Update Engine

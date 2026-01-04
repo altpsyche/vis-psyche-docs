@@ -157,6 +157,9 @@ namespace VizEngine
         VP_CORE_TRACE("Input system initialized");
     }
 
+> [!NOTE]
+> We register the scroll callback directly here for simplicity. When adopting an event-driven architecture later, you may centralize all GLFW callbacks in the window manager and forward scroll data to the Input system. This keeps callback ownership clear while maintaining polling support.
+
     void Input::Update()
     {
         // Copy current to previous
