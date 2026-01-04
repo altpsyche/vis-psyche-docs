@@ -114,13 +114,14 @@ Browse the documentation and reference it when modifying the existing codebase. 
 
 | After Part | What Works |
 |------------|------------|
-| **Part I** (Ch 0–4) | DLL compiles, logging works |
-| **Part II** (Ch 5–7) | Window opens, understand OpenGL concepts |
-| **Part III** (Ch 8–11) | Textured geometry renders |
-| **Part IV** (Ch 12–15) | Multiple objects with ImGui controls |
-| **Part V** (Ch 16) | Lit scene with Blinn-Phong shading |
-| **Part VI** (Ch 17–19) | glTF models load and display |
-| **Part VII** (Ch 20–21) | Fly-camera with WASD + mouse |
+| **Part I** (Ch 0–5) | DLL compiles, logging works |
+| **Part II** (Ch 6–8) | Window opens, understand OpenGL concepts |
+| **Part III** (Ch 9–12) | Textured geometry renders |
+| **Part IV** (Ch 13–16) | Multiple objects with ImGui controls |
+| **Part V** (Ch 17) | Lit scene with Blinn-Phong shading |
+| **Part VI** (Ch 18–20) | glTF models load and display |
+| **Part VII** (Ch 21–22) | Fly-camera with WASD + mouse |
+| **Part VIII** (Ch 23–26) | Engine/App separation, events |
 
 ---
 
@@ -141,42 +142,43 @@ Part I: Getting Started
 ├── Ch 1: Environment Setup
 ├── Ch 2: Hello Triangle
 ├── Ch 3: Project Structure
-├── Ch 3b: DLL Architecture
-└── Ch 4: Logging System
+├── Ch 4: DLL Architecture
+└── Ch 5: Logging System
 
 Part II: OpenGL Foundations
-├── Ch 5: Window & Context
-├── Ch 6: OpenGL Fundamentals
-└── Ch 7: RAII & Resource Management
+├── Ch 6: Window & Context
+├── Ch 7: OpenGL Fundamentals
+└── Ch 8: RAII & Resource Management
 
 Part III: GPU Abstractions
-├── Ch 8: Buffer Classes
-├── Ch 9: Shader System
-├── Ch 10: Texture System
-└── Ch 11: Renderer Class
+├── Ch 9: Buffer Classes
+├── Ch 10: Shader System
+├── Ch 11: Texture System
+└── Ch 12: Renderer Class
 
 Part IV: Engine Architecture
-├── Ch 12: Transform & Mesh
-├── Ch 13: Camera System
-├── Ch 14: Scene Management
-└── Ch 15: Dear ImGui
+├── Ch 13: Transform & Mesh
+├── Ch 14: Camera System
+├── Ch 15: Scene Management
+└── Ch 16: Dear ImGui
 
 Part V: Lighting
-└── Ch 16: Blinn-Phong Lighting
+└── Ch 17: Blinn-Phong Lighting
 
-Part VI: Assets
-├── Ch 17: glTF Format
-├── Ch 18: Model Loader (Geometry)
-└── Ch 19: Model Loader (Materials)
+Part VI: Asset Loading
+├── Ch 18: glTF Format
+├── Ch 19: Model Loader (Geometry)
+└── Ch 20: Model Loader (Materials)
 
 Part VII: Input & Controls
-├── Ch 20: Input System
-└── Ch 21: Camera Controller
+├── Ch 21: Input System
+└── Ch 22: Camera Controller
 
 Part VIII: Application Lifecycle
-├── Ch 22: Engine and Game Loop
-└── Ch 23: Sandbox Migration
-└── Ch 24: Event System
+├── Ch 23: Engine and Game Loop
+├── Ch 24: Sandbox Migration
+├── Ch 25: Event System
+└── Ch 26: Advanced Lifecycle
 
 Appendices
 └── A: Code Reference
