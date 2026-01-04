@@ -69,7 +69,7 @@ Events should flow through layers in order. ImGui (overlay) gets events first, t
      ~UIManager();
      
      void BeginFrame();
-     void EndFrame();
+     void Render();
 +    void OnEvent(Event& e);
      
      // ... existing methods ...
