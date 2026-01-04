@@ -115,7 +115,8 @@ namespace VizEngine
         unsigned int CompileShader(unsigned int type, const std::string& source);
         unsigned int CreateShader(const std::string& vert, const std::string& frag);
         int GetUniformLocation(const std::string& name);
-        void CheckCompileErrors(unsigned int shader, std::string type);
+        // Returns true on success, false on error
+        bool CheckCompileErrors(unsigned int shader, std::string type);
     };
 }
 ```
@@ -255,20 +256,37 @@ namespace VizEngine
     unsigned int Shader::CreateShader(const std::string& vert, const std::string& frag)
     {
         unsigned int program = glCreateProgram();
+
         unsigned int vs = CompileShader(GL_VERTEX_SHADER, vert);
+        if (!CheckCompileErrors(vs, "VERTEX"))
+        {
+            glDeleteShader(vs);
+            glDeleteProgram(program);
+            return 0;
+        }
+
         unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, frag);
+        if (!CheckCompileErrors(fs, "FRAGMENT"))
+        {
+            glDeleteShader(vs);
+            glDeleteShader(fs);
+            glDeleteProgram(program);
+            return 0;
+        }
 
         glAttachShader(program, vs);
         glAttachShader(program, fs);
         glLinkProgram(program);
 
-        int success;
-        glGetProgramiv(program, GL_LINK_STATUS, &success);
-        if (!success)
-            CheckCompileErrors(program, "PROGRAM");
-
+        // Cleanup shader objects (attached to program, no longer needed)
         glDeleteShader(vs);
         glDeleteShader(fs);
+
+        if (!CheckCompileErrors(program, "PROGRAM"))
+        {
+            glDeleteProgram(program);
+            return 0;
+        }
 
         return program;
     }
@@ -287,19 +305,32 @@ namespace VizEngine
         return location;
     }
 
-    void Shader::CheckCompileErrors(unsigned int shader, std::string type)
+    // Returns true on success, false on error
+    bool Shader::CheckCompileErrors(unsigned int shader, std::string type)
     {
+        int success;
         char infoLog[1024];
         if (type != "PROGRAM")
         {
-            glGetShaderInfoLog(shader, 1024, NULL, infoLog);
-            VP_CORE_ERROR("{} Shader Error:\n{}", type, infoLog);
+            glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+            if (!success)
+            {
+                glGetShaderInfoLog(shader, 1024, NULL, infoLog);
+                VP_CORE_ERROR("{} Shader Error:\n{}", type, infoLog);
+                return false;
+            }
         }
         else
         {
-            glGetProgramInfoLog(shader, 1024, NULL, infoLog);
-            VP_CORE_ERROR("Shader Linking Error:\n{}", infoLog);
+            glGetProgramiv(shader, GL_LINK_STATUS, &success);
+            if (!success)
+            {
+                glGetProgramInfoLog(shader, 1024, NULL, infoLog);
+                VP_CORE_ERROR("Shader Linking Error:\n{}", infoLog);
+                return false;
+            }
         }
+        return true;
     }
 
     void Shader::SetBool(const std::string& name, bool value)

@@ -197,6 +197,18 @@ namespace VizEngine
 #define VP_CRITICAL(...) ::VizEngine::Log::GetClientLogger()->critical(__VA_ARGS__)
 
 // =============================================================================
+// Cross-Platform Debug Break
+// =============================================================================
+#if defined(_MSC_VER)
+    #define VP_DEBUG_BREAK() __debugbreak()
+#elif defined(__clang__) || defined(__GNUC__)
+    #define VP_DEBUG_BREAK() __builtin_trap()
+#else
+    #include <cstdlib>
+    #define VP_DEBUG_BREAK() std::abort()
+#endif
+
+// =============================================================================
 // Assertion Macros (Debug-only, stripped in release builds)
 // =============================================================================
 #ifdef NDEBUG
@@ -206,16 +218,16 @@ namespace VizEngine
     #define VP_CORE_ASSERT(condition, ...) \
         do { \
             if (!(condition)) { \
-                VP_CORE_ERROR("Assertion failed: {}", __VA_ARGS__); \
-                __debugbreak(); \
+                VP_CORE_ERROR("Check failed: {} - {}", #condition, __VA_ARGS__); \
+                VP_DEBUG_BREAK(); \
             } \
         } while (0)
 
     #define VP_ASSERT(condition, ...) \
         do { \
             if (!(condition)) { \
-                VP_ERROR("Assertion failed: {}", __VA_ARGS__); \
-                __debugbreak(); \
+                VP_ERROR("Check failed: {} - {}", #condition, __VA_ARGS__); \
+                VP_DEBUG_BREAK(); \
             } \
         } while (0)
 #endif
@@ -242,8 +254,9 @@ GLFWManager& Engine::GetWindow()
 ```
 
 **Key behaviors:**
-- **Debug builds**: Logs the error message and triggers `__debugbreak()` to halt in the debugger
+- **Debug builds**: Logs the error message (including the failed condition) and triggers `VP_DEBUG_BREAK()` to halt in the debugger
 - **Release builds**: Completely stripped out (zero overhead) when `NDEBUG` is defined
+- **Cross-platform**: Works on MSVC, GCC, and Clang
 
 Use assertions for programming errors that should never happen in correct code—not for recoverable runtime errors.
 

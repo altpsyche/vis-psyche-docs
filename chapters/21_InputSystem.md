@@ -122,7 +122,8 @@ namespace VizEngine
     {
     public:
         static void Init(GLFWwindow* window);
-        static void Update();  // Call once per frame
+        static void Update();    // Call once per frame
+        static void EndFrame();  // Call after polling events
 
         // Keyboard
         static bool IsKeyPressed(KeyCode key);   // Just pressed this frame
@@ -231,8 +232,13 @@ namespace VizEngine
             s_LastMousePosition = s_MousePosition;
             s_FirstMouse = false;
         }
+    }
 
-        s_ScrollDelta = 0.0f;  // Reset at frame start (accumulates via callback)
+    void Input::EndFrame()
+    {
+        // Reset scroll delta after frame processing
+        // Called after glfwPollEvents() so scroll data is current during the next frame
+        s_ScrollDelta = 0.0f;
     }
 
     bool Input::IsKeyPressed(KeyCode key)
@@ -302,8 +308,11 @@ namespace VizEngine
 // Initialize once
 Input::Init(window.GetWindow());
 
-// In render loop
+// In render loop (Engine::Run handles this automatically)
 Input::Update();  // MUST be called at start of frame!
+// ... process input during frame ...
+// After glfwPollEvents():
+Input::EndFrame();  // Reset scroll delta for next frame
 
 // Keyboard
 if (Input::IsKeyHeld(KeyCode::W)) camera.MoveForward(speed);
