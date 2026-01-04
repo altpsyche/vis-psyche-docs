@@ -27,6 +27,7 @@ chapters:
   - chapters/21_InputSystem.md
   - chapters/22_CameraController.md
   - chapters/23_EngineAndGameLoop.md
+  - chapters/24_SandboxMigration.md
 
 appendices:
   - chapters/A_Reference.md

@@ -173,6 +173,11 @@ Part VII: Input & Controls
 ├── Ch 20: Input System
 └── Ch 21: Camera Controller
 
+Part VIII: Application Lifecycle
+├── Ch 22: Virtual Lifecycle
+├── Ch 23: Engine and Game Loop
+└── Ch 24: Sandbox Migration
+
 Appendices
 └── A: Code Reference
 ```
