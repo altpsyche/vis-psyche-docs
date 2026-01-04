@@ -262,6 +262,11 @@ At the end of Part VII, the engine contains:
 
 ---
 
+## Also need to work on Cross-platform support
+ - Start with the Build System
+ - Add cross-platform support for debug break.
+ - Etc 
+
 ## Future Considerations
 
 - **Scripting**: Lua or C# integration
