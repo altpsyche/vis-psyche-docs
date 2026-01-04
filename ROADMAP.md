@@ -66,8 +66,8 @@ At the end of Part VII, the engine contains:
 
 | Phase | Focus | Parts | Chapters | Status |
 |-------|-------|-------|----------|--------|
-| 1. Foundation | Engine/Application separation | VIII | 23–26 | (Complete)
-| 2. Advanced OpenGL | Framebuffers, shadows, PBR | IX–X | 26–33 | (Not Started)
+| 1. Foundation | Engine/Application separation | VIII | 23–26 | Complete
+| 2. Advanced OpenGL | Framebuffers, shadows, PBR | IX–X | 26–33 | In Progress
 | 3. Engine Systems | ECS, serialization, physics | XI–XIII | 34–44 | (Not Started)
 | 4. Modern Graphics | Vulkan/D3D12 concepts, NVRHI, render graph | XIV–XVI | 45–57 | (Not Started)
 | 5. Editor | Scene editor with tooling | XVII | 58–63 | (Not Started)
@@ -77,7 +77,7 @@ At the end of Part VII, the engine contains:
 
 ## Phase 1: Foundation
 
-**Part VIII: Application Lifecycle** (Complete)
+**Part VIII: Application Lifecycle** Complete
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
@@ -92,11 +92,11 @@ At the end of Part VII, the engine contains:
 
 ## Phase 2: Advanced OpenGL
 
-**Part IX: Advanced Techniques** (Not Started)
+**Part IX: Advanced Techniques** In Progres
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 27 | Framebuffers | Render targets, MRT, attachments | (Not Started)
+| 27 | Framebuffers | Render targets, MRT, attachments | In Progress
 | 28 | Shadow Mapping | Depth from light, PCF, cascades | (Not Started)
 | 29 | Cubemaps and Skybox | Environment mapping, reflections | (Not Started)
 
@@ -233,7 +233,7 @@ At the end of Part VII, the engine contains:
 | VI | Asset Loading | 18–20 | Complete |
 | VII | Input and Controls | 21–22 | Complete |
 | VIII | Application Lifecycle | 23–26 | Complete |
-| IX | Advanced OpenGL | 26–28 | Planned |
+| IX | Advanced Techniques | 26–28 | Planned |
 | X | Physically Based Rendering | 29–33 | Planned |
 | XI | Entity-Component System | 34–36 | Planned |
 | XII | Engine Infrastructure | 37–39 | Planned |
