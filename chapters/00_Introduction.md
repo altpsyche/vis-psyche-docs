@@ -123,6 +123,40 @@ Browse the documentation and reference it when modifying the existing codebase. 
 | **Part VII** (Ch 21–22) | Fly-camera with WASD + mouse |
 | **Part VIII** (Ch 23–26) | Engine/App separation, events |
 
+### Architecture Evolution after Part VIII
+
+The codebase architecture evolves as you learn:
+
+```
+Parts I-VII: Monolithic Application
+┌─────────────────────────────────────┐
+│ Application::Run()                  │
+│   - Window setup                    │
+│   - Game loop                       │
+│   - Rendering                       │   ← Everything in one place
+│   - Cleanup                         │      (easier to understand)
+└─────────────────────────────────────┘
+
+Part VIII: Separated Concerns
+┌─────────────────────────────────────┐
+│ Engine (owns infrastructure)        │
+│   - Window, OpenGL, ImGui           │
+│   - Game loop                       │
+└──────────────┬──────────────────────┘
+               │ calls
+               ▼
+┌─────────────────────────────────────┐
+│ Application (your game logic)       │
+│   - OnCreate()   → setup            │
+│   - OnUpdate()   → game logic       │   ← Reusable, testable
+│   - OnRender()   → rendering        │
+│   - OnDestroy()  → cleanup          │
+└─────────────────────────────────────┘
+```
+
+> [!NOTE]
+> This evolution is intentional. You first learn the complete pipeline in one place, then refactor for scalability. Each stage is correct for its learning goal.
+
 ---
 
 ## Platform Note

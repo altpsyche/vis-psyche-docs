@@ -18,6 +18,65 @@ In this chapter, we'll refactor the engine to cleanly separate **engine infrastr
 
 ---
 
+## Migrating Your Existing Code
+
+If you've been building the engine through previous chapters, your `Application::Run()` contains the entire game loop. Here's how to distribute that code across lifecycle methods:
+
+### Code Migration Map
+
+| Current Location (in `Run()`) | New Location | Called When |
+|-------------------------------|--------------|-------------|
+| Asset loading, scene setup | `OnCreate()` | Once, before loop |
+| Per-frame game logic (camera, physics) | `OnUpdate(deltaTime)` | Every frame |
+| Scene rendering, shader setup | `OnRender()` | Every frame |
+| ImGui panels | `OnImGuiRender()` | Every frame |
+| Cleanup (if any) | `OnDestroy()` | Once, after loop |
+
+### Key Differences
+
+**Before (monolithic):**
+```cpp
+void Application::Run() {
+    // Setup
+    Shader shader("lit.shader");
+    while (!window.ShouldClose()) {
+        shader.Bind();
+        scene.Render();
+        ImGui::Begin("Panel");
+        ImGui::End();
+    }
+}
+```
+
+**After (lifecycle):**
+```cpp
+class Sandbox : public Application {
+    std::unique_ptr<Shader> m_Shader;  // Local → Member
+    
+    void OnCreate() override {
+        m_Shader = std::make_unique<Shader>("lit.shader");
+    }
+    void OnRender() override {
+        m_Shader->Bind();
+        m_Scene.Render();
+    }
+    void OnImGuiRender() override {
+        auto& ui = Engine::Get().GetUIManager();
+        ui.StartWindow("Panel");
+        ui.EndWindow();
+    }
+};
+```
+
+### What Changes
+
+1. **Local variables → Member variables** (they persist across method calls)
+2. **Direct `ImGui::` calls → `UIManager` wrappers** (avoids DLL boundary issues)
+3. **Engine owns the game loop** (you implement focused hooks)
+4. **`unique_ptr` ownership** (automatic cleanup, clear semantics)
+
+---
+
 ## Architecture Overview
 
 We'll split responsibilities:

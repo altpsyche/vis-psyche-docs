@@ -201,8 +201,21 @@ namespace VizEngine
 }  // namespace VizEngine
 ```
 
-> [!NOTE]
-> **Monolithic Application**: Currently, `Application::Run()` contains all engine infrastructure (window, OpenGL, game loop) and game logic in one method. This is intentional for learning—it's easier to understand everything in one place. Later, we'll refactor to separate engine infrastructure from game-specific code, improving reusability and testability.
+> [!IMPORTANT]
+> **Monolithic Design (Intentional)**
+>
+> Currently, `Application::Run()` contains everything: window creation, OpenGL setup, the game loop, rendering, and cleanup. This is intentional for learning—you see the complete pipeline in one place without jumping between files.
+>
+> **Why this changes later:** As engines grow, mixing infrastructure (window, OpenGL context) with game logic (your code) creates problems:
+> - Can't reuse the engine for different games
+> - Hard to test pieces independently
+> - Difficult to maintain as complexity grows
+>
+> In a later chapter, we'll refactor to separate concerns:
+> - **Engine** owns the game loop and infrastructure
+> - **Application** provides virtual hooks (`OnCreate`, `OnUpdate`, `OnRender`) that the engine calls
+>
+> For now, focus on understanding the complete flow. The current design is correct for this learning stage.
 
 ---
 
