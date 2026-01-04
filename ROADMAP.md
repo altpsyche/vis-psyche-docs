@@ -232,8 +232,8 @@ At the end of Part VII, the engine contains:
 | V | Lighting | 17 | Complete |
 | VI | Asset Loading | 18–20 | Complete |
 | VII | Input and Controls | 21–22 | Complete |
-| VIII | Application Lifecycle | 23–25 | In-Progress |
-| IX | Advanced Techniques | 26–28 | Planned |
+| VIII | Application Lifecycle | 23–26 | Complete |
+| IX | Advanced OpenGL | 26–28 | Planned |
 | X | Physically Based Rendering | 29–33 | Planned |
 | XI | Entity-Component System | 34–36 | Planned |
 | XII | Engine Infrastructure | 37–39 | Planned |
