@@ -28,6 +28,7 @@ chapters:
   - chapters/22_CameraController.md
   - chapters/23_EngineAndGameLoop.md
   - chapters/24_SandboxMigration.md
+  - chapters/25_EventSystem.md
 
 appendices:
   - chapters/A_Reference.md
