@@ -134,6 +134,7 @@ namespace VizEngine
 
 #include "Shader.h"
 #include "VizEngine/Log.h"
+#include <stdexcept>
 #include <gtc/type_ptr.hpp>
 
 namespace VizEngine
@@ -141,11 +142,30 @@ namespace VizEngine
     Shader::Shader(const std::string& shaderFile)
         : m_shaderPath(shaderFile), m_RendererID(0)
     {
+        // Parse the shader file
         ShaderPrograms sources = ShaderParser(shaderFile);
+        if (sources.VertexProgram.empty() || sources.FragmentProgram.empty())
+        {
+            VP_CORE_ERROR("Failed to parse shader file: {}", shaderFile);
+            throw std::runtime_error("Failed to parse shader: " + shaderFile);
+        }
+        
+        // Compile and link
         m_RendererID = CreateShader(sources.VertexProgram, sources.FragmentProgram);
+        if (m_RendererID == 0)
+        {
+            VP_CORE_ERROR("Failed to compile/link shader: {}", shaderFile);
+            throw std::runtime_error("Failed to compile shader: " + shaderFile);
+        }
+        
         VP_CORE_INFO("Shader created: {} (ID={})", shaderFile, m_RendererID);
     }
+```
 
+> [!IMPORTANT]
+> The Shader constructor throws `std::runtime_error` if parsing or compilation fails. This follows the RAII principle: an object should be valid if construction succeeds. Callers should use try-catch or let the exception propagate.
+
+```cpp
     Shader::~Shader()
     {
         if (m_RendererID != 0)

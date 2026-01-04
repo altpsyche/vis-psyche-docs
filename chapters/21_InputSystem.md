@@ -187,7 +187,7 @@ namespace VizEngine
             s_FirstMouse = false;
         }
 
-        s_ScrollDelta = 0.0f;  // Reset after reading
+        s_ScrollDelta = 0.0f;  // Reset at frame start (accumulates via callback)
     }
 
     bool Input::IsKeyPressed(KeyCode key)
@@ -243,7 +243,7 @@ namespace VizEngine
     {
         (void)window;
         (void)xoffset;
-        s_ScrollDelta = float(yoffset);
+        s_ScrollDelta += float(yoffset);  // Accumulates during frame
     }
 
 }  // namespace VizEngine
