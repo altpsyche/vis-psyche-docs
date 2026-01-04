@@ -211,15 +211,150 @@ dispatcher.Dispatch<WindowResizeEvent>(
 
 ---
 
+## Engine Stats Panel
+
+Let's tie Part VIII together with an **Engine Stats Panel** that demonstrates all the concepts we've built:
+
+| Feature | Part VIII Concept |
+|---------|-------------------|
+| FPS / Delta Time | `Engine::GetDeltaTime()` from Chapter 23 |
+| Frame Counter | Game loop from Chapter 23 |
+| Window Dimensions | Resize events from Chapter 25-26 |
+| F1 Toggle | Event-driven hotkey from Chapter 25 |
+
+### Step 1: Add Member Variables
+
+**Update `Sandbox/src/SandboxApp.cpp`:**
+
+Add these member variables to the Sandbox class:
+
+```cpp
+private:
+    // ... existing members ...
+
+    // Engine stats
+    bool m_ShowEngineStats = true;
+    uint64_t m_FrameCount = 0;
+    float m_FpsUpdateTimer = 0.0f;
+    float m_CurrentFPS = 0.0f;
+    int m_WindowWidth = 800;
+    int m_WindowHeight = 800;
+```
+
+### Step 2: Update OnUpdate()
+
+Calculate FPS using delta time:
+
+```cpp
+void OnUpdate(float deltaTime) override
+{
+    // =========================================================================
+    // Engine Stats
+    // =========================================================================
+    m_FrameCount++;
+    m_FpsUpdateTimer += deltaTime;
+    if (m_FpsUpdateTimer >= 0.5f)  // Update every 0.5 seconds
+    {
+        m_CurrentFPS = 1.0f / deltaTime;
+        m_FpsUpdateTimer = 0.0f;
+    }
+
+    // ... existing camera controller code ...
+}
+```
+
+### Step 3: Update OnEvent()
+
+Track window dimensions and add F1 toggle:
+
+```cpp
+void OnEvent(VizEngine::Event& e) override
+{
+    VizEngine::EventDispatcher dispatcher(e);
+
+    // Handle window resize - update camera and track dimensions
+    dispatcher.Dispatch<VizEngine::WindowResizeEvent>(
+        [this](VizEngine::WindowResizeEvent& event) {
+            m_WindowWidth = event.GetWidth();
+            m_WindowHeight = event.GetHeight();
+
+            if (m_WindowWidth > 0 && m_WindowHeight > 0)
+            {
+                float aspect = static_cast<float>(m_WindowWidth)
+                             / static_cast<float>(m_WindowHeight);
+                m_Camera.SetAspectRatio(aspect);
+            }
+            return false;
+        }
+    );
+
+    // F1 toggles Engine Stats panel
+    dispatcher.Dispatch<VizEngine::KeyPressedEvent>(
+        [this](VizEngine::KeyPressedEvent& event) {
+            if (event.GetKeyCode() == VizEngine::KeyCode::F1 && !event.IsRepeat())
+            {
+                m_ShowEngineStats = !m_ShowEngineStats;
+                VP_INFO("Engine Stats: {}", m_ShowEngineStats ? "ON" : "OFF");
+                return true;
+            }
+            return false;
+        }
+    );
+}
+```
+
+### Step 4: Add Engine Stats Panel
+
+Add a new ImGui panel in `OnImGuiRender()`:
+
+```cpp
+void OnImGuiRender() override
+{
+    auto& engine = VizEngine::Engine::Get();
+    auto& uiManager = engine.GetUIManager();
+
+    // =========================================================================
+    // Engine Stats Panel (toggle with F1)
+    // =========================================================================
+    if (m_ShowEngineStats)
+    {
+        uiManager.StartWindow("Engine Stats");
+
+        uiManager.Text("FPS: %.1f", m_CurrentFPS);
+        uiManager.Text("Delta: %.2f ms", engine.GetDeltaTime() * 1000.0f);
+        uiManager.Text("Frame: %llu", m_FrameCount);
+        uiManager.Separator();
+        uiManager.Text("Window: %d x %d", m_WindowWidth, m_WindowHeight);
+        uiManager.Separator();
+        uiManager.Text("Press F1 to toggle");
+
+        uiManager.EndWindow();
+    }
+
+    // ... existing panels ...
+}
+```
+
+### Result
+
+The Engine Stats panel provides visual proof that Part VIII is working:
+
+- **FPS/Delta**: Engine's game loop timing
+- **Frame count**: Loop iterations
+- **Window dimensions**: Real-time event updates on resize
+- **F1 toggle**: Event-driven input without polling
+
+---
+
 ## Milestone
 
-**Event Propagation Complete**
+**Part VIII Complete**
 
 You have:
 - Event flow with proper layer ordering
 - ImGui event consumption
 - Handled flag that stops propagation
-- Best practices for event handling
+- Engine Stats panel demonstrating all concepts
 
 ---
 
@@ -235,3 +370,4 @@ In **Part IX**, we'll explore advanced OpenGL techniques like framebuffers and s
 > **Next:** [Chapter 27: Framebuffers](27_Framebuffers.md)
 
 > **Previous:** [Chapter 25: Event System](25_EventSystem.md)
+
