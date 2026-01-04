@@ -206,9 +206,6 @@ namespace VizEngine
         s_LastMousePosition = s_MousePosition;
     }
 
-> [!NOTE]
-> The scroll callback is centralized in `GLFWManager.cpp`, which calls `Input::ScrollCallback()` to forward scroll data. This keeps callback ownership clear while maintaining polling support.
-
     void Input::Update()
     {
         // Copy current state to previous state
@@ -244,7 +241,7 @@ namespace VizEngine
     void Input::EndFrame()
     {
         // Reset scroll delta after frame processing
-        // Called after glfwPollEvents() so scroll data is current during the next frame
+        // Called at end of frame; scroll data was valid during OnUpdate()
         s_ScrollDelta = 0.0f;
     }
 

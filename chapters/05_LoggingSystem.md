@@ -129,49 +129,38 @@ target_link_libraries(VizEngine
 
 #pragma once
 
-#include "Core.h"
-
-// Silence MSVC warnings in spdlog headers
-#ifdef _MSC_VER
-    #pragma warning(push)
-    #pragma warning(disable: 4189 4996)
-#endif
-
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-
-#ifdef _MSC_VER
-    #pragma warning(pop)
-#endif
-
 #include <memory>
+#include "Core.h"
+#include "spdlog/spdlog.h"
 
 namespace VizEngine
 {
-    /// @brief Logging system with separate core and client loggers.
-    /// 
-    /// Usage:
-    ///   VP_CORE_INFO("Engine message: {}", value);  // Engine logs
-    ///   VP_INFO("Application message: {}", value);  // Client logs
     class VizEngine_API Log
     {
     public:
+        /// @brief Log level enum (abstracts spdlog types)
+        enum class LogLevel
+        {
+            Trace, Debug, Info, Warn, Error, Critical, Off
+        };
+
         /// @brief Initialize the logging system. Call once at startup.
         static void Init();
 
         /// @brief Set log level for core (engine) logger.
-        static void SetCoreLogLevel(spdlog::level::level_enum level);
+        static void SetCoreLogLevel(LogLevel level);
 
         /// @brief Set log level for client (application) logger.
-        static void SetClientLogLevel(spdlog::level::level_enum level);
+        static void SetClientLogLevel(LogLevel level);
 
         /// @brief Get the core logger instance.
-        static std::shared_ptr<spdlog::logger>& GetCoreLogger() { return s_CoreLogger; }
+        inline static std::shared_ptr<spdlog::logger>& GetCoreLogger() { return s_CoreLogger; }
 
         /// @brief Get the client logger instance.
-        static std::shared_ptr<spdlog::logger>& GetClientLogger() { return s_ClientLogger; }
+        inline static std::shared_ptr<spdlog::logger>& GetClientLogger() { return s_ClientLogger; }
 
     private:
+        static spdlog::level::level_enum EnumToLogLevel(LogLevel level);
         static std::shared_ptr<spdlog::logger> s_CoreLogger;
         static std::shared_ptr<spdlog::logger> s_ClientLogger;
     };
@@ -270,6 +259,7 @@ Use assertions for programming errors that should never happen in correct codeâ€
 // VizEngine/src/VizEngine/Log.cpp
 
 #include "Log.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 
 namespace VizEngine
 {
@@ -292,14 +282,29 @@ namespace VizEngine
         s_ClientLogger->set_level(spdlog::level::trace);
     }
 
-    void Log::SetCoreLogLevel(spdlog::level::level_enum level)
+    spdlog::level::level_enum Log::EnumToLogLevel(LogLevel level)
     {
-        s_CoreLogger->set_level(level);
+        switch (level)
+        {
+            case LogLevel::Trace:    return spdlog::level::trace;
+            case LogLevel::Debug:    return spdlog::level::debug;
+            case LogLevel::Info:     return spdlog::level::info;
+            case LogLevel::Warn:     return spdlog::level::warn;
+            case LogLevel::Error:    return spdlog::level::err;
+            case LogLevel::Critical: return spdlog::level::critical;
+            case LogLevel::Off:      return spdlog::level::off;
+            default:                 return spdlog::level::info;
+        }
     }
 
-    void Log::SetClientLogLevel(spdlog::level::level_enum level)
+    void Log::SetCoreLogLevel(LogLevel level)
     {
-        s_ClientLogger->set_level(level);
+        s_CoreLogger->set_level(EnumToLogLevel(level));
+    }
+
+    void Log::SetClientLogLevel(LogLevel level)
+    {
+        s_ClientLogger->set_level(EnumToLogLevel(level));
     }
 
 }  // namespace VizEngine
@@ -541,7 +546,7 @@ After pressing Escape:
 
 ```cpp
 // Show only warnings and above
-VizEngine::Log::SetCoreLogLevel(spdlog::level::warn);
+VizEngine::Log::SetCoreLogLevel(VizEngine::Log::LogLevel::Warn);
 ```
 
 ---

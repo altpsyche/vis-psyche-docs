@@ -178,6 +178,7 @@ namespace VizEngine
 #include "OpenGL/Renderer.h"
 #include "OpenGL/ErrorHandling.h"
 #include "GUI/UIManager.h"
+#include "Core/Input.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>

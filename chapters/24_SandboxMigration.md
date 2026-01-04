@@ -450,19 +450,8 @@ The Sandbox application is now cleanly separated from engine infrastructure. You
 
 ## What's Next
 
-Congratulations! You've completed the VizPsyche engine architecture. The engine now has:
-- Clean DLL/Application separation
-- Proper game loop with lifecycle methods
-- Input system with typed enums
-- Camera controller
-- Scene management with ImGui inspector
-
----
-
-## What's Next
-
 With the Engine/Application architecture complete, you're ready to add an event system for handling window and input events through callbacks.
 
-> **Next:** Chapter 25: Event System
+> **Next:** [Chapter 25: Event System](25_EventSystem.md)
 
 > **Previous:** [Chapter 23: Engine and Game Loop](23_EngineAndGameLoop.md)
