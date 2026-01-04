@@ -172,61 +172,68 @@ namespace VizEngine
 // VizEngine/src/VizEngine/Core/Input.cpp
 
 #include "Input.h"
-#include "VizEngine/Log.h"
 #include <GLFW/glfw3.h>
+#include <cstring>
 
 namespace VizEngine
 {
+    // Array size constants
+    static constexpr int MAX_KEYS = 512;
+    static constexpr int MAX_MOUSE_BUTTONS = 8;
+
+    // Static member definitions
     GLFWwindow* Input::s_Window = nullptr;
-    bool Input::s_CurrentKeys[512] = {};
-    bool Input::s_PreviousKeys[512] = {};
-    bool Input::s_CurrentMouseButtons[8] = {};
-    bool Input::s_PreviousMouseButtons[8] = {};
-    glm::vec2 Input::s_MousePosition = {};
-    glm::vec2 Input::s_LastMousePosition = {};
+    bool Input::s_CurrentKeys[MAX_KEYS] = { false };
+    bool Input::s_PreviousKeys[MAX_KEYS] = { false };
+    bool Input::s_CurrentMouseButtons[MAX_MOUSE_BUTTONS] = { false };
+    bool Input::s_PreviousMouseButtons[MAX_MOUSE_BUTTONS] = { false };
+    glm::vec2 Input::s_MousePosition = glm::vec2(0.0f);
+    glm::vec2 Input::s_LastMousePosition = glm::vec2(0.0f);
     float Input::s_ScrollDelta = 0.0f;
     bool Input::s_FirstMouse = true;
 
     void Input::Init(GLFWwindow* window)
     {
         s_Window = window;
-        glfwSetScrollCallback(window, ScrollCallback);
-
+        
+        // Note: Scroll callback is registered by GLFWManager
+        // GLFWManager.cpp calls Input::ScrollCallback to update s_ScrollDelta
+        
+        // Initialize mouse position
         double x, y;
         glfwGetCursorPos(window, &x, &y);
-        s_MousePosition = { float(x), float(y) };
+        s_MousePosition = glm::vec2(static_cast<float>(x), static_cast<float>(y));
         s_LastMousePosition = s_MousePosition;
-
-        VP_CORE_TRACE("Input system initialized");
     }
 
 > [!NOTE]
-> We register the scroll callback directly here for simplicity. When adopting an event-driven architecture later, you may centralize all GLFW callbacks in the window manager and forward scroll data to the Input system. This keeps callback ownership clear while maintaining polling support.
+> The scroll callback is centralized in `GLFWManager.cpp`, which calls `Input::ScrollCallback()` to forward scroll data. This keeps callback ownership clear while maintaining polling support.
 
     void Input::Update()
     {
-        // Copy current to previous
-        for (int i = 0; i < 512; i++) s_PreviousKeys[i] = s_CurrentKeys[i];
-        for (int i = 0; i < 8; i++) s_PreviousMouseButtons[i] = s_CurrentMouseButtons[i];
-
-        // Poll current keyboard state
-        for (int i = 0; i < 512; i++)
+        // Copy current state to previous state
+        std::memcpy(s_PreviousKeys, s_CurrentKeys, sizeof(s_CurrentKeys));
+        std::memcpy(s_PreviousMouseButtons, s_CurrentMouseButtons, sizeof(s_CurrentMouseButtons));
+        
+        // Update current key states
+        for (int key = 0; key < MAX_KEYS; key++)
         {
-            s_CurrentKeys[i] = glfwGetKey(s_Window, i) == GLFW_PRESS;
+            s_CurrentKeys[key] = (glfwGetKey(s_Window, key) == GLFW_PRESS);
         }
-
-        // Poll current mouse button state
-        for (int i = 0; i < 8; i++)
+        
+        // Update current mouse button states
+        for (int button = 0; button < MAX_MOUSE_BUTTONS; button++)
         {
-            s_CurrentMouseButtons[i] = glfwGetMouseButton(s_Window, i) == GLFW_PRESS;
+            s_CurrentMouseButtons[button] = (glfwGetMouseButton(s_Window, button) == GLFW_PRESS);
         }
-
+        
         // Update mouse position
         s_LastMousePosition = s_MousePosition;
         double x, y;
         glfwGetCursorPos(s_Window, &x, &y);
-        s_MousePosition = { float(x), float(y) };
-
+        s_MousePosition = glm::vec2(static_cast<float>(x), static_cast<float>(y));
+        
+        // Handle first mouse movement (avoid large delta on first frame)
         if (s_FirstMouse)
         {
             s_LastMousePosition = s_MousePosition;
@@ -244,34 +251,42 @@ namespace VizEngine
     bool Input::IsKeyPressed(KeyCode key)
     {
         int k = static_cast<int>(key);
+        if (k < 0 || k >= MAX_KEYS) return false;
         return s_CurrentKeys[k] && !s_PreviousKeys[k];
     }
 
     bool Input::IsKeyHeld(KeyCode key)
     {
-        return s_CurrentKeys[static_cast<int>(key)];
+        int k = static_cast<int>(key);
+        if (k < 0 || k >= MAX_KEYS) return false;
+        return s_CurrentKeys[k];
     }
 
     bool Input::IsKeyReleased(KeyCode key)
     {
         int k = static_cast<int>(key);
+        if (k < 0 || k >= MAX_KEYS) return false;
         return !s_CurrentKeys[k] && s_PreviousKeys[k];
     }
 
     bool Input::IsMouseButtonPressed(MouseCode button)
     {
         int b = static_cast<int>(button);
+        if (b < 0 || b >= MAX_MOUSE_BUTTONS) return false;
         return s_CurrentMouseButtons[b] && !s_PreviousMouseButtons[b];
     }
 
     bool Input::IsMouseButtonHeld(MouseCode button)
     {
-        return s_CurrentMouseButtons[static_cast<int>(button)];
+        int b = static_cast<int>(button);
+        if (b < 0 || b >= MAX_MOUSE_BUTTONS) return false;
+        return s_CurrentMouseButtons[b];
     }
 
     bool Input::IsMouseButtonReleased(MouseCode button)
     {
         int b = static_cast<int>(button);
+        if (b < 0 || b >= MAX_MOUSE_BUTTONS) return false;
         return !s_CurrentMouseButtons[b] && s_PreviousMouseButtons[b];
     }
 
@@ -294,7 +309,7 @@ namespace VizEngine
     {
         (void)window;
         (void)xoffset;
-        s_ScrollDelta += float(yoffset);  // Accumulates during frame
+        s_ScrollDelta += static_cast<float>(yoffset);  // Accumulates during frame
     }
 
 }  // namespace VizEngine
