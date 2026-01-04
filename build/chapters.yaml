@@ -29,6 +29,7 @@ chapters:
   - chapters/23_EngineAndGameLoop.md
   - chapters/24_SandboxMigration.md
   - chapters/25_EventSystem.md
+  - chapters/26_AdvancedLifecycle.md
 
 appendices:
   - chapters/A_Reference.md

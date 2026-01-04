@@ -66,7 +66,7 @@ At the end of Part VII, the engine contains:
 
 | Phase | Focus | Parts | Chapters | Status |
 |-------|-------|-------|----------|--------|
-| 1. Foundation | Engine/Application separation | VIII | 23–25 | (In-Progress)
+| 1. Foundation | Engine/Application separation | VIII | 23–26 | (Complete)
 | 2. Advanced OpenGL | Framebuffers, shadows, PBR | IX–X | 26–33 | (Not Started)
 | 3. Engine Systems | ECS, serialization, physics | XI–XIII | 34–44 | (Not Started)
 | 4. Modern Graphics | Vulkan/D3D12 concepts, NVRHI, render graph | XIV–XVI | 45–57 | (Not Started)
@@ -77,7 +77,7 @@ At the end of Part VII, the engine contains:
 
 ## Phase 1: Foundation
 
-**Part VIII: Application Lifecycle** (In-Progress)
+**Part VIII: Application Lifecycle** (Complete)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
