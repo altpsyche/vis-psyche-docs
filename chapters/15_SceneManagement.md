@@ -172,6 +172,9 @@ namespace VizEngine
     {
         shader.Bind();
 
+        // Explicitly set texture slot for main texture
+        shader.SetInt("u_MainTex", 0);
+
         for (auto& obj : m_Objects)
         {
             if (!obj.Active) continue;

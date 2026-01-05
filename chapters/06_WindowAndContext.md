@@ -76,6 +76,8 @@ namespace VizEngine
 #include "GLFWManager.h"
 #include "VizEngine/Log.h"
 
+#include <stdexcept>
+
 namespace VizEngine
 {
     GLFWManager::GLFWManager(unsigned int width, unsigned int height, const std::string& title)
@@ -94,8 +96,8 @@ namespace VizEngine
         // Initialize GLFW
         if (!glfwInit())
         {
-            VP_CORE_CRITICAL("Failed to initialize GLFW!");
-            return;
+            VP_CORE_ERROR("Failed to initialize GLFW");
+            throw std::runtime_error("Failed to initialize GLFW");
         }
         VP_CORE_TRACE("GLFW initialized");
 
@@ -103,14 +105,18 @@ namespace VizEngine
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#ifdef __APPLE__
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+        glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 
         // Create window
-        m_Window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
+        m_Window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
         if (!m_Window)
         {
-            VP_CORE_CRITICAL("Failed to create GLFW window!");
+            VP_CORE_ERROR("Failed to create GLFW window");
             glfwTerminate();
-            return;
+            throw std::runtime_error("Failed to create GLFW window");
         }
 
         VP_CORE_INFO("Window created: {}x{} - '{}'", width, height, title);
