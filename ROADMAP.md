@@ -92,11 +92,11 @@ At the end of Part VII, the engine contains:
 
 ## Phase 2: Advanced OpenGL
 
-**Part IX: Advanced Techniques** In Progres
+**Part IX: Advanced Techniques** In Progress
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 27 | Framebuffers | Render targets, MRT, attachments | In Progress
+| 27 | Framebuffers | Render targets, MRT, attachments | Complete
 | 28 | Shadow Mapping | Depth from light, PCF, cascades | (Not Started)
 | 29 | Cubemaps and Skybox | Environment mapping, reflections | (Not Started)
 

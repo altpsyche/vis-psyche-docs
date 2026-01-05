@@ -521,6 +521,10 @@ void OnRender() override
 	// =========================================================================
 	// Render to Framebuffer (offscreen)
 	// =========================================================================
+	// Use 1:1 aspect ratio for the 800x800 framebuffer
+	float windowAspect = static_cast<float>(m_WindowWidth) / static_cast<float>(m_WindowHeight);
+	m_Camera.SetAspectRatio(1.0f);  // Framebuffer is square (800x800)
+
 	m_Framebuffer->Bind();
 	renderer.Clear(m_ClearColor);
 	m_Scene.Render(renderer, *m_LitShader, m_Camera);
@@ -529,17 +533,20 @@ void OnRender() override
 	// =========================================================================
 	// Render to Screen (default framebuffer)
 	// =========================================================================
-	// Restore viewport to window size (use tracked dimensions to avoid header dependency)
+	// Restore camera to window aspect ratio
+	m_Camera.SetAspectRatio(windowAspect);
+
+	// Restore viewport to window size
 	renderer.SetViewport(0, 0, m_WindowWidth, m_WindowHeight);
 
-	// Clear screen - the scene will be displayed via ImGui preview
-	float screenClearColor[4] = { 0.1f, 0.1f, 0.15f, 1.0f };
-	renderer.Clear(screenClearColor);
+	// Render scene to screen (same as framebuffer for demonstration)
+	renderer.Clear(m_ClearColor);
+	m_Scene.Render(renderer, *m_LitShader, m_Camera);
 }
 ```
 
-> [!NOTE]
-> We use `renderer.SetViewport()` instead of calling `glViewport()` directly. This keeps all OpenGL calls inside VizEngine, avoiding DLL boundary issues with GLAD symbols. Similarly, `Renderer::Clear()` takes a `float[4]` array, not `glm::vec4`.
+> [!IMPORTANT]
+> We switch the camera aspect ratio between passes. The framebuffer is fixed at 800×800 (1:1), while the screen matches the window dimensions. Without this, resizing the window would stretch the framebuffer preview.
 
 ---
 
@@ -560,20 +567,17 @@ void OnImGuiRender() override
 	// =========================================================================
 	if (m_ShowFramebufferTexture)
 	{
-		uiManager.StartWindow("Offscreen Render");
+		uiManager.StartFixedWindow("Offscreen Render", 360.0f, 420.0f);
 
 		// ImGui::Image takes texture ID, size
 		unsigned int texID = m_FramebufferColor->GetID();
-		float width = static_cast<float>(m_Framebuffer->GetWidth());
-		float height = static_cast<float>(m_Framebuffer->GetHeight());
 
-		// Display with fixed size (scale down if needed)
-		float displaySize = 320.0f;  // Preview size
-		float aspect = width / height;
+		// Display at fixed size (framebuffer is 800x800, preview is 320x320)
+		float displaySize = 320.0f;
 		uiManager.Image(
 			reinterpret_cast<void*>(static_cast<uintptr_t>(texID)),
 			displaySize,
-			displaySize / aspect
+			displaySize  // 1:1 aspect for square framebuffer
 		);
 
 		uiManager.Separator();
@@ -587,17 +591,24 @@ void OnImGuiRender() override
 }
 ```
 
-Add the `Image()` method to `UIManager` if it doesn't exist yet:
+Add the `Image()` and `StartFixedWindow()` methods to `UIManager`:
 
 **Update `VizEngine/src/VizEngine/GUI/UIManager.h`:**
 
 ```cpp
+void StartFixedWindow(const std::string& windowName, float width, float height);
 void Image(void* textureID, float width, float height);
 ```
 
 **Update `VizEngine/src/VizEngine/GUI/UIManager.cpp`:**
 
 ```cpp
+void UIManager::StartFixedWindow(const std::string& windowName, float width, float height)
+{
+	ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_FirstUseEver);
+	ImGui::Begin(windowName.c_str(), nullptr, ImGuiWindowFlags_NoResize);
+}
+
 void UIManager::Image(void* textureID, float width, float height)
 {
 	ImGui::Image(textureID, ImVec2(width, height), ImVec2(0, 1), ImVec2(1, 0));  // Flip UV
@@ -605,7 +616,8 @@ void UIManager::Image(void* textureID, float width, float height)
 ```
 
 > [!IMPORTANT]
-> OpenGL textures are bottom-left origin, but ImGui expects top-left. We flip the UV coordinates: `ImVec2(0, 1)` to `ImVec2(1, 0)`.
+> - `StartFixedWindow()` creates a non-resizable ImGui window, perfect for fixed-size framebuffer previews.
+> - OpenGL textures are bottom-left origin, but ImGui expects top-left. We flip the UV coordinates: `ImVec2(0, 1)` to `ImVec2(1, 0)`.
 
 ---
 
