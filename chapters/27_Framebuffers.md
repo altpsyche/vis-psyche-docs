@@ -318,7 +318,7 @@ namespace VizEngine
 		// Store reference
 		m_DepthAttachment = texture;
 
-		VP_CORE_INFO("Framebuffer {}: Attached depth texture {}", m_FBO, texture->GetID());
+		VP_CORE_INFO("Framebuffer {}: Attached depth texture {}", m_fbo, texture->GetID());
 	}
 
 	bool Framebuffer::IsComplete() const
@@ -357,7 +357,7 @@ namespace VizEngine
 				break;
 			}
 
-			VP_CORE_ERROR("Framebuffer {}: Not complete - {}", m_FBO, errorMsg);
+			VP_CORE_ERROR("Framebuffer {}: Not complete - {}", m_fbo, errorMsg);
 			return false;
 		}
 
@@ -395,11 +395,11 @@ Texture(int width, int height, unsigned int internalFormat, unsigned int format,
 
 ```cpp
 Texture::Texture(int width, int height, unsigned int internalFormat, unsigned int format, unsigned int dataType)
-	: m_RendererID(0), m_FilePath("framebuffer"), m_LocalBuffer(nullptr),
+	: m_texture(0), m_FilePath("framebuffer"), m_LocalBuffer(nullptr),
 	  m_Width(width), m_Height(height), m_BPP(4)
 {
-	glGenTextures(1, &m_RendererID);
-	glBindTexture(GL_TEXTURE_2D, m_RendererID);
+	glGenTextures(1, &m_texture);
+	glBindTexture(GL_TEXTURE_2D, m_texture);
 
 	// Allocate texture storage (data = nullptr for empty texture)
 	glTexImage2D(
@@ -422,7 +422,7 @@ Texture::Texture(int width, int height, unsigned int internalFormat, unsigned in
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	VP_CORE_INFO("Empty texture created: ID={}, Size={}x{}", m_RendererID, m_Width, m_Height);
+	VP_CORE_INFO("Empty texture created: ID={}, Size={}x{}", m_texture, m_Width, m_Height);
 }
 ```
 
