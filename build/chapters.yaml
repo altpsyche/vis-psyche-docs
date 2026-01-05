@@ -30,6 +30,8 @@ chapters:
   - chapters/24_SandboxMigration.md
   - chapters/25_EventSystem.md
   - chapters/26_AdvancedLifecycle.md
+  - chapters/27_Framebuffers.md
+  - chapters/28_ShadowMapping.md
 
 appendices:
   - chapters/A_Reference.md

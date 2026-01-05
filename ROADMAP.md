@@ -97,7 +97,7 @@ At the end of Part VII, the engine contains:
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
 | 27 | Framebuffers | Render targets, MRT, attachments | Complete
-| 28 | Shadow Mapping | Depth from light, PCF, cascades | (Not Started)
+| 28 | Shadow Mapping | Depth from light, PCF, cascades | In Progress
 | 29 | Cubemaps and Skybox | Environment mapping, reflections | (Not Started)
 
 **Part X: Physically Based Rendering** (Not Started)
