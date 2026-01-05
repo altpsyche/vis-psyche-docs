@@ -49,6 +49,9 @@ A step-by-step guide to building a 3D rendering engine from scratch using C++ an
 - [Chapter 25: Event System](25_EventSystem.md)
 - [Chapter 26: Advanced Lifecycle](26_AdvancedLifecycle.md)
 
+### Part IX: Advanced Techniques
+- [Chapter 27: Framebuffers](27_Framebuffers.md)
+
 ### Appendices
 - [Appendix A: Code Reference](A_Reference.md)
 
