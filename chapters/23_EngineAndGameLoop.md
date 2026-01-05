@@ -266,10 +266,12 @@ namespace VizEngine
 
 		m_Running = true;
 
+		bool appCreated = false;
 		try
 		{
 			// Application initialization
 			app->OnCreate();
+			appCreated = true;
 
 			double prevTime = glfwGetTime();
 
@@ -305,10 +307,18 @@ namespace VizEngine
 		catch (const std::exception& e)
 		{
 			VP_CORE_ERROR("Exception in engine loop: {}", e.what());
+			if (appCreated)
+			{
+				app->OnDestroy();
+			}
 		}
 		catch (...)
 		{
 			VP_CORE_ERROR("Unknown exception in engine loop");
+			if (appCreated)
+			{
+				app->OnDestroy();
+			}
 		}
 
 		Shutdown();
