@@ -342,11 +342,24 @@ namespace VizEngine
 		VP_CORE_INFO("Initializing Engine...");
 
 		// Create window
-		m_Window = std::make_unique<GLFWManager>(
-			config.Width, 
-			config.Height, 
-			config.Title.c_str()
-		);
+		try
+		{
+			m_Window = std::make_unique<GLFWManager>(
+				config.Width, 
+				config.Height, 
+				config.Title.c_str()
+			);
+		}
+		catch (const std::exception& e)
+		{
+			VP_CORE_ERROR("Failed to create window: {}", e.what());
+			return false;
+		}
+		catch (...)
+		{
+			VP_CORE_ERROR("Failed to create window: Unknown error");
+			return false;
+		}
 
 		// Initialize GLAD
 		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
