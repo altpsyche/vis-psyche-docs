@@ -395,10 +395,11 @@ Texture(int width, int height, unsigned int internalFormat, unsigned int format,
 
 ```cpp
 Texture::Texture(int width, int height, unsigned int internalFormat, unsigned int format, unsigned int dataType)
-	: m_Width(width), m_Height(height)
+	: m_RendererID(0), m_FilePath("framebuffer"), m_LocalBuffer(nullptr),
+	  m_Width(width), m_Height(height), m_BPP(4)
 {
-	glGenTextures(1, &m_TextureID);
-	glBindTexture(GL_TEXTURE_2D, m_TextureID);
+	glGenTextures(1, &m_RendererID);
+	glBindTexture(GL_TEXTURE_2D, m_RendererID);
 
 	// Allocate texture storage (data = nullptr for empty texture)
 	glTexImage2D(
@@ -413,13 +414,15 @@ Texture::Texture(int width, int height, unsigned int internalFormat, unsigned in
 		nullptr               // no pixel data (allocate empty)
 	);
 
-	// Set texture parameters
+	// Set texture parameters suitable for framebuffer attachments
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	VP_CORE_INFO("Empty texture created: ID={}, Size={}x{}", m_TextureID, m_Width, m_Height);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	VP_CORE_INFO("Empty texture created: ID={}, Size={}x{}", m_RendererID, m_Width, m_Height);
 }
 ```
 
