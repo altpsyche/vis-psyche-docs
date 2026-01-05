@@ -856,14 +856,14 @@ You have:
 - Displayed rendered texture in ImGui
 - Established foundation for shadow mapping and post-processing
 
-The framebuffer abstraction is the **foundation for all advanced rendering techniques**. In the next chapter, we'll use framebuffers to render depth from a light's perspective for shadow mapping.
+The framebuffer abstraction is the **foundation for all advanced rendering techniques**. In the next chapter, we'll extend our Texture class with configuration methods needed for advanced techniques.
 
 ---
 
 ## What's Next
 
-In **Chapter 28: Shadow Mapping**, we'll use framebuffers to render depth maps and add realistic shadows to the scene.
+In **Chapter 28: Advanced Texture Configuration**, we'll add filtering, wrap mode, and border color controls to our Texture class—essential for shadow mapping and other advanced techniques.
 
-> **Next:** [Chapter 28: Shadow Mapping](28_ShadowMapping.md)
+> **Next:** [Chapter 28: Advanced Texture Configuration](28_TextureParameters.md)
 
 > **Previous:** [Chapter 26: Advanced Lifecycle](26_AdvancedLifecycle.md)

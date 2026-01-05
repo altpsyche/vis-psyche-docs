@@ -51,6 +51,8 @@ A step-by-step guide to building a 3D rendering engine from scratch using C++ an
 
 ### Part IX: Advanced Techniques
 - [Chapter 27: Framebuffers](27_Framebuffers.md)
+- [Chapter 28: Advanced Texture Configuration](28_TextureParameters.md)
+- [Chapter 29: Shadow Mapping](29_ShadowMapping.md)
 
 ### Appendices
 - [Appendix A: Code Reference](A_Reference.md)

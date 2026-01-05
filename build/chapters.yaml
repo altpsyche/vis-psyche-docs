@@ -31,7 +31,8 @@ chapters:
   - chapters/25_EventSystem.md
   - chapters/26_AdvancedLifecycle.md
   - chapters/27_Framebuffers.md
-  - chapters/28_ShadowMapping.md
+  - chapters/28_TextureParameters.md
+  - chapters/29_ShadowMapping.md
 
 appendices:
   - chapters/A_Reference.md

@@ -1,8 +1,8 @@
 \newpage
 
-# Chapter 28: Shadow Mapping
+# Chapter 29: Shadow Mapping
 
-Implement realistic shadows using depth maps and two-pass rendering with the framebuffer foundation from Chapter 27.
+Implement realistic shadows using depth maps and two-pass rendering, building on Chapters 27 (Framebuffers) and 28 (Advanced Texture Configuration).
 
 ---
 
@@ -40,7 +40,7 @@ Light's Perspective              Camera's Perspective
 Render to texture              Use texture in shader
 ```
 
-This chapter builds directly on **Chapter 27's framebuffer** foundation—we'll render depth to a texture instead of color.
+This chapter builds on **Chapter 27's framebuffers** and uses the texture configuration methods from **Chapter 28**.
 
 ---
 
@@ -204,6 +204,9 @@ bool m_ShowShadowMap = false;
 
 ---
 
+> [!NOTE]
+> This chapter uses the `SetWrap()` and `SetBorderColor()` methods added in Chapter 28. Make sure you have completed that chapter first.
+
 ## Step 1: Create Shadow Map Framebuffer
 
 The shadow map is a **depth-only framebuffer** (no color attachment).
@@ -216,7 +219,7 @@ Add to existing framebuffer setup:
 // =========================================================================
 // Create Shadow Map Framebuffer (for depth rendering from light's POV)
 // =========================================================================
-int shadowMapResolution = 1024;  // Common: 1024, 2048, 4096
+int shadowMapResolution = 2048;  // Common: 1024, 2048, 4096
 
 // Create depth texture (GL_DEPTH_COMPONENT24 for 24-bit precision)
 m_ShadowMapDepth = std::make_shared<VizEngine::Texture>(
@@ -225,6 +228,12 @@ m_ShadowMapDepth = std::make_shared<VizEngine::Texture>(
     GL_DEPTH_COMPONENT,     // Format
     GL_FLOAT                // Data type
 );
+
+// Configure shadow map texture sampling
+// Use GL_CLAMP_TO_BORDER so areas outside the shadow map aren't shadowed
+m_ShadowMapDepth->SetWrap(GL_CLAMP_TO_BORDER, GL_CLAMP_TO_BORDER);
+float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };  // White = max depth = no shadow
+m_ShadowMapDepth->SetBorderColor(borderColor);
 
 // Create framebuffer and attach depth texture
 m_ShadowMapFramebuffer = std::make_shared<VizEngine::Framebuffer>(
@@ -245,6 +254,12 @@ else
 
 > [!NOTE]
 > We only attach a depth texture, no color attachment. OpenGL allows depth-only framebuffers. The fragment shader in Pass 1 can be empty—depth is written automatically by the GPU.
+
+> [!IMPORTANT]
+> **Shadow map texture configuration is critical:**
+> - `GL_CLAMP_TO_BORDER` prevents shadow "streaking" at edges of the light's view
+> - Border color of white (1.0) means areas outside the shadow map are treated as "at maximum depth" (not in shadow)
+> - Without this, you'll see artifacts at the edges of your scene
 
 ---
 
@@ -300,13 +315,13 @@ glm::mat4 ComputeLightSpaceMatrix(const VizEngine::DirectionalLight& light)
 
 This shader renders scene geometry from the light's perspective, outputting only depth.
 
-**Create `Sandbox/shaders/shadow_depth.shader`:**
+**Create `VizEngine/src/resources/shaders/shadow_depth.shader`:**
 
 ```glsl
 #shader vertex
-#version 330 core
+#version 460 core
 
-layout(location = 0) in vec3 a_Position;
+layout(location = 0) in vec4 aPos;
 
 uniform mat4 u_LightSpaceMatrix;  // Light's projection * view
 uniform mat4 u_Model;              // Model matrix
@@ -314,12 +329,12 @@ uniform mat4 u_Model;              // Model matrix
 void main()
 {
     // Transform vertex to light's clip space
-    gl_Position = u_LightSpaceMatrix * u_Model * vec4(a_Position, 1.0);
+    gl_Position = u_LightSpaceMatrix * u_Model * aPos;
 }
 
 
 #shader fragment
-#version 330 core
+#version 460 core
 
 void main()
 {
@@ -336,7 +351,7 @@ void main()
 
 ```cpp
 // Load shadow depth shader
-m_ShadowDepthShader = std::make_shared<VizEngine::Shader>("shaders/shadow_depth.shader");
+m_ShadowDepthShader = std::make_shared<VizEngine::Shader>("resources/shaders/shadow_depth.shader");
 ```
 
 ---
@@ -345,13 +360,13 @@ m_ShadowDepthShader = std::make_shared<VizEngine::Shader>("shaders/shadow_depth.
 
 Modify the existing lit shader to sample the shadow map and apply shadows to lighting.
 
-**Update `Sandbox/shaders/lit.shader`:**
+**Update `VizEngine/src/resources/shaders/lit.shader`:**
 
 Add uniforms and shadow calculation to the fragment shader:
 
 ```glsl
 #shader fragment
-#version 330 core
+#version 460 core
 
 layout(location = 0) out vec4 FragColor;
 
@@ -445,36 +460,39 @@ void main()
 
 ```glsl
 #shader vertex
-#version 330 core
+#version 460 core
 
-layout(location = 0) in vec3 a_Position;
-layout(location = 1) in vec3 a_Normal;
-layout(location = 2) in vec2 a_TexCoord;
+layout (location = 0) in vec4 aPos;
+layout (location = 1) in vec3 aNormal;
+layout (location = 2) in vec4 aColor;
+layout (location = 3) in vec2 aTexCoord;
 
-out vec3 v_Normal;
-out vec2 v_TexCoord;
 out vec3 v_FragPos;
-out vec4 v_FragPosLightSpace;  // NEW: position in light space
+out vec3 v_Normal;
+out vec4 v_Color;
+out vec2 v_TexCoord;
+out vec4 v_FragPosLightSpace;  // Position in light space for shadow mapping
 
 uniform mat4 u_Model;
-uniform mat4 u_View;
-uniform mat4 u_Projection;
-uniform mat4 u_LightSpaceMatrix;  // NEW
+uniform mat4 u_MVP;
+uniform mat4 u_LightSpaceMatrix;  // Light's projection * view
 
 void main()
 {
-    vec4 worldPos = u_Model * vec4(a_Position, 1.0);
+    // World position for lighting and shadow calculations
+    vec4 worldPos = u_Model * aPos;
     v_FragPos = worldPos.xyz;
     
-    // Transform normal to world space (handle non-uniform scaling)
-    v_Normal = mat3(transpose(inverse(u_Model))) * a_Normal;
+    // Transform normal to world space
+    v_Normal = mat3(transpose(inverse(u_Model))) * aNormal;
     
-    v_TexCoord = a_TexCoord;
+    v_Color = aColor;
+    v_TexCoord = aTexCoord;
     
-    // NEW: Transform position to light space for shadow mapping
+    // Transform position to light space for shadow mapping
     v_FragPosLightSpace = u_LightSpaceMatrix * worldPos;
     
-    gl_Position = u_Projection * u_View * worldPos;
+    gl_Position = u_MVP * aPos;
 }
 ```
 
@@ -565,15 +583,14 @@ renderer.SetViewport(0, 0, m_ShadowMapFramebuffer->GetWidth(), m_ShadowMapFrameb
 renderer.ClearDepth();
 
 // Enable polygon offset to reduce shadow acne
-glEnable(GL_POLYGON_OFFSET_FILL);
-glPolygonOffset(2.0f, 4.0f);  // Factor, units
+renderer.EnablePolygonOffset(2.0f, 4.0f);  // Factor, units
 
 m_ShadowDepthShader->Bind();
 m_ShadowDepthShader->SetMatrix4fv("u_LightSpaceMatrix", m_LightSpaceMatrix);
 m_Scene.Render(renderer, *m_ShadowDepthShader, m_Camera);
 
 // Disable polygon offset
-glDisable(GL_POLYGON_OFFSET_FILL);
+renderer.DisablePolygonOffset();
 
 m_ShadowMapFramebuffer->Unbind();
 ```
@@ -788,7 +805,7 @@ This is beyond the scope of this chapter but is the industry standard for open-w
 
 ## Milestone
 
-**Chapter 28 Complete - Shadow Mapping**
+**Chapter 29 Complete - Shadow Mapping**
 
 You have:
 - Implemented two-pass shadow mapping using framebuffers
@@ -801,14 +818,12 @@ You have:
 
 Your scenes now have **realistic shadows** that respond to light direction and object occlusion. This is a foundational technique used in virtually all modern 3D games and renderers.
 
-The next chapter will explore **cubemaps and skyboxes**, adding environment mapping and reflections.
-
 ---
 
 ## What's Next
 
-In **Chapter 29: Cubemaps and Skybox**, we'll render 6-sided environment maps and create immersive skyboxes using cubemap textures.
+In **Chapter 30: Cubemaps and Skybox**, we'll render 6-sided environment maps and create immersive skyboxes using cubemap textures.
 
-> **Next:** [Chapter 29: Cubemaps and Skybox](29_CubemapsAndSkybox.md)
+> **Next:** [Chapter 30: Cubemaps and Skybox](30_CubemapsAndSkybox.md)
 
-> **Previous:** [Chapter 27: Framebuffers](27_Framebuffers.md)
+> **Previous:** [Chapter 28: Advanced Texture Configuration](28_TextureParameters.md)
