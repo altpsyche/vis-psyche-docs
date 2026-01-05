@@ -828,9 +828,8 @@ After unbinding, restore the viewport to match the window size:
 
 ```cpp
 framebuffer->Unbind();
-int width, height;
-engine.GetWindow().GetFramebufferSize(width, height);
-glViewport(0, 0, width, height);
+// Use tracked window dimensions (set via WindowResizeEvent - see Chapter 26)
+renderer.SetViewport(0, 0, m_WindowWidth, m_WindowHeight);
 ```
 
 ---
