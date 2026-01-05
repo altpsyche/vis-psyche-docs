@@ -264,14 +264,19 @@ Resource-owning classes delete copy operations and implement move operations.
 
 ### Naming Conventions: OpenGL IDs
 
-| Class Type | Member Name | Reason |
-|------------|-------------|--------|
-| **Buffers** (VBO, IBO, VAO) | `m_ID` | Simple, direct OpenGL buffer ID |
-| **Shaders, Textures, Framebuffers** | `m_RendererID` | Renderer-managed resources, distinguishes from other IDs |
+Each OpenGL wrapper class uses a descriptive member name matching its OpenGL object type:
 
-This convention helps identify the resource's role:
-- `m_ID` → Raw buffer objects (low-level)
-- `m_RendererID` → Renderer-level resources (textures, programs, FBOs)
+| Class | Member Name | OpenGL Object |
+|-------|-------------|---------------|
+| VertexBuffer | `m_vbo` | Vertex Buffer Object |
+| IndexBuffer | `m_ibo` | Index Buffer Object |
+| VertexArray | `m_vao` | Vertex Array Object |
+| Shader | `m_program` | Shader Program |
+| Texture | `m_texture` | Texture Object |
+| Framebuffer | `m_fbo` | Framebuffer Object |
+
+> [!NOTE]
+> This naming convention is **self-documenting** - each variable name directly reflects the OpenGL terminology, making the code easier to understand for those learning graphics programming.
 
 ---
 

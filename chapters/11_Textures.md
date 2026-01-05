@@ -97,10 +97,10 @@ namespace VizEngine
 
         inline int GetWidth() const { return m_Width; }
         inline int GetHeight() const { return m_Height; }
-        inline unsigned int GetID() const { return m_RendererID; }
+        inline unsigned int GetID() const { return m_texture; }
 
     private:
-        unsigned int m_RendererID;
+        unsigned int m_texture;
         std::string m_FilePath;
         unsigned char* m_LocalBuffer;
         int m_Width, m_Height, m_BPP;
@@ -125,7 +125,7 @@ namespace VizEngine
 namespace VizEngine
 {
     Texture::Texture(const std::string& path)
-        : m_RendererID(0), m_FilePath(path), m_LocalBuffer(nullptr),
+        : m_texture(0), m_FilePath(path), m_LocalBuffer(nullptr),
           m_Width(0), m_Height(0), m_BPP(0)
     {
         // Flip texture vertically (OpenGL expects bottom-left origin)
@@ -141,8 +141,8 @@ namespace VizEngine
         }
 
         // Create texture
-        glGenTextures(1, &m_RendererID);
-        glBindTexture(GL_TEXTURE_2D, m_RendererID);
+        glGenTextures(1, &m_texture);
+        glBindTexture(GL_TEXTURE_2D, m_texture);
 
         // Set parameters
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -162,21 +162,21 @@ namespace VizEngine
 
     Texture::~Texture()
     {
-        if (m_RendererID != 0)
+        if (m_texture != 0)
         {
-            glDeleteTextures(1, &m_RendererID);
+            glDeleteTextures(1, &m_texture);
         }
     }
 
     Texture::Texture(Texture&& other) noexcept
-        : m_RendererID(other.m_RendererID)
+        : m_texture(other.m_texture)
         , m_FilePath(std::move(other.m_FilePath))
         , m_LocalBuffer(other.m_LocalBuffer)
         , m_Width(other.m_Width)
         , m_Height(other.m_Height)
         , m_BPP(other.m_BPP)
     {
-        other.m_RendererID = 0;
+        other.m_texture = 0;
         other.m_LocalBuffer = nullptr;
     }
 
@@ -184,17 +184,17 @@ namespace VizEngine
     {
         if (this != &other)
         {
-            if (m_RendererID != 0)
-                glDeleteTextures(1, &m_RendererID);
+            if (m_texture != 0)
+                glDeleteTextures(1, &m_texture);
 
-            m_RendererID = other.m_RendererID;
+            m_texture = other.m_texture;
             m_FilePath = std::move(other.m_FilePath);
             m_LocalBuffer = other.m_LocalBuffer;
             m_Width = other.m_Width;
             m_Height = other.m_Height;
             m_BPP = other.m_BPP;
 
-            other.m_RendererID = 0;
+            other.m_texture = 0;
             other.m_LocalBuffer = nullptr;
         }
         return *this;
@@ -203,7 +203,7 @@ namespace VizEngine
     void Texture::Bind(unsigned int slot) const
     {
         glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_2D, m_RendererID);
+        glBindTexture(GL_TEXTURE_2D, m_texture);
     }
 
     void Texture::Unbind() const

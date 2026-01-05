@@ -47,10 +47,10 @@ namespace VizEngine
         void Bind() const;
         void Unbind() const;
 
-        unsigned int GetID() const { return m_ID; }
+        unsigned int GetID() const { return m_vbo; }
 
     private:
-        unsigned int m_ID = 0;
+        unsigned int m_vbo = 0;
     };
 
 }  // namespace VizEngine
@@ -69,42 +69,42 @@ namespace VizEngine
 {
     VertexBuffer::VertexBuffer(const void* data, size_t size)
     {
-        glGenBuffers(1, &m_ID);
-        glBindBuffer(GL_ARRAY_BUFFER, m_ID);
+        glGenBuffers(1, &m_vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
         glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
-        VP_CORE_TRACE("VertexBuffer created: ID={}", m_ID);
+        VP_CORE_TRACE("VertexBuffer created: ID={}", m_vbo);
     }
 
     VertexBuffer::~VertexBuffer()
     {
-        if (m_ID != 0)
+        if (m_vbo != 0)
         {
-            glDeleteBuffers(1, &m_ID);
-            VP_CORE_TRACE("VertexBuffer deleted: ID={}", m_ID);
+            glDeleteBuffers(1, &m_vbo);
+            VP_CORE_TRACE("VertexBuffer deleted: ID={}", m_vbo);
         }
     }
 
     VertexBuffer::VertexBuffer(VertexBuffer&& other) noexcept
-        : m_ID(other.m_ID)
+        : m_vbo(other.m_vbo)
     {
-        other.m_ID = 0;
+        other.m_vbo = 0;
     }
 
     VertexBuffer& VertexBuffer::operator=(VertexBuffer&& other) noexcept
     {
         if (this != &other)
         {
-            if (m_ID != 0)
-                glDeleteBuffers(1, &m_ID);
-            m_ID = other.m_ID;
-            other.m_ID = 0;
+            if (m_vbo != 0)
+                glDeleteBuffers(1, &m_vbo);
+            m_vbo = other.m_vbo;
+            other.m_vbo = 0;
         }
         return *this;
     }
 
     void VertexBuffer::Bind() const
     {
-        glBindBuffer(GL_ARRAY_BUFFER, m_ID);
+        glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     }
 
     void VertexBuffer::Unbind() const
@@ -148,10 +148,10 @@ namespace VizEngine
         void Unbind() const;
 
         unsigned int GetCount() const { return m_Count; }
-        unsigned int GetID() const { return m_ID; }
+        unsigned int GetID() const { return m_ibo; }
 
     private:
-        unsigned int m_ID = 0;
+        unsigned int m_ibo = 0;
         unsigned int m_Count = 0;
     };
 
@@ -172,25 +172,25 @@ namespace VizEngine
     IndexBuffer::IndexBuffer(const unsigned int* data, unsigned int count)
         : m_Count(count)
     {
-        glGenBuffers(1, &m_ID);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ID);
+        glGenBuffers(1, &m_ibo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, count * sizeof(unsigned int), data, GL_STATIC_DRAW);
-        VP_CORE_TRACE("IndexBuffer created: ID={}, Count={}", m_ID, m_Count);
+        VP_CORE_TRACE("IndexBuffer created: ID={}, Count={}", m_ibo, m_Count);
     }
 
     IndexBuffer::~IndexBuffer()
     {
-        if (m_ID != 0)
+        if (m_ibo != 0)
         {
-            glDeleteBuffers(1, &m_ID);
-            VP_CORE_TRACE("IndexBuffer deleted: ID={}", m_ID);
+            glDeleteBuffers(1, &m_ibo);
+            VP_CORE_TRACE("IndexBuffer deleted: ID={}", m_ibo);
         }
     }
 
     IndexBuffer::IndexBuffer(IndexBuffer&& other) noexcept
-        : m_ID(other.m_ID), m_Count(other.m_Count)
+        : m_ibo(other.m_ibo), m_Count(other.m_Count)
     {
-        other.m_ID = 0;
+        other.m_ibo = 0;
         other.m_Count = 0;
     }
 
@@ -198,11 +198,11 @@ namespace VizEngine
     {
         if (this != &other)
         {
-            if (m_ID != 0)
-                glDeleteBuffers(1, &m_ID);
-            m_ID = other.m_ID;
+            if (m_ibo != 0)
+                glDeleteBuffers(1, &m_ibo);
+            m_ibo = other.m_ibo;
             m_Count = other.m_Count;
-            other.m_ID = 0;
+            other.m_ibo = 0;
             other.m_Count = 0;
         }
         return *this;
@@ -210,7 +210,7 @@ namespace VizEngine
 
     void IndexBuffer::Bind() const
     {
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ID);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     }
 
     void IndexBuffer::Unbind() const
@@ -335,10 +335,10 @@ namespace VizEngine
 
         void LinkVertexBuffer(const VertexBuffer& vb, const VertexBufferLayout& layout);
 
-        unsigned int GetID() const { return m_ID; }
+        unsigned int GetID() const { return m_vao; }
 
     private:
-        unsigned int m_ID = 0;
+        unsigned int m_vao = 0;
     };
 
 }  // namespace VizEngine
@@ -357,40 +357,40 @@ namespace VizEngine
 {
     VertexArray::VertexArray()
     {
-        glGenVertexArrays(1, &m_ID);
-        VP_CORE_TRACE("VertexArray created: ID={}", m_ID);
+        glGenVertexArrays(1, &m_vao);
+        VP_CORE_TRACE("VertexArray created: ID={}", m_vao);
     }
 
     VertexArray::~VertexArray()
     {
-        if (m_ID != 0)
+        if (m_vao != 0)
         {
-            glDeleteVertexArrays(1, &m_ID);
-            VP_CORE_TRACE("VertexArray deleted: ID={}", m_ID);
+            glDeleteVertexArrays(1, &m_vao);
+            VP_CORE_TRACE("VertexArray deleted: ID={}", m_vao);
         }
     }
 
     VertexArray::VertexArray(VertexArray&& other) noexcept
-        : m_ID(other.m_ID)
+        : m_vao(other.m_vao)
     {
-        other.m_ID = 0;
+        other.m_vao = 0;
     }
 
     VertexArray& VertexArray::operator=(VertexArray&& other) noexcept
     {
         if (this != &other)
         {
-            if (m_ID != 0)
-                glDeleteVertexArrays(1, &m_ID);
-            m_ID = other.m_ID;
-            other.m_ID = 0;
+            if (m_vao != 0)
+                glDeleteVertexArrays(1, &m_vao);
+            m_vao = other.m_vao;
+            other.m_vao = 0;
         }
         return *this;
     }
 
     void VertexArray::Bind() const
     {
-        glBindVertexArray(m_ID);
+        glBindVertexArray(m_vao);
     }
 
     void VertexArray::Unbind() const

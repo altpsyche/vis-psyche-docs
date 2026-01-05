@@ -108,7 +108,7 @@ namespace VizEngine
 
     private:
         std::string m_shaderPath;
-        unsigned int m_RendererID;
+        unsigned int m_program;
         std::unordered_map<std::string, int> m_LocationCache;
 
         ShaderPrograms ShaderParser(const std::string& shaderFile);
@@ -141,7 +141,7 @@ namespace VizEngine
 namespace VizEngine
 {
     Shader::Shader(const std::string& shaderFile)
-        : m_shaderPath(shaderFile), m_RendererID(0)
+        : m_shaderPath(shaderFile), m_program(0)
     {
         // Parse the shader file
         ShaderPrograms sources = ShaderParser(shaderFile);
@@ -152,14 +152,14 @@ namespace VizEngine
         }
         
         // Compile and link
-        m_RendererID = CreateShader(sources.VertexProgram, sources.FragmentProgram);
-        if (m_RendererID == 0)
+        m_program = CreateShader(sources.VertexProgram, sources.FragmentProgram);
+        if (m_program == 0)
         {
             VP_CORE_ERROR("Failed to compile/link shader: {}", shaderFile);
             throw std::runtime_error("Failed to compile shader: " + shaderFile);
         }
         
-        VP_CORE_INFO("Shader created: {} (ID={})", shaderFile, m_RendererID);
+        VP_CORE_INFO("Shader created: {} (ID={})", shaderFile, m_program);
     }
 ```
 
@@ -169,37 +169,37 @@ namespace VizEngine
 ```cpp
     Shader::~Shader()
     {
-        if (m_RendererID != 0)
+        if (m_program != 0)
         {
-            glDeleteProgram(m_RendererID);
+            glDeleteProgram(m_program);
             VP_CORE_TRACE("Shader deleted: {}", m_shaderPath);
         }
     }
 
     Shader::Shader(Shader&& other) noexcept
         : m_shaderPath(std::move(other.m_shaderPath))
-        , m_RendererID(other.m_RendererID)
+        , m_program(other.m_program)
         , m_LocationCache(std::move(other.m_LocationCache))
     {
-        other.m_RendererID = 0;
+        other.m_program = 0;
     }
 
     Shader& Shader::operator=(Shader&& other) noexcept
     {
         if (this != &other)
         {
-            if (m_RendererID != 0)
-                glDeleteProgram(m_RendererID);
+            if (m_program != 0)
+                glDeleteProgram(m_program);
 
             m_shaderPath = std::move(other.m_shaderPath);
-            m_RendererID = other.m_RendererID;
+            m_program = other.m_program;
             m_LocationCache = std::move(other.m_LocationCache);
-            other.m_RendererID = 0;
+            other.m_program = 0;
         }
         return *this;
     }
 
-    void Shader::Bind() const { glUseProgram(m_RendererID); }
+    void Shader::Bind() const { glUseProgram(m_program); }
     void Shader::Unbind() const { glUseProgram(0); }
 
     ShaderPrograms Shader::ShaderParser(const std::string& shaderFile)
@@ -297,7 +297,7 @@ namespace VizEngine
         if (it != m_LocationCache.end())
             return it->second;
 
-        int location = glGetUniformLocation(m_RendererID, name.c_str());
+        int location = glGetUniformLocation(m_program, name.c_str());
         if (location == -1)
             VP_CORE_WARN("Uniform '{}' not found", name);
 
