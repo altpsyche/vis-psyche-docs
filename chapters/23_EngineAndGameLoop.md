@@ -121,7 +121,34 @@ We'll split responsibilities:
 
 ---
 
-## Step 1: Create Engine.h
+## Step 1: Update GLFWManager
+
+Before we build the Engine class, we need to ensure the `GLFWManager` handles the Input system initialization. In previous chapters, we initialized `Input` in `Application::Run`, but now the Engine will manage this.
+
+**Open `VizEngine/src/VizEngine/OpenGL/GLFWManager.cpp` and update `Init`:**
+
+```cpp
+#include "VizEngine/Core/Input.h" // Add this include
+
+void GLFWManager::Init(unsigned int width, unsigned int height, const std::string& title)
+{
+    // ... (Window creation code) ...
+
+    glfwMakeContextCurrent(m_Window);
+    
+    // ... (Callback setup) ...
+
+    // Initialize Input system with the new window
+    Input::Init(m_Window);
+}
+```
+
+> [!NOTE]
+> Moving `Input::Init` here ensures the input system is ready as soon as the window exists.
+
+---
+
+## Step 2: Create the Engine Class
 
 **Create `VizEngine/src/VizEngine/Engine.h`:**
 
