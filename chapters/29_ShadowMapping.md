@@ -397,17 +397,15 @@ uniform vec3 u_LightDiffuse;
 uniform vec3 u_LightSpecular;
 uniform vec3 u_ViewPos;
 
-uniform sampler2D u_Texture;
-uniform vec3 u_MaterialAmbient;
-uniform vec3 u_MaterialDiffuse;
-uniform vec3 u_MaterialSpecular;
-uniform float u_MaterialRoughness;
+// Object properties
+uniform vec4 u_ObjectColor;
+uniform sampler2D u_MainTex;
+uniform float u_Roughness;
 
-// New uniforms for shadow mapping
+// Shadow mapping
 uniform sampler2D u_ShadowMap;
-uniform mat4 u_LightSpaceMatrix;
 
-// Calculate shadow (0.0 = fully lit, 1.0 = in shadow)
+// Calculate shadow with PCF (0.0 = fully lit, 1.0 = in shadow)
 float CalculateShadow(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
 {
     // Perspective divide to get NDC coordinates
@@ -419,52 +417,65 @@ float CalculateShadow(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
     // Outside shadow map bounds = no shadow
     if (projCoords.z > 1.0)
         return 0.0;
+    if (projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0)
+        return 0.0;
     
-    // Sample shadow map (get closest depth from light's perspective)
-    float closestDepth = texture(u_ShadowMap, projCoords.xy).r;
-    
-    // Get current fragment's depth
     float currentDepth = projCoords.z;
     
     // Slope-scaled bias to prevent shadow acne
     float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.001);
     
-    // Compare depths: if current > closest, fragment is in shadow
-    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+    // PCF: Sample 3x3 kernel for soft shadows
+    float shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(u_ShadowMap, 0);
+    
+    for (int x = -1; x <= 1; ++x)
+    {
+        for (int y = -1; y <= 1; ++y)
+        {
+            vec2 offset = vec2(x, y) * texelSize;
+            float closestDepth = texture(u_ShadowMap, projCoords.xy + offset).r;
+            shadow += currentDepth - bias > closestDepth ? 1.0 : 0.0;
+        }
+    }
+    shadow /= 9.0;
     
     return shadow;
 }
 
 void main()
 {
+    // Sample texture
+    vec4 texColor = texture(u_MainTex, v_TexCoord);
+    
+    // Base color: texture * vertex color * object color
+    vec3 baseColor = texColor.rgb * v_Color.rgb * u_ObjectColor.rgb;
+    
     // Normalize interpolated normal
     vec3 norm = normalize(v_Normal);
     vec3 lightDir = normalize(-u_LightDirection);
-    vec3 viewDir = normalize(u_ViewPos - v_FragPos);
     
     // Ambient lighting (always present, even in shadow)
-    vec3 ambient = u_LightAmbient * u_MaterialAmbient;
+    vec3 ambient = u_LightAmbient * baseColor;
     
     // Diffuse lighting
     float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = u_LightDiffuse * (diff * u_MaterialDiffuse);
+    vec3 diffuse = u_LightDiffuse * diff * baseColor;
     
     // Specular lighting (Blinn-Phong)
-    vec3 halfwayDir = normalize(lightDir + viewDir);
-    float shininess = (1.0 - u_MaterialRoughness) * 128.0;
-    float spec = pow(max(dot(norm, halfwayDir), 0.0), shininess);
-    vec3 specular = u_LightSpecular * (spec * u_MaterialSpecular);
+    vec3 viewDir = normalize(u_ViewPos - v_FragPos);
+    vec3 halfDir = normalize(lightDir + viewDir);
+    float shininess = mix(256.0, 8.0, u_Roughness);
+    float spec = pow(max(dot(norm, halfDir), 0.0), shininess);
+    vec3 specular = u_LightSpecular * spec;
     
     // Calculate shadow (0.0 = lit, 1.0 = shadowed)
     float shadow = CalculateShadow(v_FragPosLightSpace, norm, lightDir);
     
     // Apply shadow to diffuse and specular (NOT to ambient)
-    // Ambient light reaches shadowed areas (indirect lighting)
-    vec3 lighting = ambient + (1.0 - shadow) * (diffuse + specular);
+    vec3 result = ambient + (1.0 - shadow) * (diffuse + specular);
     
-    // Apply texture color
-    vec4 texColor = texture(u_Texture, v_TexCoord);
-    FragColor = vec4(lighting * texColor.rgb, texColor.a);
+    FragColor = vec4(result, texColor.a * u_ObjectColor.a);
 }
 ```
 
@@ -631,6 +642,8 @@ float CalculateShadow(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
     
     // Outside shadow map bounds = no shadow
     if (projCoords.z > 1.0)
+        return 0.0;
+    if (projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0)
         return 0.0;
     
     float currentDepth = projCoords.z;
