@@ -70,15 +70,18 @@ target_include_directories(VizEngine
 
 #pragma once
 
-#include "VizEngine/Core.h"
+#include <iostream>
 #include <string>
+#include <glad/glad.h>
+#include "VizEngine/Core.h"
 
 namespace VizEngine
 {
     class VizEngine_API Texture
     {
     public:
-        Texture(const std::string& filepath);
+        // Load from file
+        Texture(const std::string& path);
         ~Texture();
 
         // No copying
@@ -92,16 +95,15 @@ namespace VizEngine
         void Bind(unsigned int slot = 0) const;
         void Unbind() const;
 
-        int GetWidth() const { return m_Width; }
-        int GetHeight() const { return m_Height; }
-        unsigned int GetID() const { return m_ID; }
+        inline int GetWidth() const { return m_Width; }
+        inline int GetHeight() const { return m_Height; }
+        inline unsigned int GetID() const { return m_RendererID; }
 
     private:
-        unsigned int m_ID = 0;
-        std::string m_Filepath;
-        int m_Width = 0;
-        int m_Height = 0;
-        int m_Channels = 0;
+        unsigned int m_RendererID;
+        std::string m_FilePath;
+        unsigned char* m_LocalBuffer;
+        int m_Width, m_Height, m_BPP;
     };
 
 }  // namespace VizEngine
@@ -117,119 +119,83 @@ namespace VizEngine
 // VizEngine/src/VizEngine/OpenGL/Texture.cpp
 
 #include "Texture.h"
-#include "Commons.h"
 #include "VizEngine/Log.h"
-
-#include <stb_image.h>
+#include "stb_image.h"
 
 namespace VizEngine
 {
-    Texture::Texture(const std::string& filepath)
-        : m_Filepath(filepath)
+    Texture::Texture(const std::string& path)
+        : m_RendererID(0), m_FilePath(path), m_LocalBuffer(nullptr),
+          m_Width(0), m_Height(0), m_BPP(0)
     {
         // Flip texture vertically (OpenGL expects bottom-left origin)
-        stbi_set_flip_vertically_on_load(true);
+        stbi_set_flip_vertically_on_load(1);
+        
+        // Load image (force 4 channels - RGBA)
+        m_LocalBuffer = stbi_load(path.c_str(), &m_Width, &m_Height, &m_BPP, 4);
 
-        // Load image
-        unsigned char* data = stbi_load(
-            filepath.c_str(),
-            &m_Width, &m_Height, &m_Channels,
-            0  // Don't force channels
-        );
-
-        if (!data)
+        if (!m_LocalBuffer)
         {
-            VP_CORE_ERROR("Failed to load texture: {}", filepath);
+            VP_CORE_ERROR("Failed to load texture: {}", path);
             return;
         }
 
-        VP_CORE_TRACE("Loaded texture: {}x{} ({} channels)", m_Width, m_Height, m_Channels);
-
-        // Determine format
-        GLenum internalFormat = GL_RGB8;
-        GLenum dataFormat = GL_RGB;
-
-        if (m_Channels == 4)
-        {
-            internalFormat = GL_RGBA8;
-            dataFormat = GL_RGBA;
-        }
-        else if (m_Channels == 1)
-        {
-            internalFormat = GL_R8;
-            dataFormat = GL_RED;
-        }
-
         // Create texture
-        glGenTextures(1, &m_ID);
-        glBindTexture(GL_TEXTURE_2D, m_ID);
+        glGenTextures(1, &m_RendererID);
+        glBindTexture(GL_TEXTURE_2D, m_RendererID);
 
         // Set parameters
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
         // Upload to GPU
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,                  // Mipmap level
-            internalFormat,     // Internal format
-            m_Width, m_Height,
-            0,                  // Border (must be 0)
-            dataFormat,         // Source format
-            GL_UNSIGNED_BYTE,   // Source type
-            data
-        );
-
-        // Generate mipmaps
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_Width, m_Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_LocalBuffer);
         glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, 0);
 
         // Free CPU-side data
-        stbi_image_free(data);
-
-        VP_CORE_INFO("Texture created: {} (ID={})", filepath, m_ID);
+        stbi_image_free(m_LocalBuffer);
+        m_LocalBuffer = nullptr;
     }
 
     Texture::~Texture()
     {
-        if (m_ID != 0)
+        if (m_RendererID != 0)
         {
-            glDeleteTextures(1, &m_ID);
-            VP_CORE_TRACE("Texture deleted: {}", m_Filepath);
+            glDeleteTextures(1, &m_RendererID);
         }
     }
 
     Texture::Texture(Texture&& other) noexcept
-        : m_ID(other.m_ID)
-        , m_Filepath(std::move(other.m_Filepath))
+        : m_RendererID(other.m_RendererID)
+        , m_FilePath(std::move(other.m_FilePath))
+        , m_LocalBuffer(other.m_LocalBuffer)
         , m_Width(other.m_Width)
         , m_Height(other.m_Height)
-        , m_Channels(other.m_Channels)
+        , m_BPP(other.m_BPP)
     {
-        other.m_ID = 0;
-        other.m_Width = 0;
-        other.m_Height = 0;
-        other.m_Channels = 0;
+        other.m_RendererID = 0;
+        other.m_LocalBuffer = nullptr;
     }
 
     Texture& Texture::operator=(Texture&& other) noexcept
     {
         if (this != &other)
         {
-            if (m_ID != 0)
-                glDeleteTextures(1, &m_ID);
+            if (m_RendererID != 0)
+                glDeleteTextures(1, &m_RendererID);
 
-            m_ID = other.m_ID;
-            m_Filepath = std::move(other.m_Filepath);
+            m_RendererID = other.m_RendererID;
+            m_FilePath = std::move(other.m_FilePath);
+            m_LocalBuffer = other.m_LocalBuffer;
             m_Width = other.m_Width;
             m_Height = other.m_Height;
-            m_Channels = other.m_Channels;
+            m_BPP = other.m_BPP;
 
-            other.m_ID = 0;
-            other.m_Width = 0;
-            other.m_Height = 0;
-            other.m_Channels = 0;
+            other.m_RendererID = 0;
+            other.m_LocalBuffer = nullptr;
         }
         return *this;
     }
@@ -237,7 +203,7 @@ namespace VizEngine
     void Texture::Bind(unsigned int slot) const
     {
         glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_2D, m_ID);
+        glBindTexture(GL_TEXTURE_2D, m_RendererID);
     }
 
     void Texture::Unbind() const

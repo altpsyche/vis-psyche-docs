@@ -33,7 +33,8 @@ As of now, VizPsyche has:
 - VertexBufferLayout (attribute configuration)
 - Shader (compile, link, uniforms, caching)
 - Texture (load images, bind to slots)
-- Renderer (clear, draw)
+- Framebuffer (render-to-texture, offscreen rendering)
+- Renderer (clear, draw, viewport)
 - GLFWManager (window, context, input)
 - ErrorHandling (OpenGL debug callbacks)
 
@@ -109,6 +110,7 @@ As of now, VizPsyche has:
 | `OpenGL/VertexBufferLayout.h` | Vertex attribute configuration |
 | `OpenGL/Shader.h` | Shader program wrapper |
 | `OpenGL/Texture.h` | Texture wrapper |
+| `OpenGL/Framebuffer.h` | FBO wrapper for render-to-texture |
 | `OpenGL/Renderer.h` | High-level render commands |
 | `OpenGL/GLFWManager.h` | Window and context |
 | `OpenGL/ErrorHandling.h` | Debug output handling |
@@ -213,7 +215,8 @@ VizEngine (namespace)
 │   ├── VertexArray: LinkVertexBuffer(), Bind(), Unbind()
 │   ├── Shader: Bind(), Unbind(), Set*() uniforms
 │   ├── Texture: Bind(), Unbind(), GetWidth(), GetHeight()
-│   └── Renderer: Clear(), Draw()
+│   ├── Framebuffer: Bind(), Unbind(), AttachColorTexture(), AttachDepthTexture(), IsComplete()
+│   └── Renderer: Clear(), Draw(), SetViewport()
 │
 ├── GLFWManager
 │   ├── PollEvents()
@@ -258,6 +261,17 @@ All OpenGL wrappers have `Bind()`/`Unbind()` to manage OpenGL's state machine.
 
 ### Rule of 5
 Resource-owning classes delete copy operations and implement move operations.
+
+### Naming Conventions: OpenGL IDs
+
+| Class Type | Member Name | Reason |
+|------------|-------------|--------|
+| **Buffers** (VBO, IBO, VAO) | `m_ID` | Simple, direct OpenGL buffer ID |
+| **Shaders, Textures, Framebuffers** | `m_RendererID` | Renderer-managed resources, distinguishes from other IDs |
+
+This convention helps identify the resource's role:
+- `m_ID` → Raw buffer objects (low-level)
+- `m_RendererID` → Renderer-level resources (textures, programs, FBOs)
 
 ---
 
@@ -420,6 +434,8 @@ cmake --build build --config Debug
 | Engine class, game loop, lifecycle methods | [23 Engine and Game Loop](23_EngineAndGameLoop.md) |
 | Sandbox refactoring, CreateApplication | [24 Sandbox Migration](24_SandboxMigration.md) |
 | Event dispatcher, window/input events | [25 Event System](25_EventSystem.md) |
+| Engine lifecycle, OnEvent routing | [26 Advanced Lifecycle](26_AdvancedLifecycle.md) |
+| Framebuffers, render-to-texture, offscreen rendering | [27 Framebuffers](27_Framebuffers.md) |
 
 ---
 
