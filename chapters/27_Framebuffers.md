@@ -438,7 +438,9 @@ First, ensure you have the necessary includes at the top of the file:
 
 ```cpp
 #include <VizEngine.h>
-#include <glad/glad.h>  // For GL_RGBA8, GL_DEPTH_COMPONENT24, glViewport
+#include <VizEngine/Events/ApplicationEvent.h>
+#include <VizEngine/Events/KeyEvent.h>
+// Note: GL constants (GL_RGBA8, etc.) are available via VizEngine.h -> Texture.h -> glad.h
 ```
 
 Add member variables:
@@ -527,19 +529,17 @@ void OnRender() override
 	// =========================================================================
 	// Render to Screen (default framebuffer)
 	// =========================================================================
-	// Restore viewport to window size
-	auto& window = engine.GetWindow();
-	int width = window.GetWidth();
-	int height = window.GetHeight();
-	glViewport(0, 0, width, height);
+	// Restore viewport to window size (use tracked dimensions to avoid header dependency)
+	renderer.SetViewport(0, 0, m_WindowWidth, m_WindowHeight);
 
 	// Clear screen - the scene will be displayed via ImGui preview
-	renderer.Clear(glm::vec4(0.1f, 0.1f, 0.15f, 1.0f));
+	float screenClearColor[4] = { 0.1f, 0.1f, 0.15f, 1.0f };
+	renderer.Clear(screenClearColor);
 }
 ```
 
 > [!NOTE]
-> We render the scene once to the framebuffer (offscreen). The result will be displayed in ImGui using the `Image()` widget in `OnImGuiRender()`. This is more efficient than rendering twice.
+> We use `renderer.SetViewport()` instead of calling `glViewport()` directly. This keeps all OpenGL calls inside VizEngine, avoiding DLL boundary issues with GLAD symbols. Similarly, `Renderer::Clear()` takes a `float[4]` array, not `glm::vec4`.
 
 ---
 
@@ -606,6 +606,37 @@ void UIManager::Image(void* textureID, float width, float height)
 
 > [!IMPORTANT]
 > OpenGL textures are bottom-left origin, but ImGui expects top-left. We flip the UV coordinates: `ImVec2(0, 1)` to `ImVec2(1, 0)`.
+
+---
+
+## Step 6: Add Viewport Method to Renderer
+
+Client applications can't call OpenGL functions directly (they're inside the VizEngine DLL). Add a viewport wrapper:
+
+**Update `VizEngine/src/VizEngine/OpenGL/Renderer.h`:**
+
+```cpp
+class VizEngine_API Renderer
+{
+public:
+	void Clear(float clearColor[4]);
+	void ClearDepth();
+	void SetViewport(int x, int y, int width, int height);
+	void Draw(const VertexArray& va, const IndexBuffer& ib, const Shader& shader) const;
+};
+```
+
+**Update `VizEngine/src/VizEngine/OpenGL/Renderer.cpp`:**
+
+```cpp
+void Renderer::SetViewport(int x, int y, int width, int height)
+{
+	glViewport(x, y, width, height);
+}
+```
+
+> [!NOTE]
+> This follows the pattern of keeping all OpenGL calls inside VizEngine. Client applications use `renderer.SetViewport()` instead of calling `glViewport()` directly, avoiding DLL boundary issues with GLAD symbols.
 
 ---
 
