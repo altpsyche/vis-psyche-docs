@@ -179,6 +179,18 @@ Or use OpenGL's `glPolygonOffset()` to offset depth during rendering.
 
 #### 3. Aliasing (Jagged Shadow Edges)
 
+**Problem**: Shadow edges appear jagged/pixelated.
+
+**Cause**: Shadow map resolution is too low for the scene scale.
+
+**Solution**: 
+- Increase shadow map resolution (1024 → 2048 → 4096)
+- Use Percentage Closer Filtering (PCF) to soften edges
+- Consider cascaded shadow maps for large scenes
+
+> [!NOTE]
+> **Performance vs Quality Tradeoff**: Shadow map resolution directly impacts both quality and performance. A 2048x2048 shadow map requires 4x more memory and fill-rate than 1024x1024. Start with 2048 for most scenes, and profile before increasing to 4096.
+
 **Problem**: Shadow edges look pixelated/blocky.
 
 **Cause**: Shadow map resolution is limited. Each texel represents a large area in world space.

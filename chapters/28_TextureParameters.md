@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 28: Advanced Texture Configuration
+# Chapter 28: Texture Parameters
 
 Extend our Texture class with sampling configuration for advanced rendering techniques.
 

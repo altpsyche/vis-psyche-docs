@@ -22,7 +22,7 @@ Until now, we've rendered directly to the **default framebuffer** (the screen). 
 
 | Technique | Why Framebuffers? |
 |-----------|-------------------|
-| **Shadow Mapping** | Render depth from light's perspective to a texture (Chapter 28) |
+| **Shadow Mapping** | Render depth from light's perspective to a texture (Chapter 29) |
 | **Post-Processing** | Render scene to texture, apply effects like bloom or blur (Part X) |
 | **Portals/Mirrors** | Render scene from different camera to texture |
 | **Deferred Rendering** | Multiple render targets for G-buffer (Part X) |
@@ -76,6 +76,9 @@ Each attachment is either:
    ↓
 7. Use Texture (e.g., in ImGui, post-processing, etc.)
 ```
+
+> [!TIP]
+> **Automatic Viewport Management**: When you call `Framebuffer::Bind()`, the viewport is automatically set to match the framebuffer's dimensions. This ensures correct rendering without manual `glViewport()` calls.
 
 ---
 
