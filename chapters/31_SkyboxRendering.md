@@ -477,7 +477,7 @@ if (m_ShowSkybox)
 > 
 > **Performance Impact:** Negligible for a cube (72 triangles total). The skybox shader is extremely lightweight.
 > 
-> **Future Refactoring:** In **Part XII: Engine Infrastructure** (Chapters 41-43), we'll move debug framebuffers behind conditional compilation flags, transitioning to production-ready patterns. For now, the educational clarity justifies the minimal overhead.
+> **Future Refactoring:** we'll move debug framebuffers behind conditional compilation flags, transitioning to production-ready patterns. For now, the educational clarity justifies the minimal overhead.
 
 **In `OnImGuiRender()`, add skybox controls:**
 
