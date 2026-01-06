@@ -38,6 +38,7 @@ chapters:
   - chapters/32_PBRTheory.md
   - chapters/33_PBRImplementation.md
   - chapters/34_ImageBasedLighting.md
+  - chapters/35_HDRPipeline.md
 
 appendices:
   - chapters/A_Reference.md

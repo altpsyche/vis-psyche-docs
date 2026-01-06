@@ -791,7 +791,7 @@ namespace VizEngine
     {
     public:
         FullscreenQuad();
-        ~Fullscreen Quad() = default;
+        ~FullscreenQuad() = default;
 
         /**
          * Render the fullscreen quad.
@@ -1553,15 +1553,15 @@ glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 **Chapter 35 Complete - HDR Pipeline**
 
 You have:
-- ✅ Implemented floating-point HDR framebuffers (RGB16F)
-- ✅ Created a comprehensive tone mapping shader with 5 operators
-- ✅ Understood the theory behind each tone mapping operator
-- ✅ Implemented manual exposure control (f-stops)
-- ✅ Learned about automatic exposure and eye adaptation
-- ✅ Built a two-pass rendering pipeline (scene → HDR → tone map → screen)
-- ✅ Added ImGui controls for real-time adjustment
-- ✅ Applied proper gamma correction (linear → sRGB)
-- ✅ Tested and validated the HDR pipeline
+- Implemented floating-point HDR framebuffers (RGB16F)
+- Created a comprehensive tone mapping shader with 5 operators
+- Understood the theory behind each tone mapping operator
+- Implemented manual exposure control (f-stops)
+- Learned about automatic exposure and eye adaptation
+- Built a two-pass rendering pipeline (scene → HDR → tone map → screen)
+- Added ImGui controls for real-time adjustment
+- Applied proper gamma correction (linear → sRGB)
+- Tested and validated the HDR pipeline
 
 Your engine now supports **industry-standard HDR rendering**—the same workflow used by Unreal Engine, Unity, and modern AAA games. This is a critical foundation for advanced post-processing effects and photorealistic rendering.
 
