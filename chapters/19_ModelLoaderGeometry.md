@@ -196,6 +196,29 @@ namespace VizEngine
 
 ---
 
+## Step 4: Update CMakeLists.txt
+
+Add the new `Model.cpp` to the build system.
+
+**Modify `VizEngine/CMakeLists.txt`:**
+
+In the `VIZENGINE_SOURCES` section (Core subsection), add:
+
+```cmake
+    src/VizEngine/Core/Model.cpp
+```
+
+In the `VIZENGINE_HEADERS` section (Core headers subsection), add:
+
+```cmake
+    src/VizEngine/Core/Model.h
+```
+
+> [!NOTE]
+> `Material.h` was added to headers in a previous step. It's header-only, so no `.cpp` file is needed.
+
+---
+
 ## Usage Example
 
 ```cpp

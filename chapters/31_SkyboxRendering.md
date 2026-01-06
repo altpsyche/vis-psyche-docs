@@ -170,7 +170,40 @@ void main()
 
 ---
 
-## Step 2: Create Skybox Class
+## Step 2: Update Build Configuration
+
+Before implementing the Skybox class, add the new files to the build system.
+
+**Modify `VizEngine/CMakeLists.txt`:**
+
+In the `VIZENGINE_SOURCES` section, add after `CubemapUtils.cpp`:
+
+```cmake
+    # Renderer
+    src/VizEngine/Renderer/Skybox.cpp
+```
+
+In the `VIZENGINE_HEADERS` section, add after `CubemapUtils.h`:
+
+```cmake
+    # Renderer headers
+    src/VizEngine/Renderer/Skybox.h
+```
+
+**Modify `VizEngine/src/VizEngine.h`:**
+
+Add to the includes section (after `CubemapUtils.h`):
+
+```cpp
+#include "VizEngine/Renderer/Skybox.h"
+```
+
+> [!NOTE]
+> This creates a new `Renderer` category in the build system for rendering-related classes (as opposed to low-level OpenGL wrappers).
+
+---
+
+## Step 3: Create Skybox Class
 
 Encapsulate skybox rendering logic in a reusable class.
 
@@ -234,11 +267,11 @@ void SetupMesh();
 #include "VizEngine/OpenGL/Shader.h"
 #include "VizEngine/OpenGL/VertexArray.h"
 #include "VizEngine/OpenGL/VertexBuffer.h"
-#include "VizEngine/Camera/Camera.h"
+#include "VizEngine/Core/Camera.h"
 #include "VizEngine/Log.h"
 
 #include <glad/glad.h>
-#include <glm/glm.hpp>
+#include <glm.hpp>
 
 namespace VizEngine
 {
@@ -316,7 +349,7 @@ VertexBufferLayout layout;
 layout.Push<float>(3);  // Position only
 
 m_VAO = std::make_unique<VertexArray>();
-m_VAO->AddBuffer(*m_VBO, layout);
+m_VAO->LinkVertexBuffer(*m_VBO, layout);
 }
 
 void Skybox::Render(const Camera& camera)
@@ -351,15 +384,15 @@ glDepthFunc(GL_LESS);
 
 ---
 
-## Step 3: Integrate Skybox in SandboxApp
+## Step 4: Integrate Skybox in SandboxApp
 
 Now we can load an HDRI, convert it, and render the skybox.
 
 ### Download a Free HDRI
 
 Visit [polyhaven.com](https://polyhaven.com/hdris) and download a free HDRI:
-- Recommended: **"Newport Loft"** (2K HDR, ~5 MB)
-- Save to: `VizEngine/src/resources/textures/environments/newport_loft.hdr`
+- Recommended: **"Qwantani Dusk 2 Puresky"** (2K HDR)
+- Save to: `VizEngine/src/resources/textures/environments/qwantani_dusk_2_puresky_2k.hdr`
 
 ### Update SandboxApp.h
 
@@ -385,7 +418,7 @@ VP_INFO("Loading environment HDRI...");
 
 // Load HDR equirectangular map
 m_EnvironmentHDRI = std::make_shared<VizEngine::Texture>(
-    "resources/textures/environments/newport_loft.hdr", 
+    "resources/textures/environments/qwantani_dusk_2_puresky_2k.hdr", 
     true  // isHDR
 );
 

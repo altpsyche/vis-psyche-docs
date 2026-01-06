@@ -314,6 +314,26 @@ namespace VizEngine
 
 ---
 
+## Step 3: Update CMakeLists.txt
+
+Add the new `Input.cpp` to the build system.
+
+**Modify `VizEngine/CMakeLists.txt`:**
+
+In the `VIZENGINE_SOURCES` section (Core subsection), add:
+
+```cmake
+    src/VizEngine/Core/Input.cpp
+```
+
+In the `VIZENGINE_HEADERS` section (Core headers subsection), add:
+
+```cmake
+    src/VizEngine/Core/Input.h
+```
+
+---
+
 ## Usage Example
 
 ```cpp

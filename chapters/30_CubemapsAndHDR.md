@@ -477,7 +477,38 @@ void main()
 
 ---
 
-## Step 4: Create Cubemap Conversion Utility
+## Step 4: Update Build Configuration
+
+Add the new files to the build system.
+
+**Modify `VizEngine/CMakeLists.txt`:**
+
+In the `VIZENGINE_SOURCES` section, add after `VertexBuffer.cpp`:
+
+```cmake
+    src/VizEngine/OpenGL/CubemapUtils.cpp
+```
+
+In the `VIZENGINE_HEADERS` section, add after `VertexBufferLayout.h`:
+
+```cmake
+    src/VizEngine/OpenGL/CubemapUtils.h
+```
+
+**Modify `VizEngine/src/VizEngine.h`:**
+
+Add to the OpenGL includes section (after `Framebuffer.h`):
+
+```cpp
+#include "VizEngine/OpenGL/CubemapUtils.h"
+```
+
+> [!IMPORTANT]
+> **Build System Integration**: Every new `.cpp` file must be added to `CMakeLists.txt` for the build to succeed. Every public header should be added to `VizEngine.h` for easy access by applications.
+
+---
+
+## Step 5: Create Cubemap Conversion Utility
 
 This utility renders the equirectangular map to each cubemap face.
 
@@ -531,8 +562,8 @@ namespace VizEngine
 #include "VizEngine/Log.h"
 
 #include <glad/glad.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include <glm.hpp>
+#include <gtc/matrix_transform.hpp>
 
 namespace VizEngine
 {
@@ -627,7 +658,7 @@ namespace VizEngine
 		layout.Push<float>(3);  // Position
 
 		auto cubeVAO = std::make_shared<VertexArray>();
-		cubeVAO->AddBuffer(*cubeVBO, layout);
+		cubeVAO->LinkVertexBuffer(*cubeVBO, layout);
 
 		// Bind shader and equirectangular map
 		shader->Bind();

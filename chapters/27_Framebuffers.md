@@ -434,7 +434,27 @@ namespace VizEngine
 
 ---
 
-## Step 3: Update Texture for Framebuffer Usage
+## Step 3: Update CMakeLists.txt
+
+Add the new `Framebuffer.cpp` to the build system.
+
+**Modify `VizEngine/CMakeLists.txt`:**
+
+In the `VIZENGINE_SOURCES` section (OpenGL subsection), add:
+
+```cmake
+    src/VizEngine/OpenGL/Framebuffer.cpp
+```
+
+In the `VIZENGINE_HEADERS` section (OpenGL headers subsection), add:
+
+```cmake
+    src/VizEngine/OpenGL/Framebuffer.h
+```
+
+---
+
+## Step 4: Update Texture for Framebuffer Usage
 
 Our `Texture` class needs a constructor that creates empty textures suitable for framebuffer attachments.
 

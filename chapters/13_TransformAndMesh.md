@@ -262,6 +262,30 @@ namespace VizEngine
 
 ---
 
+## Step 4: Update CMakeLists.txt
+
+Add the new `Mesh.cpp` to the build system.
+
+**Modify `VizEngine/CMakeLists.txt`:**
+
+In the `VIZENGINE_SOURCES` section (Core subsection), add:
+
+```cmake
+    src/VizEngine/Core/Mesh.cpp
+```
+
+In the `VIZENGINE_HEADERS` section (Core headers subsection), add:
+
+```cmake
+    src/VizEngine/Core/Mesh.h
+    src/VizEngine/Core/Transform.h
+```
+
+> [!NOTE]
+> `Transform.h` is header-only (no `.cpp` file), so it only needs to be in `VIZENGINE_HEADERS`.
+
+---
+
 ## Usage Example
 
 ```cpp

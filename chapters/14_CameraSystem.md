@@ -220,6 +220,26 @@ namespace VizEngine
 
 ---
 
+## Step 3: Update CMakeLists.txt
+
+Add the new `Camera.cpp` to the build system.
+
+**Modify `VizEngine/CMakeLists.txt`:**
+
+In the `VIZENGINE_SOURCES` section (Core subsection), add:
+
+```cmake
+    src/VizEngine/Core/Camera.cpp
+```
+
+In the `VIZENGINE_HEADERS` section (Core headers subsection), add:
+
+```cmake
+    src/VizEngine/Core/Camera.h
+```
+
+---
+
 ## Usage Example
 
 ```cpp
