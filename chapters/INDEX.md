@@ -56,6 +56,10 @@ A step-by-step guide to building a 3D rendering engine from scratch using C++ an
 - [Chapter 30: Cubemaps and HDR](30_CubemapsAndHDR.md)
 - [Chapter 31: Skybox Rendering](31_SkyboxRendering.md)
 
+### Part X: Physically Based Rendering
+- [Chapter 32: PBR Theory](32_PBRTheory.md)
+- [Chapter 33: PBR Implementation](33_PBRImplementation.md)
+
 ### Appendices
 - [Appendix A: Code Reference](A_Reference.md)
 

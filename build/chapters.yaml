@@ -35,6 +35,8 @@ chapters:
   - chapters/29_ShadowMapping.md
   - chapters/30_CubemapsAndHDR.md
   - chapters/31_SkyboxRendering.md
+  - chapters/32_PBRTheory.md
+  - chapters/33_PBRImplementation.md
 
 appendices:
   - chapters/A_Reference.md
