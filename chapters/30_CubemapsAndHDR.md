@@ -571,6 +571,13 @@ namespace VizEngine
 		std::shared_ptr<Texture> equirectangularMap,
 		int resolution)
 	{
+		// Validate resolution bounds
+		if (resolution <= 0 || resolution > 8192)
+		{
+			VP_CORE_ERROR("Cubemap conversion: Invalid resolution {} (must be 1-8192)", resolution);
+			return nullptr;
+		}
+
 		VP_CORE_INFO("Converting equirectangular map to cubemap ({}x{} per face)...", resolution, resolution);
 
 		// Create empty cubemap texture

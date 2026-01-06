@@ -429,6 +429,10 @@ m_SkyboxCubemap = VizEngine::CubemapUtils::EquirectangularToCubemap(
     cubemapResolution
 );
 
+// Release original HDRI to free memory (~6MB for 2K texture)
+// The cubemap now contains all the data we need
+m_EnvironmentHDRI.reset();
+
 // Create skybox
 m_Skybox = std::make_unique<VizEngine::Skybox>(m_SkyboxCubemap);
 
@@ -475,7 +479,6 @@ if (m_ShowSkybox)
 // =========================================================================
 uiManager.BeginSection("Skybox");
 uiManager.Checkbox("Show Skybox", &m_ShowSkybox);
-uiManager.Text("HDRI: %dx%d", m_EnvironmentHDRI->GetWidth(), m_EnvironmentHDRI->GetHeight());
 uiManager.Text("Cubemap: %dx%d per face", m_SkyboxCubemap->GetWidth(), m_SkyboxCubemap->GetHeight());
 uiManager.EndSection();
 ```
