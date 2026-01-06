@@ -469,7 +469,15 @@ if (m_ShowSkybox)
 ```
 
 > [!NOTE]
-> The skybox is rendered **twice**: once before `Unbind()` (so it appears in the framebuffer texture for F2 preview), and once after (so it appears on the screen). This ensures the skybox is visible in both the main window and the ImGui framebuffer preview.
+> **Intentional Double Rendering:** The skybox is rendered **twice per frame**:
+> 1. Before `Unbind()` → appears in framebuffer texture (F2 preview)
+> 2. After `Unbind()` → appears on screen
+> 
+> This ensures the skybox is visible in both the main window and the ImGui framebuffer preview.
+> 
+> **Performance Impact:** Negligible for a cube (72 triangles total). The skybox shader is extremely lightweight.
+> 
+> For this educational implementation, the clarity of the double-render approach outweighs the minimal performance cost.
 
 **In `OnImGuiRender()`, add skybox controls:**
 

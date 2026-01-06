@@ -441,6 +441,10 @@ in vec3 v_WorldPos;
 
 uniform sampler2D u_EquirectangularMap;
 
+// Constants for spherical coordinate normalization
+const float INV_TWO_PI = 0.1591549;  // 1 / (2π)
+const float INV_PI = 0.3183099;      // 1 / π
+
 // Convert 3D direction vector to equirectangular UV coordinates
 vec2 SampleSphericalMap(vec3 v)
 {
@@ -451,7 +455,7 @@ vec2 SampleSphericalMap(vec3 v)
     vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
     
     // Normalize from [-π, π] × [-π/2, π/2] to [0, 1] × [0, 1]
-    uv *= vec2(0.1591, 0.3183);  // inv(2π), inv(π)
+    uv *= vec2(INV_TWO_PI, INV_PI);
     uv += 0.5;
     
     return uv;
