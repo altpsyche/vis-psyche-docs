@@ -37,6 +37,7 @@ chapters:
   - chapters/31_SkyboxRendering.md
   - chapters/32_PBRTheory.md
   - chapters/33_PBRImplementation.md
+  - chapters/34_ImageBasedLighting.md
 
 appendices:
   - chapters/A_Reference.md

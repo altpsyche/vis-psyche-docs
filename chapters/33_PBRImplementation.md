@@ -750,7 +750,7 @@ Your engine now supports **physically based materials** that behave correctly un
 
 ## What's Next
 
-In **Chapter 34: Image-Based Lighting**, we'll replace the simple ambient term with environment-based lighting using the cubemap from Chapter 30-31. This adds realistic ambient lighting and reflections from the environment itself.
+In **Chapter 34: Image-Based Lighting**, we'll replace the simple ambient term with environment-based lighting using HDR cubemaps. This adds realistic diffuse irradiance and specular reflections from the environment itself.
 
 > **Next:** [Chapter 34: Image-Based Lighting](34_ImageBasedLighting.md)
 

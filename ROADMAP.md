@@ -92,23 +92,23 @@ At the end of Part VII, the engine contains:
 
 ## Phase 2: Advanced OpenGL
 
-**Part IX: Advanced Techniques** In Progress
+**Part IX: Advanced Techniques** Complete
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
 | 27 | Framebuffers | Render targets, MRT, attachments | Complete
 | 28 | Advanced Texture Configuration | Filtering, wrap modes, border colors | Complete
-| 29 | Shadow Mapping | Depth from light, PCF, cascades | In Progress
-| 30 | Cubemaps and HDR | Environment mapping, reflections | In Progress
-| 31 | Skybox Rendering | Environment mapping, reflections | In Progress
+| 29 | Shadow Mapping | Depth from light, PCF, cascades | Complete
+| 30 | Cubemaps and HDR | Environment mapping, reflections | Complete
+| 31 | Skybox Rendering | Environment mapping, reflections | Complete
 
-**Part X: Physically Based Rendering** (Not Started)
+**Part X: Physically Based Rendering** In Progress
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 32 | PBR Theory | Energy conservation, microfacets | (Not Started)
-| 33 | PBR Implementation | Cook-Torrance, metallic-roughness | (Not Started)
-| 34 | Image-Based Lighting | Irradiance, prefiltered environment | (Not Started)
+| 32 | PBR Theory | Energy conservation, microfacets | Complete
+| 33 | PBR Implementation | Cook-Torrance, metallic-roughness | Complete
+| 34 | Image-Based Lighting | Irradiance, prefiltered environment | In Progress
 | 35 | HDR Pipeline | Floating-point framebuffers, exposure | (Not Started)
 | 36 | Material System | Material abstraction, parameter binding, shader variants | (Not Started)
 | 37 | Post-Processing | Bloom, tone mapping, color grading | (Not Started)

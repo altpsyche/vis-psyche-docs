@@ -59,6 +59,7 @@ A step-by-step guide to building a 3D rendering engine from scratch using C++ an
 ### Part X: Physically Based Rendering
 - [Chapter 32: PBR Theory](32_PBRTheory.md)
 - [Chapter 33: PBR Implementation](33_PBRImplementation.md)
+- [Chapter 34: Image-Based Lighting](34_ImageBasedLighting.md)
 
 ### Appendices
 - [Appendix A: Code Reference](A_Reference.md)
