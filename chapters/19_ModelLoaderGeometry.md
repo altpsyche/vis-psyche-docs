@@ -80,11 +80,6 @@ namespace VizEngine
 
 ---
 
-> [!IMPORTANT]
-> Model uses a **static factory pattern**: `Model::LoadFromFile()` returns `unique_ptr` which is `nullptr` on failure. There is no public constructor.
-
----
-
 ## Step 2: Create Material.h
 
 **Create `VizEngine/src/VizEngine/Core/Material.h`:**
