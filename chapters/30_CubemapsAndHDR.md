@@ -625,6 +625,11 @@ namespace VizEngine
 
 		// Create empty cubemap texture
 		auto cubemap = std::make_shared<Texture>(resolution, equirectangularMap->IsHDR());
+		if (!cubemap)
+		{
+			VP_CORE_ERROR("Cubemap conversion: Failed to create cubemap texture (resolution: {}x{})", resolution, resolution);
+			return nullptr;
+		}
 
 		// Create framebuffer for rendering to cubemap faces
 		auto framebuffer = std::make_shared<Framebuffer>(resolution, resolution);
@@ -638,6 +643,12 @@ namespace VizEngine
 		// Create depth renderbuffer (we don't need to sample it)
 		unsigned int rbo;
 		glGenRenderbuffers(1, &rbo);
+		if (rbo == 0)
+		{
+			VP_CORE_ERROR("Cubemap conversion: Failed to generate renderbuffer");
+			return nullptr;
+		}
+
 		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, resolution, resolution);
 		glBindRenderbuffer(GL_RENDERBUFFER, 0);
@@ -645,6 +656,14 @@ namespace VizEngine
 		// Attach depth renderbuffer to framebuffer
 		framebuffer->Bind();
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+		// Verify framebuffer usability (at least depth attached)
+		if (!framebuffer->IsComplete())
+		{
+			VP_CORE_ERROR("Cubemap conversion: Framebuffer incomplete after depth attachment");
+			glDeleteRenderbuffers(1, &rbo);
+			return nullptr;
+		}
 
 		// Load conversion shader
 		auto shader = std::make_shared<Shader>("resources/shaders/equirect_to_cube.shader");

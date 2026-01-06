@@ -560,8 +560,6 @@ void OnRender() override
     // =========================================================================
     // Pass 2: Render scene normally with shadows
     // =========================================================================
-    // Restore viewport to window size
-    renderer.SetViewport(0, 0, m_WindowWidth, m_WindowHeight);
     
     // Clear screen
     renderer.Clear(m_ClearColor);
