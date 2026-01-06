@@ -674,8 +674,22 @@ std::shared_ptr<Texture> CubemapUtils::GenerateIrradianceMap(
         glm::lookAt(glm::vec3(0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
     };
 
-    // Cube vertices (reuse from EquirectangularToCubemap)
-    float cubeVertices[] = { /* ... same 36 vertices as before ... */ };
+    // Cube vertices (same as EquirectangularToCubemap in Chapter 30)
+    // See CubemapUtils.cpp for full vertex data
+    float cubeVertices[] = {
+        -1.0f, -1.0f, -1.0f,   1.0f,  1.0f, -1.0f,   1.0f, -1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,  -1.0f, -1.0f, -1.0f,  -1.0f,  1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,   1.0f, -1.0f,  1.0f,   1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,  -1.0f,  1.0f,  1.0f,  -1.0f, -1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,  -1.0f,  1.0f, -1.0f,  -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,  -1.0f, -1.0f,  1.0f,  -1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,   1.0f, -1.0f, -1.0f,   1.0f,  1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,   1.0f,  1.0f,  1.0f,   1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f, -1.0f,   1.0f, -1.0f, -1.0f,   1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,  -1.0f, -1.0f,  1.0f,  -1.0f, -1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,   1.0f,  1.0f,  1.0f,   1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f,  1.0f,  -1.0f,  1.0f, -1.0f,  -1.0f,  1.0f,  1.0f
+    };
     auto cubeVBO = std::make_shared<VertexBuffer>(cubeVertices, static_cast<unsigned int>(sizeof(cubeVertices)));
     VertexBufferLayout layout;
     layout.Push<float>(3);
@@ -750,8 +764,21 @@ std::shared_ptr<Texture> CubemapUtils::GeneratePrefilteredMap(
         glm::lookAt(glm::vec3(0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
     };
 
-    // Cube geometry
-    float cubeVertices[] = { /* ... same vertices ... */ };
+    // Cube vertices (same as GenerateIrradianceMap above)
+    float cubeVertices[] = {
+        -1.0f, -1.0f, -1.0f,   1.0f,  1.0f, -1.0f,   1.0f, -1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,  -1.0f, -1.0f, -1.0f,  -1.0f,  1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,   1.0f, -1.0f,  1.0f,   1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,  -1.0f,  1.0f,  1.0f,  -1.0f, -1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,  -1.0f,  1.0f, -1.0f,  -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,  -1.0f, -1.0f,  1.0f,  -1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,   1.0f, -1.0f, -1.0f,   1.0f,  1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,   1.0f,  1.0f,  1.0f,   1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f, -1.0f,   1.0f, -1.0f, -1.0f,   1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,  -1.0f, -1.0f,  1.0f,  -1.0f, -1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,   1.0f,  1.0f,  1.0f,   1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f,  1.0f,  -1.0f,  1.0f, -1.0f,  -1.0f,  1.0f,  1.0f
+    };
     auto cubeVBO = std::make_shared<VertexBuffer>(cubeVertices, static_cast<unsigned int>(sizeof(cubeVertices)));
     VertexBufferLayout layout;
     layout.Push<float>(3);
@@ -895,6 +922,16 @@ uniform float u_MaxReflectionLOD;
 uniform bool u_UseIBL;
 ```
 
+Add a new Fresnel-Schlick with roughness function after the existing `FresnelSchlick`:
+
+```glsl
+// Fresnel-Schlick with roughness for IBL (accounts for rough surfaces)
+vec3 FresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
+{
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+```
+
 Replace the ambient calculation at the end of `main()`:
 
 ```glsl
@@ -906,6 +943,10 @@ vec3 ambient;
 if (u_UseIBL)
 {
     // ----- Diffuse IBL -----
+    // Use Fresnel with roughness for IBL to account for surface roughness
+    vec3 kS_IBL = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, u_Roughness);
+    vec3 kD_IBL = (vec3(1.0) - kS_IBL) * (1.0 - u_Metallic);
+    
     vec3 irradiance = texture(u_IrradianceMap, N).rgb;
     vec3 diffuseIBL = irradiance * albedo;
     
@@ -923,8 +964,7 @@ if (u_UseIBL)
     vec3 specularIBL = prefilteredColor * (F0 * envBRDF.x + envBRDF.y);
     
     // ----- Combine -----
-    // kD already computed above for direct lighting
-    ambient = (kD * diffuseIBL + specularIBL) * u_AO;
+    ambient = (kD_IBL * diffuseIBL + specularIBL) * u_AO;
 }
 else
 {
@@ -934,7 +974,7 @@ else
 ```
 
 > [!NOTE]
-> We need `F0` (base reflectivity) for the specular IBL reconstruction. This is already calculated earlier in the shader for direct lighting—make sure it's accessible here (move it before the light loop if needed).
+> We use `FresnelSchlickRoughness` for IBL instead of the standard `FresnelSchlick`. This variant accounts for rough surfaces by clamping the maximum Fresnel value, providing more accurate results for non-shiny materials.
 
 ---
 

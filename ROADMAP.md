@@ -108,7 +108,7 @@ At the end of Part VII, the engine contains:
 |----|-------|--------|--------|
 | 32 | PBR Theory | Energy conservation, microfacets | Complete
 | 33 | PBR Implementation | Cook-Torrance, metallic-roughness | Complete
-| 34 | Image-Based Lighting | Irradiance, prefiltered environment | In Progress
+| 34 | Image-Based Lighting | Irradiance, prefiltered environment | Complete
 | 35 | HDR Pipeline | Floating-point framebuffers, exposure | (Not Started)
 | 36 | Material System | Material abstraction, parameter binding, shader variants | (Not Started)
 | 37 | Post-Processing | Bloom, tone mapping, color grading | (Not Started)
