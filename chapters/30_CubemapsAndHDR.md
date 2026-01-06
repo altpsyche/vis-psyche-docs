@@ -683,6 +683,14 @@ namespace VizEngine
 				0  // Mipmap level
 			);
 
+			// Verify framebuffer is complete after attachment
+			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			{
+				VP_CORE_ERROR("Cubemap conversion: FBO incomplete for face {}", i);
+				glDeleteRenderbuffers(1, &rbo);
+				return nullptr;
+			}
+
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 			// Render cube
@@ -692,10 +700,16 @@ namespace VizEngine
 
 		framebuffer->Unbind();
 
+		// Generate mipmaps for the cubemap (improves quality and required for IBL)
+		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->GetID());
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
 		// Cleanup
 		glDeleteRenderbuffers(1, &rbo);
 
-		VP_CORE_INFO("Cubemap conversion complete!");
+		VP_CORE_INFO("Cubemap conversion complete (with mipmaps)!");
 
 		return cubemap;
 	}
