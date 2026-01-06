@@ -397,12 +397,42 @@ void Texture::Bind(unsigned int slot) const
 **Modify `Texture::Unbind()` in `Texture.cpp`:**
 
 ```cpp
-void Texture::Unbind() const
-{
-	if (m_IsCubemap)
-		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 	else
 		glBindTexture(GL_TEXTURE_2D, 0);
+}
+```
+
+### Update Parameter Methods for Cubemaps
+
+Since cubemaps use `GL_TEXTURE_CUBE_MAP` instead of `GL_TEXTURE_2D`, we must update our configuration methods to bind the correct target.
+
+**Modify `Texture.cpp` methods (`SetFilter`, `SetWrap`, `SetBorderColor`):**
+
+```cpp
+void Texture::SetFilter(unsigned int minFilter, unsigned int magFilter)
+{
+	GLenum target = m_IsCubemap ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
+	glBindTexture(target, m_texture);
+	glTexParameteri(target, GL_TEXTURE_MIN_FILTER, minFilter);
+	glTexParameteri(target, GL_TEXTURE_MAG_FILTER, magFilter);
+	glBindTexture(target, 0);
+}
+
+void Texture::SetWrap(unsigned int sWrap, unsigned int tWrap)
+{
+	GLenum target = m_IsCubemap ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
+	glBindTexture(target, m_texture);
+	glTexParameteri(target, GL_TEXTURE_WRAP_S, sWrap);
+	glTexParameteri(target, GL_TEXTURE_WRAP_T, tWrap);
+	glBindTexture(target, 0);
+}
+
+void Texture::SetBorderColor(const float color[4])
+{
+	GLenum target = m_IsCubemap ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
+	glBindTexture(target, m_texture);
+	glTexParameterfv(target, GL_TEXTURE_BORDER_COLOR, color);
+	glBindTexture(target, 0);
 }
 ```
 
@@ -677,6 +707,10 @@ namespace VizEngine
 		equirectangularMap->Bind(0);
 		shader->SetInt("u_EquirectangularMap", 0);
 
+		// Save current viewport
+		GLint prevViewport[4];
+		glGetIntegerv(GL_VIEWPORT, prevViewport);
+
 		glViewport(0, 0, resolution, resolution);
 		framebuffer->Bind();
 
@@ -710,6 +744,9 @@ namespace VizEngine
 		}
 
 		framebuffer->Unbind();
+
+		// Restore previous viewport
+		glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
 
 		// Generate mipmaps for the cubemap (improves quality and required for IBL)
 		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->GetID());

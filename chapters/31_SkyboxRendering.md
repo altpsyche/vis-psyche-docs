@@ -275,13 +275,19 @@ void SetupMesh();
 
 namespace VizEngine
 {
-Skybox::Skybox(std::shared_ptr<Texture> cubemap)
-: m_Cubemap(cubemap)
-{
-if (!m_Cubemap->IsCubemap())
-{
-VP_CORE_ERROR("Skybox: Texture is not a cubemap!");
-}
+	Skybox::Skybox(std::shared_ptr<Texture> cubemap)
+		: m_Cubemap(cubemap)
+	{
+		if (!m_Cubemap)
+		{
+			VP_CORE_ERROR("Skybox: Cubemap texture is null!");
+			throw std::runtime_error("Skybox: Cannot create skybox with null cubemap");
+		}
+
+		if (!m_Cubemap->IsCubemap())
+		{
+			VP_CORE_ERROR("Skybox: Texture is not a cubemap!");
+		}
 
 // Load skybox shader
 m_Shader = std::make_shared<Shader>("resources/shaders/skybox.shader");
@@ -457,6 +463,7 @@ m_Framebuffer->Unbind();
 m_Camera.SetAspectRatio(windowAspect);
 
 // Restore viewport to window size
+// Restore viewport to window size
 renderer.SetViewport(0, 0, m_WindowWidth, m_WindowHeight);
 
 // =========================================================================
@@ -487,7 +494,16 @@ if (m_ShowSkybox)
 // =========================================================================
 uiManager.BeginSection("Skybox");
 uiManager.Checkbox("Show Skybox", &m_ShowSkybox);
-uiManager.Text("Cubemap: %dx%d per face", m_SkyboxCubemap->GetWidth(), m_SkyboxCubemap->GetHeight());
+
+if (m_SkyboxCubemap)
+{
+    uiManager.Text("Cubemap: %dx%d per face", m_SkyboxCubemap->GetWidth(), m_SkyboxCubemap->GetHeight());
+}
+else
+{
+    uiManager.Text("Cubemap: Not loaded");
+}
+
 uiManager.EndSection();
 ```
 
