@@ -580,8 +580,15 @@ void OnRender() override
     m_LitShader->SetMatrix4fv("u_LightSpaceMatrix", m_LightSpaceMatrix);
     
     // Bind shadow map to texture slot 1
-    m_ShadowMapDepth->Bind(1);
-    m_LitShader->SetInt("u_ShadowMap", 1);
+    if (m_ShadowMapDepth)
+    {
+        m_ShadowMapDepth->Bind(1);
+        m_LitShader->SetInt("u_ShadowMap", 1);
+    }
+    else
+    {
+        m_LitShader->SetInt("u_ShadowMap", 0);
+    }
     
     // Render scene with shadows
     m_Scene.Render(renderer, *m_LitShader, m_Camera);

@@ -629,9 +629,9 @@ namespace VizEngine
 		// Create framebuffer for rendering to cubemap faces
 		auto framebuffer = std::make_shared<Framebuffer>(resolution, resolution);
 
-		if (!framebuffer || !framebuffer->IsComplete())
+		if (!framebuffer)
 		{
-			VP_CORE_ERROR("Cubemap conversion: Failed to create valid framebuffer (resolution: {}x{})", resolution, resolution);
+			VP_CORE_ERROR("Cubemap conversion: Failed to create framebuffer");
 			return nullptr;
 		}
 
@@ -648,6 +648,12 @@ namespace VizEngine
 
 		// Load conversion shader
 		auto shader = std::make_shared<Shader>("resources/shaders/equirect_to_cube.shader");
+		if (!shader->IsValid())
+		{
+			VP_CORE_ERROR("Cubemap conversion: Failed to load shader 'resources/shaders/equirect_to_cube.shader'");
+			glDeleteRenderbuffers(1, &rbo);
+			return nullptr;
+		}
 
 		// Projection matrix (90° FOV to cover each face exactly)
 		glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
@@ -748,6 +754,7 @@ namespace VizEngine
 			{
 				VP_CORE_ERROR("Cubemap conversion: FBO incomplete for face {}", i);
 				glDeleteRenderbuffers(1, &rbo);
+				glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
 				return nullptr;
 			}
 
