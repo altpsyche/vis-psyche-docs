@@ -16,10 +16,11 @@ In **Chapter 32**, we explored the mathematical foundation of Physically Based R
 |-----------|-------------|
 | **pbr.shader** | Complete vertex/fragment shader implementing Cook-Torrance BRDF |
 | **Helper functions** | `DistributionGGX()`, `FresnelSchlick()`, `GeometrySmith()` |
-| **Multi-light support** | Four point lights for testing |
+| **Lighting support** | Directional light + 4 point lights |
+| **Texture support** | Albedo textures with tinting |
 | **Material uniforms** | Albedo, metallic, roughness, ambient occlusion |
 
-**Expected result:** A PBR-lit sphere (or any mesh) that responds realistically to roughness and metallic parameters—matching industry-standard renderers like glTF Sample Viewer.
+**Expected result:** A PBR-rendered scene where objects (including textured models like the Duck) respond realistically to roughness and metallic parameters—matching industry-standard renderers like glTF Sample Viewer.
 
 ---
 
@@ -33,8 +34,9 @@ By the end of this chapter, you'll have:
 | **GGX Distribution** | Normal distribution function for specular highlight shape |
 | **Fresnel-Schlick** | Angle-dependent reflectivity with metallic workflow |
 | **Smith Geometry** | Self-shadowing/masking for energy conservation |
-| **Multi-Light Loop** | Support for multiple point lights |
-| **Testing Setup** | Material parameter sweeps for validation |
+| **Multi-Light Support** | Directional light + 4 point lights |
+| **Texture Support** | Albedo texture sampling with color tinting |
+| **Material Controls** | Per-object metallic/roughness editing via ImGui |
 
 ---
 
@@ -48,9 +50,11 @@ Create a new shader file that implements the complete PBR lighting model.
 #shader vertex
 #version 460 core
 
-layout(location = 0) in vec3 aPos;
-layout(location = 1) in vec3 aNormal;
-layout(location = 2) in vec2 aTexCoords;
+// Match existing Mesh vertex layout (see Mesh.cpp SetupMesh)
+layout(location = 0) in vec4 aPos;       // Position (vec4)
+layout(location = 1) in vec3 aNormal;    // Normal (vec3)
+layout(location = 2) in vec4 aColor;     // Color (vec4) - unused in PBR but must be declared
+layout(location = 3) in vec2 aTexCoords; // TexCoords (vec2)
 
 out vec3 v_WorldPos;
 out vec3 v_Normal;
@@ -63,7 +67,7 @@ uniform mat4 u_Projection;
 void main()
 {
     // Transform position to world space
-    v_WorldPos = vec3(u_Model * vec4(aPos, 1.0));
+    v_WorldPos = vec3(u_Model * aPos);
     
     // Transform normal to world space (use normal matrix for non-uniform scaling)
     v_Normal = mat3(transpose(inverse(u_Model))) * aNormal;
@@ -87,10 +91,14 @@ in vec2 v_TexCoords;
 // ============================================================================
 // Material Parameters
 // ============================================================================
-uniform vec3 u_Albedo;       // Base color
-uniform float u_Metallic;    // 0 = dielectric, 1 = metal
-uniform float u_Roughness;   // 0 = smooth, 1 = rough
-uniform float u_AO;          // Ambient occlusion
+uniform vec3 u_Albedo;           // Base color (or tint if using texture)
+uniform float u_Metallic;        // 0 = dielectric, 1 = metal
+uniform float u_Roughness;       // 0 = smooth, 1 = rough
+uniform float u_AO;              // Ambient occlusion
+
+// Albedo/Base color texture
+uniform sampler2D u_AlbedoTexture;
+uniform bool u_UseAlbedoTexture;
 
 // ============================================================================
 // Camera
@@ -103,6 +111,13 @@ uniform vec3 u_ViewPos;
 uniform vec3 u_LightPositions[4];
 uniform vec3 u_LightColors[4];
 uniform int u_LightCount;
+
+// ============================================================================
+// Directional Light (optional, for unified lighting with existing scene)
+// ============================================================================
+uniform vec3 u_DirLightDirection;   // Direction FROM light (normalized)
+uniform vec3 u_DirLightColor;       // Radiance (intensity baked in)
+uniform bool u_UseDirLight;         // Enable directional light
 
 // ============================================================================
 // Constants
@@ -189,11 +204,19 @@ void main()
     vec3 N = normalize(v_Normal);
     vec3 V = normalize(u_ViewPos - v_WorldPos);
     
+    // Get albedo from texture or uniform
+    vec3 albedo = u_Albedo;
+    if (u_UseAlbedoTexture)
+    {
+        vec4 texColor = texture(u_AlbedoTexture, v_TexCoords);
+        albedo = texColor.rgb * u_Albedo;  // Multiply texture with tint color
+    }
+    
     // Calculate F0 (base reflectivity)
     // Dielectrics: 0.04 (approximately 4% reflectivity)
     // Metals: use albedo as F0 (tinted reflections)
     vec3 F0 = vec3(0.04);
-    F0 = mix(F0, u_Albedo, u_Metallic);
+    F0 = mix(F0, albedo, u_Metallic);
     
     // Accumulate radiance from all lights
     vec3 Lo = vec3(0.0);
@@ -247,7 +270,7 @@ void main()
         kD *= (1.0 - u_Metallic);
         
         // Lambertian diffuse: albedo / π
-        vec3 diffuse = kD * u_Albedo / PI;
+        vec3 diffuse = kD * albedo / PI;
         
         // ====================================================================
         // Combine and Accumulate
@@ -256,10 +279,41 @@ void main()
     }
     
     // ========================================================================
+    // Directional Light Contribution (if enabled)
+    // ========================================================================
+    if (u_UseDirLight)
+    {
+        // Direction TO light (negate the uniform which is FROM light)
+        vec3 L = normalize(-u_DirLightDirection);
+        vec3 H = normalize(V + L);
+        
+        // No attenuation for directional lights (infinitely far)
+        vec3 radiance = u_DirLightColor;
+        
+        // Cook-Torrance BRDF (same as point lights)
+        float D = DistributionGGX(N, H, u_Roughness);
+        float cosTheta = max(dot(H, V), 0.0);
+        vec3 F = FresnelSchlick(cosTheta, F0);
+        float G = GeometrySmith(N, V, L, u_Roughness);
+        
+        vec3 numerator = D * F * G;
+        float NdotV = max(dot(N, V), 0.0);
+        float NdotL = max(dot(N, L), 0.0);
+        float denominator = 4.0 * NdotV * NdotL + 0.0001;
+        vec3 specular = numerator / denominator;
+        
+        vec3 kS = F;
+        vec3 kD = (vec3(1.0) - kS) * (1.0 - u_Metallic);
+        vec3 diffuse = kD * albedo / PI;
+        
+        Lo += (diffuse + specular) * radiance * NdotL;
+    }
+    
+    // ========================================================================
     // Ambient Lighting (simple constant term for now)
     // Chapter 34 will replace this with Image-Based Lighting
     // ========================================================================
-    vec3 ambient = vec3(0.03) * u_Albedo * u_AO;
+    vec3 ambient = vec3(0.03) * albedo * u_AO;
     
     vec3 color = ambient + Lo;
     
@@ -353,28 +407,29 @@ In your application (e.g., `SandboxApp.cpp`), load the PBR shader:
 
 ```cpp
 // In OnCreate()
-m_PBRShader = std::make_shared<VizEngine::Shader>("resources/shaders/pbr.shader");
+m_PBRShader = std::make_unique<VizEngine::Shader>("resources/shaders/pbr.shader");
 ```
 
 ### Setting Up Lights
 
-Configure point lights for testing:
+Configure both directional and point lights:
 
 ```cpp
-// Four corner lights for even illumination
-glm::vec3 lightPositions[] = {
+// Directional light (unified with existing scene)
+m_Light.Direction = glm::vec3(-0.5f, -1.0f, -0.3f);
+m_Light.Diffuse = glm::vec3(0.8f, 0.8f, 0.75f);
+
+// Four corner point lights for PBR
+glm::vec3 m_PBRLightPositions[4] = {
     glm::vec3(-10.0f,  10.0f, 10.0f),
     glm::vec3( 10.0f,  10.0f, 10.0f),
     glm::vec3(-10.0f, -10.0f, 10.0f),
     glm::vec3( 10.0f, -10.0f, 10.0f)
 };
 
-glm::vec3 lightColors[] = {
-    glm::vec3(300.0f, 300.0f, 300.0f),
-    glm::vec3(300.0f, 300.0f, 300.0f),
-    glm::vec3(300.0f, 300.0f, 300.0f),
-    glm::vec3(300.0f, 300.0f, 300.0f)
-};
+float m_PBRLightIntensity = 300.0f;
+glm::vec3 m_PBRLightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+glm::vec3 m_PBRLightColors[4];  // = color * intensity
 ```
 
 > [!NOTE]
@@ -386,59 +441,84 @@ glm::vec3 lightColors[] = {
 // In OnRender()
 m_PBRShader->Bind();
 
-// Set matrices
-m_PBRShader->SetMatrix4fv("u_Model", modelMatrix);
+// Set camera matrices
 m_PBRShader->SetMatrix4fv("u_View", m_Camera.GetViewMatrix());
 m_PBRShader->SetMatrix4fv("u_Projection", m_Camera.GetProjectionMatrix());
-
-// Set camera position
 m_PBRShader->SetVec3("u_ViewPos", m_Camera.GetPosition());
 
-// Set material properties
-m_PBRShader->SetVec3("u_Albedo", glm::vec3(0.5f, 0.0f, 0.0f));  // Red
-m_PBRShader->SetFloat("u_Metallic", 0.0f);   // Dielectric
-m_PBRShader->SetFloat("u_Roughness", 0.5f);  // Medium rough
-m_PBRShader->SetFloat("u_AO", 1.0f);         // No occlusion
-
-// Set lights
+// Set point lights
 m_PBRShader->SetInt("u_LightCount", 4);
 for (int i = 0; i < 4; ++i)
 {
-    m_PBRShader->SetVec3("u_LightPositions[" + std::to_string(i) + "]", lightPositions[i]);
-    m_PBRShader->SetVec3("u_LightColors[" + std::to_string(i) + "]", lightColors[i]);
+    m_PBRShader->SetVec3("u_LightPositions[" + std::to_string(i) + "]", m_PBRLightPositions[i]);
+    m_PBRShader->SetVec3("u_LightColors[" + std::to_string(i) + "]", m_PBRLightColors[i]);
 }
 
-// Render mesh
-m_Mesh->Draw();
+// Set directional light
+m_PBRShader->SetBool("u_UseDirLight", true);
+m_PBRShader->SetVec3("u_DirLightDirection", m_Light.GetDirection());
+m_PBRShader->SetVec3("u_DirLightColor", m_Light.Diffuse * 2.0f);
+
+// Render scene objects
+for (auto& obj : m_Scene)
+{
+    if (!obj.Active || !obj.MeshPtr) continue;
+    
+    glm::mat4 model = obj.ObjectTransform.GetModelMatrix();
+    m_PBRShader->SetMatrix4fv("u_Model", model);
+    
+    // Set material properties from SceneObject
+    m_PBRShader->SetVec3("u_Albedo", glm::vec3(obj.Color));
+    m_PBRShader->SetFloat("u_Metallic", obj.Metallic);
+    m_PBRShader->SetFloat("u_Roughness", obj.Roughness);
+    m_PBRShader->SetFloat("u_AO", 1.0f);
+    
+    // Bind texture if available
+    if (obj.TexturePtr)
+    {
+        obj.TexturePtr->Bind(0);
+        m_PBRShader->SetInt("u_AlbedoTexture", 0);
+        m_PBRShader->SetBool("u_UseAlbedoTexture", true);
+    }
+    else
+    {
+        m_PBRShader->SetBool("u_UseAlbedoTexture", false);
+    }
+    
+    obj.MeshPtr->Bind();
+    renderer.Draw(obj.MeshPtr->GetVertexArray(), obj.MeshPtr->GetIndexBuffer(), *m_PBRShader);
+}
 ```
 
 ---
 
 ## Step 4: Testing Material Variations
 
-Create a grid of spheres to visualize parameter effects:
+Use the Scene Objects panel to interactively test different material properties.
+
+### Adding Spheres for Testing
+
+First, create a sphere mesh in `OnCreate()`:
+
+```cpp
+// In OnCreate()
+m_SphereMesh = std::shared_ptr<VizEngine::Mesh>(
+    VizEngine::Mesh::CreateSphere(1.0f, 32).release()
+);
+```
+
+Then use the **"Add Sphere"** button in the Scene Objects panel to dynamically create test objects.
 
 ### Roughness Test (Dielectric)
 
-Render 7 spheres in a row with roughness varying from 0.0 to 1.0:
+Test how roughness affects specular highlights:
 
-```cpp
-for (int i = 0; i < 7; ++i)
-{
-    float roughness = i / 6.0f;  // 0.0, 0.167, 0.333, 0.5, 0.667, 0.833, 1.0
-    
-    glm::mat4 model = glm::translate(glm::mat4(1.0f), 
-        glm::vec3((i - 3) * 2.5f, 0.0f, 0.0f));
-    
-    m_PBRShader->SetMatrix4fv("u_Model", model);
-    m_PBRShader->SetVec3("u_Albedo", glm::vec3(0.5f, 0.0f, 0.0f));
-    m_PBRShader->SetFloat("u_Metallic", 0.0f);
-    m_PBRShader->SetFloat("u_Roughness", roughness);
-    m_PBRShader->SetFloat("u_AO", 1.0f);
-    
-    m_Sphere->Draw();
-}
-```
+1. Click **"Add Sphere"** multiple times to create several spheres
+2. For each sphere, select it and adjust:
+   - **Metallic**: 0.0 (dielectric)
+   - **Roughness**: Vary from 0.0 to 1.0
+   - **Color**: Set to red (0.5, 0.0, 0.0) or any base color
+3. Position spheres in a row using the Position controls
 
 **Expected result**:
 - **roughness=0.0**: Sharp, bright specular highlight
@@ -447,25 +527,14 @@ for (int i = 0; i < 7; ++i)
 
 ### Metallic Test (Gold)
 
-Render 7 spheres with roughness varying, metallic=1.0:
+Test how roughness affects metallic surfaces:
 
-```cpp
-for (int i = 0; i < 7; ++i)
-{
-    float roughness = i / 6.0f;
-    
-    glm::mat4 model = glm::translate(glm::mat4(1.0f), 
-        glm::vec3((i - 3) * 2.5f, 3.0f, 0.0f));
-    
-    m_PBRShader->SetMatrix4fv("u_Model", model);
-    m_PBRShader->SetVec3("u_Albedo", glm::vec3(1.0f, 0.76f, 0.33f));  // Gold
-    m_PBRShader->SetFloat("u_Metallic", 1.0f);
-    m_PBRShader->SetFloat("u_Roughness", roughness);
-    m_PBRShader->SetFloat("u_AO", 1.0f);
-    
-    m_Sphere->Draw();
-}
-```
+1. Click **"Add Sphere"** to create spheres
+2. For each sphere, adjust:
+   - **Metallic**: 1.0 (metal)
+   - **Roughness**: Vary from 0.0 to 1.0
+   - **Color**: Set to gold (1.0, 0.76, 0.33)
+3. Arrange in a row
 
 **Expected result**:
 - **roughness=0.0**: Perfect gold mirror
@@ -474,30 +543,32 @@ for (int i = 0; i < 7; ++i)
 
 ### Metallic Transition Test
 
-Render 7 spheres with metallic varying from 0 to 1:
+Test the dielectric-to-metal transition:
 
-```cpp
-for (int i = 0; i < 7; ++i)
-{
-    float metallic = i / 6.0f;
-    
-    glm::mat4 model = glm::translate(glm::mat4(1.0f), 
-        glm::vec3((i - 3) * 2.5f, -3.0f, 0.0f));
-    
-    m_PBRShader->SetMatrix4fv("u_Model", model);
-    m_PBRShader->SetVec3("u_Albedo", glm::vec3(0.9f, 0.6f, 0.2f));
-    m_PBRShader->SetFloat("u_Metallic", metallic);
-    m_PBRShader->SetFloat("u_Roughness", 0.3f);
-    m_PBRShader->SetFloat("u_AO", 1.0f);
-    
-    m_Sphere->Draw();
-}
-```
+1. Click **"Add Sphere"** to create spheres
+2. For each sphere, adjust:
+   - **Metallic**: Vary from 0.0 to 1.0
+   - **Roughness**: 0.3 (constant)
+   - **Color**: Set to orange (0.9, 0.6, 0.2)
+3. Arrange in a row
 
 **Expected result**:
-- **metallic=0**: Plastic-like, colorless highlights
+- **metallic=0.0**: Plastic-like, colorless highlights
 - **metallic=0.5**: Transition (rarely used in practice)
-- **metallic=1**: Metal-like, tinted (orange-gold) reflections
+- **metallic=1.0**: Metal-like, tinted (orange) reflections
+
+### Using the ImGui Controls
+
+The **Scene Objects** panel provides:
+- **Add Sphere** button: Creates a new sphere with default PBR properties
+- **Material sliders**: Adjust Metallic (0-1) and Roughness (0.05-1)
+- **Color picker**: Change albedo color
+- **Transform controls**: Position, rotation, scale
+
+The **Lighting** panel allows you to:
+- Adjust directional light direction and color
+- Control point light intensity (50-1000) and color
+- See real-time PBR response to lighting changes
 
 ---
 
@@ -605,7 +676,7 @@ Validate your results against known-good PBR renderers:
 
 | Limitation | Solution (Future Chapter) |
 |------------|---------------------------|
-| No texture support | Chapter 36: Material System |
+| Only albedo textures | Chapter 36: Material System (metallic/roughness/normal maps) |
 | Simple ambient | Chapter 34: Image-Based Lighting |
 | Basic tone mapping | Chapter 35: HDR Pipeline |
 | No normal mapping | Chapter 36: Material System |
