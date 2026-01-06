@@ -734,7 +734,7 @@ namespace VizEngine
 		};
 
 		// Setup cube VAO/VBO
-		auto cubeVBO = std::make_shared<VertexBuffer>(cubeVertices, sizeof(cubeVertices));
+		auto cubeVBO = std::make_shared<VertexBuffer>(cubeVertices, static_cast<unsigned int>(sizeof(cubeVertices)));
 		VertexBufferLayout layout;
 		layout.Push<float>(3);  // Position
 
