@@ -260,10 +260,10 @@ void RenderObjectInspector(SceneObject& obj)
         ImGui::DragFloat3("Scale", &obj.ObjectTransform.Scale.x, 0.1f);
     }
 
-    if (ImGui::CollapsingHeader("Material"))
+    if (ImGui::CollapsingHeader("Appearance"))
     {
         ImGui::ColorEdit4("Color", &obj.Color.r);
-        ImGui::SliderFloat("Roughness", &obj.Roughness, 0.0f, 1.0f);
+        ImGui::Checkbox("Active", &obj.Active);
     }
 
     ImGui::End();
@@ -300,7 +300,7 @@ You have:
 - UIManager class (constructor-based)
 - `StartWindow()`/`EndWindow()` for panels
 - `Render()` method
-- Object inspector example with Roughness
+- Object inspector example with Color and Active
 
 ---
 

@@ -80,39 +80,6 @@ namespace VizEngine
 
 ---
 
-## Step 2: Create Material.h
-
-**Create `VizEngine/src/VizEngine/Core/Material.h`:**
-
-```cpp
-// VizEngine/src/VizEngine/Core/Material.h
-
-#pragma once
-
-#include "VizEngine/Core.h"
-#include "VizEngine/OpenGL/Texture.h"
-#include "glm.hpp"
-#include <memory>
-
-namespace VizEngine
-{
-    /**
-     * Material for loaded models.
-     * 
-     * Chapter 33 will expand this with Roughness, Metallic for PBR.
-     */
-    struct VizEngine_API Material
-    {
-        glm::vec4 BaseColor = glm::vec4(1.0f);
-        float Shininess = 32.0f;  // Blinn-Phong exponent
-        std::shared_ptr<Texture> BaseColorTexture;
-
-        Material() = default;
-    };
-
-}  // namespace VizEngine
-```
-
 > [!IMPORTANT]
 > Model uses a **static factory pattern**: `Model::LoadFromFile()` returns `unique_ptr` which is `nullptr` on failure. There is no public constructor.
 
@@ -268,10 +235,10 @@ for (size_t i = 0; i < duckModel->GetMeshCount(); i++)
     auto& obj = scene.Add(duckModel->GetMeshes()[i], "Duck");
     obj.ObjectTransform.Scale = glm::vec3(0.02f);  // glTF uses meters
 
-    // Get material
+    // Get material properties
     const auto& mat = duckModel->GetMaterialForMesh(i);
     obj.Color = mat.BaseColor;
-    obj.Roughness = mat.Roughness;
+    obj.Shininess = mat.Shininess;
     obj.TexturePtr = mat.BaseColorTexture;
 }
 ```

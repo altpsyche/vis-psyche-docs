@@ -212,8 +212,17 @@ defaultLitShader.SetVec3("u_LightDiffuse", light.Diffuse);
 defaultLitShader.SetVec3("u_LightSpecular", light.Specular);
 defaultLitShader.SetVec3("u_ViewPos", camera.GetPosition());
 
+// Per-object: set shininess before rendering each object
+for (auto& obj : scene)
+{
+    defaultLitShader.SetFloat("u_Shininess", obj.Shininess);
+}
+
 scene.Render(renderer, defaultLitShader, camera);
 ```
+
+> [!NOTE]
+> **Scene::Render Update**: You should also update `Scene::Render()` in `Scene.cpp` to set `u_Model` (for world-space normals) and `u_Shininess` per object. The full implementation is shown in the application code.
 
 ---
 
@@ -234,7 +243,7 @@ scene.Render(renderer, defaultLitShader, camera);
 |---------|-------|----------|
 | Flat shading | Normals zero | Mesh must have valid normals |
 | Dark objects | No ambient | Increase `Ambient` component |
-| Harsh specular | Low roughness | Increase roughness (try 0.5) |
+| Harsh specular | Low shininess | Increase `Shininess` (try 64+) |
 
 ---
 

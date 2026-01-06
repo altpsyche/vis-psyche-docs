@@ -247,7 +247,6 @@ Scene scene;
 // Add ground
 auto& ground = scene.Add(planeMesh, "Ground");
 ground.ObjectTransform.Position = glm::vec3(0.0f, -1.0f, 0.0f);
-ground.Roughness = 0.9f;  // Very matte
 
 // Add cube
 auto& cube = scene.Add(cubeMesh, "Cube");
@@ -288,7 +287,7 @@ for (auto& obj : scene)
 **Scene Management Complete**
 
 You have:
-- `SceneObject` with mesh, transform, texture, roughness
+- `SceneObject` with mesh, transform, texture, color
 - `Scene::Add()` returns reference
 - `Scene::Render()` uses `renderer.Draw(mesh->GetVertexArray(), mesh->GetIndexBuffer(), shader)`
 - Range-based for loop support
