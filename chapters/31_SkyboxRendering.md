@@ -438,14 +438,34 @@ VP_INFO("Skybox ready!");
 **In `OnRender()`, add at the end (after scene rendering):**
 
 ```cpp
+// Render scene with shadows
+m_Scene.Render(renderer, *m_LitShader, m_Camera);
+
+// Render Skybox to offscreen framebuffer
+if (m_ShowSkybox)
+{
+    m_Skybox->Render(m_Camera);
+}
+
+m_Framebuffer->Unbind();
+
+// Restore camera to window aspect ratio
+m_Camera.SetAspectRatio(windowAspect);
+
+// Restore viewport to window size
+renderer.SetViewport(0, 0, m_WindowWidth, m_WindowHeight);
+
 // =========================================================================
-// Render Skybox (last, after all geometry)
+// Render Skybox to screen as well
 // =========================================================================
 if (m_ShowSkybox)
 {
     m_Skybox->Render(m_Camera);
 }
 ```
+
+> [!NOTE]
+> The skybox is rendered **twice**: once before `Unbind()` (so it appears in the framebuffer texture for F2 preview), and once after (so it appears on the screen). This ensures the skybox is visible in both the main window and the ImGui framebuffer preview.
 
 **In `OnImGuiRender()`, add skybox controls:**
 
