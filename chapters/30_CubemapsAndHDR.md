@@ -629,6 +629,12 @@ namespace VizEngine
 		// Create framebuffer for rendering to cubemap faces
 		auto framebuffer = std::make_shared<Framebuffer>(resolution, resolution);
 
+		if (!framebuffer || !framebuffer->IsComplete())
+		{
+			VP_CORE_ERROR("Cubemap conversion: Failed to create valid framebuffer (resolution: {}x{})", resolution, resolution);
+			return nullptr;
+		}
+
 		// Create depth renderbuffer (we don't need to sample it)
 		unsigned int rbo;
 		glGenRenderbuffers(1, &rbo);
