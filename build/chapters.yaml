@@ -33,6 +33,8 @@ chapters:
   - chapters/27_Framebuffers.md
   - chapters/28_TextureParameters.md
   - chapters/29_ShadowMapping.md
+  - chapters/30_CubemapsAndHDR.md
+  - chapters/31_SkyboxRendering.md
 
 appendices:
   - chapters/A_Reference.md

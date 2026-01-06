@@ -53,6 +53,8 @@ A step-by-step guide to building a 3D rendering engine from scratch using C++ an
 - [Chapter 27: Framebuffers](27_Framebuffers.md)
 - [Chapter 28: Advanced Texture Configuration](28_TextureParameters.md)
 - [Chapter 29: Shadow Mapping](29_ShadowMapping.md)
+- [Chapter 30: Cubemaps and HDR](30_CubemapsAndHDR.md)
+- [Chapter 31: Skybox Rendering](31_SkyboxRendering.md)
 
 ### Appendices
 - [Appendix A: Code Reference](A_Reference.md)

@@ -99,18 +99,19 @@ At the end of Part VII, the engine contains:
 | 27 | Framebuffers | Render targets, MRT, attachments | Complete
 | 28 | Advanced Texture Configuration | Filtering, wrap modes, border colors | Complete
 | 29 | Shadow Mapping | Depth from light, PCF, cascades | In Progress
-| 30 | Cubemaps and Skybox | Environment mapping, reflections | (Not Started)
+| 30 | Cubemaps and HDR | Environment mapping, reflections | In Progress
+| 31 | Skybox Rendering | Environment mapping, reflections | In Progress
 
 **Part X: Physically Based Rendering** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 31 | PBR Theory | Energy conservation, microfacets | (Not Started)
-| 32 | PBR Implementation | Cook-Torrance, metallic-roughness | (Not Started)
-| 33 | Image-Based Lighting | Irradiance, prefiltered environment | (Not Started)
-| 34 | HDR Pipeline | Floating-point framebuffers, exposure | (Not Started)
-| 35 | Material System | Material abstraction, parameter binding, shader variants | (Not Started)
-| 36 | Post-Processing | Bloom, tone mapping, color grading | (Not Started)
+| 32 | PBR Theory | Energy conservation, microfacets | (Not Started)
+| 33 | PBR Implementation | Cook-Torrance, metallic-roughness | (Not Started)
+| 34 | Image-Based Lighting | Irradiance, prefiltered environment | (Not Started)
+| 35 | HDR Pipeline | Floating-point framebuffers, exposure | (Not Started)
+| 36 | Material System | Material abstraction, parameter binding, shader variants | (Not Started)
+| 37 | Post-Processing | Bloom, tone mapping, color grading | (Not Started)
 
 **Deliverable**: Production-quality rendering in OpenGL with material abstraction.
 
@@ -124,9 +125,9 @@ At the end of Part VII, the engine contains:
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 37 | ECS with EnTT | Entities, components, iteration | (Not Started)
-| 38 | Core Components | Transform, MeshRenderer, Camera, Light | (Not Started)
-| 39 | Systems Architecture | Render system, scene renderer, hierarchy | (Not Started)
+| 38 | ECS with EnTT | Entities, components, iteration | (Not Started)
+| 39 | Core Components | Transform, MeshRenderer, Camera, Light | (Not Started)
+| 40 | Systems Architecture | Render system, scene renderer, hierarchy | (Not Started)
 
 > **Production Features**: Ch 38's Render System automates multi-pass rendering (shadows, post-processing) that was implemented manually in Chapters 28-35.
 
@@ -134,9 +135,9 @@ At the end of Part VII, the engine contains:
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 40 | Resource Management | Asset manager, handles, hot-reload, caching | (Not Started)
-| 41 | Serialization | JSON scenes, save/load, prefabs | (Not Started)
-| 42 | Threading Fundamentals | Job system, thread-safe containers | (Not Started)
+| 41 | Resource Management | Asset manager, handles, hot-reload, caching | (Not Started)
+| 42 | Serialization | JSON scenes, save/load, prefabs | (Not Started)
+| 43 | Threading Fundamentals | Job system, thread-safe containers | (Not Started)
 
 > **Production Features**: Ch 39's Asset Manager with hot-reload enables rapid iteration. Reference-counted resources prevent memory leaks.
 
@@ -144,11 +145,11 @@ At the end of Part VII, the engine contains:
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 43 | Physics World | Jolt setup, simulation loop, debug draw | (Not Started)
-| 44 | Collision System | Shapes, layers, filtering, triggers | (Not Started)
-| 45 | Queries and Raycasting | Ray/shape queries, object picking | (Not Started)
-| 46 | Character Controller | Kinematic body, ground detection, slopes | (Not Started)
-| 47 | Physics Debugging | Visualization, profiling, common issues | (Not Started)
+| 44 | Physics World | Jolt setup, simulation loop, debug draw | (Not Started)
+| 45 | Collision System | Shapes, layers, filtering, triggers | (Not Started)
+| 46 | Queries and Raycasting | Ray/shape queries, object picking | (Not Started)
+| 47 | Character Controller | Kinematic body, ground detection, slopes | (Not Started)
+| 48 | Physics Debugging | Visualization, profiling, common issues | (Not Started)
 
 **Deliverable**: Complete engine with ECS, serialization, threading, physics.
 
@@ -160,29 +161,29 @@ At the end of Part VII, the engine contains:
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 48 | GPU Architecture | Queues, command processors, async compute | (Not Started)
-| 49 | Vulkan Concepts | Instance, device, queues, command buffers | (Not Started)
-| 50 | D3D12 Concepts | Devices, command lists, descriptor heaps | (Not Started)
-| 51 | Memory Management | Heaps, allocation strategies, residency | (Not Started)
-| 52 | Synchronization | Fences, semaphores, barriers, hazards | (Not Started)
-| 53 | Pipeline State | PSOs, root signatures, descriptor sets | (Not Started)
+| 49 | GPU Architecture | Queues, command processors, async compute | (Not Started)
+| 50 | Vulkan Concepts | Instance, device, queues, command buffers | (Not Started)
+| 51 | D3D12 Concepts | Devices, command lists, descriptor heaps | (Not Started)
+| 52 | Memory Management | Heaps, allocation strategies, residency | (Not Started)
+| 53 | Synchronization | Fences, semaphores, barriers, hazards | (Not Started)
+| 54 | Pipeline State | PSOs, root signatures, descriptor sets | (Not Started)
 
 **Part XV: NVRHI Integration** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 54 | NVRHI Architecture | How it maps to Vulkan/D3D12/OpenGL | (Not Started)
-| 55 | Porting Buffers and Textures | Resource creation, views, memory | (Not Started)
-| 56 | Shader Compilation | HLSL to SPIR-V, DXC, offline compilation | (Not Started)
-| 57 | Shader Permutations | Variants, defines, caching, reflection | (Not Started)
-| 58 | Porting Pipelines | Graphics/compute PSOs, binding layouts | (Not Started)
+| 55 | NVRHI Architecture | How it maps to Vulkan/D3D12/OpenGL | (Not Started)
+| 56 | Porting Buffers and Textures | Resource creation, views, memory | (Not Started)
+| 57 | Shader Compilation | HLSL to SPIR-V, DXC, offline compilation | (Not Started)
+| 58 | Shader Permutations | Variants, defines, caching, reflection | (Not Started)
+| 59 | Porting Pipelines | Graphics/compute PSOs, binding layouts | (Not Started)
 
 **Part XVI: Frame Architecture** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 59 | Render Graph Concepts | Frame graphs, resource lifetimes, render passes | (Not Started)
-| 60 | Implementing Render Graph | Automatic barriers, resource aliasing, pass ordering | (Not Started)
+| 60 | Render Graph Concepts | Frame graphs, resource lifetimes, render passes | (Not Started)
+| 61 | Implementing Render Graph | Automatic barriers, resource aliasing, pass ordering | (Not Started)
 
 > **Production Features**: Render Graph automates resource barriers, enables async compute, and optimizes resource memory usage through aliasing.
 
@@ -196,12 +197,12 @@ At the end of Part VII, the engine contains:
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 61 | Editor Architecture | EditorApp, docking, play mode | (Not Started)
-| 62 | Scene Hierarchy | Entity tree, selection, parenting | (Not Started)
-| 63 | Inspector and Properties | Component editing, add/remove | (Not Started)
-| 64 | Viewport and Gizmos | Framebuffer viewport, transform handles | (Not Started)
-| 65 | Asset Browser | File browsing, thumbnails, drag-and-drop | (Not Started)
-| 66 | Undo System | Command pattern, history, macros | (Not Started)
+| 62 | Editor Architecture | EditorApp, docking, play mode | (Not Started)
+| 63 | Scene Hierarchy | Entity tree, selection, parenting | (Not Started)
+| 64 | Inspector and Properties | Component editing, add/remove | (Not Started)
+| 65 | Viewport and Gizmos | Framebuffer viewport, transform handles | (Not Started)
+| 66 | Asset Browser | File browsing, thumbnails, drag-and-drop | (Not Started)
+| 67 | Undo System | Command pattern, history, macros | (Not Started)
 
 **Deliverable**: Functional level editor with asset management.
 
@@ -213,19 +214,19 @@ At the end of Part VII, the engine contains:
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 67 | First-Person Controller | Movement, physics character | (Not Started)
-| 68 | Object Interaction | Pick up, inspect, place | (Not Started)
-| 69 | Document System | Inspection UI, stamps, decisions | (Not Started)
-| 70 | Audio | miniaudio, ambience, 3D sound | (Not Started)
-| 71 | Game State | State machine, transitions, persistence | (Not Started)
+| 68 | First-Person Controller | Movement, physics character | (Not Started)
+| 69 | Object Interaction | Pick up, inspect, place | (Not Started)
+| 70 | Document System | Inspection UI, stamps, decisions | (Not Started)
+| 71 | Audio | miniaudio, ambience, 3D sound | (Not Started)
+| 72 | Game State | State machine, transitions, persistence | (Not Started)
 
 **Part XIX: Polish and Ship** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 72 | Visual Polish | Particles, atmosphere, tuning | (Not Started)
-| 73 | Performance | Profiling, culling, optimization | (Not Started)
-| 74 | Distribution | Release builds, packaging | (Not Started)
+| 73 | Visual Polish | Particles, atmosphere, tuning | (Not Started)
+| 74 | Performance | Profiling, culling, optimization | (Not Started)
+| 75 | Distribution | Release builds, packaging | (Not Started)
 
 **Deliverable**: Complete, polished, multi-API game.
 
@@ -243,19 +244,19 @@ At the end of Part VII, the engine contains:
 | VI | Asset Loading | 18–20 | Complete |
 | VII | Input and Controls | 21–22 | Complete |
 | VIII | Application Lifecycle | 23–26 | Complete |
-| IX | Advanced Techniques | 27–30 | In Progress |
-| X | Physically Based Rendering | 31–36 | Planned |
-| XI | Entity-Component System | 37–39 | Planned |
-| XII | Engine Infrastructure | 40–42 | Planned |
-| XIII | Physics | 43–47 | Planned |
-| XIV | Understanding Modern APIs | 48–53 | Planned |
-| XV | NVRHI Integration | 54–58 | Planned |
-| XVI | Frame Architecture | 59–60 | Planned |
-| XVII | Editor | 61–66 | Planned |
-| XVIII | Game Systems | 67–71 | Planned |
-| XIX | Polish and Ship | 72–74 | Planned |
+| IX | Advanced Techniques | 27–31 | In Progress |
+| X | Physically Based Rendering | 32–37 | Planned |
+| XI | Entity-Component System | 38–40 | Planned |
+| XII | Engine Infrastructure | 41–43 | Planned |
+| XIII | Physics | 44–48 | Planned |
+| XIV | Understanding Modern APIs | 49–54 | Planned |
+| XV | NVRHI Integration | 55–59 | Planned |
+| XVI | Frame Architecture | 60–61 | Planned |
+| XVII | Editor | 62–67 | Planned |
+| XVIII | Game Systems | 68–72 | Planned |
+| XIX | Polish and Ship | 73–75 | Planned |
 
-**Total**: 74 chapters across 19 parts
+**Total**: 76 chapters across 19 parts
 
 ---
 
