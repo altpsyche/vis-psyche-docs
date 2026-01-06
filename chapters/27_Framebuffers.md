@@ -597,12 +597,12 @@ void OnRender() override
 	auto& renderer = engine.GetRenderer();
 
 	// Set light uniforms
-	m_LitShader->Bind();
-	m_LitShader->SetVec3("u_LightDirection", m_Light.GetDirection());
-	m_LitShader->SetVec3("u_LightAmbient", m_Light.Ambient);
-	m_LitShader->SetVec3("u_LightDiffuse", m_Light.Diffuse);
-	m_LitShader->SetVec3("u_LightSpecular", m_Light.Specular);
-	m_LitShader->SetVec3("u_ViewPos", m_Camera.GetPosition());
+	m_DefaultLitShader->Bind();
+	m_DefaultLitShader->SetVec3("u_LightDirection", m_Light.GetDirection());
+	m_DefaultLitShader->SetVec3("u_LightAmbient", m_Light.Ambient);
+	m_DefaultLitShader->SetVec3("u_LightDiffuse", m_Light.Diffuse);
+	m_DefaultLitShader->SetVec3("u_LightSpecular", m_Light.Specular);
+	m_DefaultLitShader->SetVec3("u_ViewPos", m_Camera.GetPosition());
 
 	// =========================================================================
 	// Render to Framebuffer (offscreen)
@@ -613,7 +613,7 @@ void OnRender() override
 
 	m_Framebuffer->Bind();
 	renderer.Clear(m_ClearColor);
-	m_Scene.Render(renderer, *m_LitShader, m_Camera);
+	m_Scene.Render(renderer, *m_DefaultLitShader, m_Camera);
 	m_Framebuffer->Unbind();
 
 	// =========================================================================
@@ -627,7 +627,7 @@ void OnRender() override
 
 	// Render scene to screen (same as framebuffer for demonstration)
 	renderer.Clear(m_ClearColor);
-	m_Scene.Render(renderer, *m_LitShader, m_Camera);
+	m_Scene.Render(renderer, *m_DefaultLitShader, m_Camera);
 }
 ```
 
@@ -890,3 +890,4 @@ In **Chapter 28: Advanced Texture Configuration**, we'll add filtering, wrap mod
 > **Next:** [Chapter 28: Advanced Texture Configuration](28_TextureParameters.md)
 
 > **Previous:** [Chapter 26: Advanced Lifecycle](26_AdvancedLifecycle.md)
+

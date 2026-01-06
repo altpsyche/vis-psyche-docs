@@ -2,25 +2,60 @@
 
 # Chapter 33: PBR Implementation
 
-Implement the Cook-Torrance BRDF in GLSL, creating a complete PBR shader for realistic material rendering.
+Upgrade `defaultlit.shader` from Blinn-Phong to Cook-Torrance PBR for physically accurate material rendering.
 
 ---
 
 ## Introduction
 
-In **Chapter 32**, we explored the mathematical foundation of Physically Based Rendering: the rendering equation, microfacet theory, and the Cook-Torrance BRDF with its D, F, and G components. Now we'll translate that theory into working GLSL code.
+In **Chapter 32**, we explored the mathematical foundation of Physically Based Rendering: the rendering equation, microfacet theory, and the Cook-Torrance BRDF with its D, F, and G components. Now we'll upgrade our existing `defaultlit.shader` and material system to use these physically-based calculations.
 
-**What we'll build:**
+**What we're upgrading:**
 
-| Component | Description |
-|-----------|-------------|
-| **pbr.shader** | Complete vertex/fragment shader implementing Cook-Torrance BRDF |
-| **Helper functions** | `DistributionGGX()`, `FresnelSchlick()`, `GeometrySmith()` |
-| **Lighting support** | Directional light + 4 point lights |
-| **Texture support** | Albedo textures with tinting |
-| **Material uniforms** | Albedo, metallic, roughness, ambient occlusion |
+| Before (Blinn-Phong) | After (Cook-Torrance) |
+|---------------------|----------------------|
+| `u_Shininess` exponent | `u_Roughness` + `u_Metallic` |
+| `obj.Shininess` field | `obj.Roughness` + `obj.Metallic` fields |
+| Arbitrary specular power | Physics-based D, F, G terms |
+| No energy conservation | Fresnel-based energy conservation |
+| Single directional light | Directional + 4 point lights |
 
-**Expected result:** A PBR-rendered scene where objects (including textured models like the Duck) respond realistically to roughness and metallic parameters—matching industry-standard renderers like glTF Sample Viewer.
+---
+
+## Step 0: Update SceneObject
+
+Add PBR properties to replace Shininess:
+
+```cpp
+// In SceneObject.h - REPLACE Shininess with:
+float Roughness = 0.5f;   // 0 = smooth, 1 = rough
+float Metallic = 0.0f;    // 0 = dielectric, 1 = metal
+```
+
+---
+
+## Step 0.5: Update Material Struct
+
+Upgrade the Material struct for full PBR support:
+
+```cpp
+// In Material.h - REPLACE entire struct with:
+struct VizEngine_API Material
+{
+    glm::vec4 BaseColor = glm::vec4(1.0f);
+    float Roughness = 0.5f;     // Was: Shininess
+    float Metallic = 0.0f;      // NEW
+    
+    std::shared_ptr<Texture> BaseColorTexture;
+    std::shared_ptr<Texture> MetallicRoughnessTexture;
+    std::shared_ptr<Texture> NormalTexture;
+    
+    // ... additional PBR textures
+};
+```
+
+> [!NOTE]
+> glTF models already store PBR properties. Previously we converted `roughness → shininess`, now we use roughness directly.
 
 ---
 
@@ -40,11 +75,16 @@ By the end of this chapter, you'll have:
 
 ---
 
-## Step 1: Create the PBR Shader File
+## Step 1: Upgrade the Shader
 
-Create a new shader file that implements the complete PBR lighting model.
+We'll upgrade our existing `defaultlit.shader` to implement Cook-Torrance PBR. The file already exists from Chapter 17—we're replacing the Blinn-Phong lighting with physically-based calculations.
 
-**Create `VizEngine/src/resources/shaders/pbr.shader`:**
+**Key uniform changes:**
+- Remove: `u_Shininess`
+- Add: `u_Roughness`, `u_Metallic`, `u_Albedo`, `u_AO`
+- Add: Point light arrays, directional light, albedo texture
+
+**Upgrade `VizEngine/src/resources/shaders/defaultlit.shader`:**
 
 ```glsl
 #shader vertex

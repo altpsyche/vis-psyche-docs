@@ -38,7 +38,7 @@ If you've been building the engine through previous chapters, your `Application:
 ```cpp
 void Application::Run() {
     // Setup
-    Shader shader("lit.shader");
+    Shader shader("defaultlit.shader");
     while (!window.ShouldClose()) {
         shader.Bind();
         scene.Render();
@@ -54,7 +54,7 @@ class Sandbox : public Application {
     std::unique_ptr<Shader> m_Shader;  // Local → Member
     
     void OnCreate() override {
-        m_Shader = std::make_unique<Shader>("lit.shader");
+        m_Shader = std::make_unique<Shader>("defaultlit.shader");
     }
     void OnRender() override {
         m_Shader->Bind();
@@ -884,3 +884,4 @@ In **Chapter 24**, we'll migrate the Sandbox application to use the new Engine/A
 > **Next:** [Chapter 24: Sandbox Migration](24_SandboxMigration.md)
 
 > **Previous:** [Chapter 22: Camera Controller](22_CameraController.md)
+

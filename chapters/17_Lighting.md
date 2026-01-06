@@ -14,6 +14,20 @@ Add realistic lighting with the Blinn-Phong illumination model.
 | **Diffuse** | Light scattered from matte surfaces |
 | **Specular** | Shiny highlights on glossy surfaces |
 
+> [!NOTE]
+> **Shader Transition**: Until now we've been using `unlit.shader` from Chapter 10. This chapter introduces `defaultlit.shader` with lighting calculations, and we'll switch to using it.
+
+---
+
+## Step 0: Update SceneObject
+
+Add a `Shininess` field to `SceneObject` for specular control:
+
+```cpp
+// In SceneObject.h - add after Color field
+float Shininess = 32.0f;  // Blinn-Phong exponent (higher = shinier)
+```
+
 ---
 
 ## Step 1: Create Light.h
@@ -73,9 +87,9 @@ namespace VizEngine
 
 ---
 
-## Step 2: Create Lit Shader
+## Step 2: Create Default Lit Shader
 
-**Create `VizEngine/src/resources/shaders/lit.shader`:**
+**Create `VizEngine/src/resources/shaders/defaultlit.shader`:**
 
 ```glsl
 #shader vertex
@@ -133,7 +147,7 @@ uniform vec4 u_ObjectColor;
 uniform sampler2D u_MainTex;
 
 // Material
-uniform float u_Roughness;
+uniform float u_Shininess;
 
 void main()
 {
@@ -160,9 +174,8 @@ void main()
     vec3 viewDir = normalize(u_ViewPos - v_FragPos);
     vec3 halfDir = normalize(lightDir + viewDir);
 
-    // Convert roughness (0=shiny, 1=matte) to shininess exponent
-    float shininess = mix(256.0, 8.0, u_Roughness);
-    float spec = pow(max(dot(norm, halfDir), 0.0), shininess);
+    // Shininess exponent: higher = tighter specular highlight
+    float spec = pow(max(dot(norm, halfDir), 0.0), u_Shininess);
     vec3 specular = u_LightSpecular * spec;
 
     // Combine
@@ -176,7 +189,9 @@ void main()
 > **Key differences from basic Phong:**
 > - Uses `vec4 aPos` for homogeneous coordinates (matches Vertex struct)
 > - Normal matrix computed **in-shader** for simplicity: `mat3(transpose(inverse(u_Model)))`
-> - Uses `u_Roughness` with `mix(256.0, 8.0, roughness)` to convert to shininess
+> - Uses `u_Shininess` directly as Blinn-Phong exponent (higher = shinier)
+>
+> **Chapter 33** will replace `u_Shininess` with `u_Roughness` and `u_Metallic` for full PBR.
 
 ---
 
@@ -190,31 +205,26 @@ light.Diffuse = glm::vec3(0.8f, 0.8f, 0.75f);
 light.Specular = glm::vec3(1.0f, 1.0f, 0.95f);
 
 // In render loop
-litShader.Bind();
-litShader.SetVec3("u_LightDirection", light.GetDirection());
-litShader.SetVec3("u_LightAmbient", light.Ambient);
-litShader.SetVec3("u_LightDiffuse", light.Diffuse);
-litShader.SetVec3("u_LightSpecular", light.Specular);
-litShader.SetVec3("u_ViewPos", camera.GetPosition());
+defaultLitShader.Bind();
+defaultLitShader.SetVec3("u_LightDirection", light.GetDirection());
+defaultLitShader.SetVec3("u_LightAmbient", light.Ambient);
+defaultLitShader.SetVec3("u_LightDiffuse", light.Diffuse);
+defaultLitShader.SetVec3("u_LightSpecular", light.Specular);
+defaultLitShader.SetVec3("u_ViewPos", camera.GetPosition());
 
-scene.Render(renderer, litShader, camera);
+scene.Render(renderer, defaultLitShader, camera);
 ```
 
 ---
 
-## Roughness to Shininess
+## Shininess Values
 
-The shader converts roughness (PBR-style, 0-1) to Blinn-Phong shininess:
-
-```glsl
-float shininess = mix(256.0, 8.0, u_Roughness);
-```
-
-| Roughness | Shininess | Appearance |
-|-----------|-----------|------------|
-| 0.0 | 256 | Mirror-like |
-| 0.5 | 132 | Semi-glossy |
-| 1.0 | 8 | Very matte |
+| Shininess | Appearance |
+|-----------|------------|
+| 8 | Very matte |
+| 32 | Default |
+| 128 | Glossy |
+| 256 | Mirror-like |
 
 ---
 
@@ -234,9 +244,11 @@ float shininess = mix(256.0, 8.0, u_Roughness);
 
 You have:
 - `DirectionalLight` with Ambient/Diffuse/Specular
-- Lit shader with roughness-to-shininess conversion
+- `defaultlit.shader` with Shininess-based specular
 - In-shader normal matrix computation
-- Matches actual codebase implementation
+
+> [!TIP]
+> In **Chapter 33**, we'll upgrade `defaultlit.shader` to use Cook-Torrance PBR, replacing the Blinn-Phong specular calculation with physically-based equations.
 
 ---
 

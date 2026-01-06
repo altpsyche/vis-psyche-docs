@@ -45,7 +45,7 @@ As of now, VizPsyche has:
 - Scene (object collection management)
 - SceneObject (mesh + transform + color bundle)
 - Model (glTF/GLB model loader with ModelLoader inner class)
-- PBRMaterial (full PBR properties: baseColor, metallic, roughness, emissive, alpha, textures)
+- Material (full PBR properties: baseColor, metallic, roughness, emissive, alpha, textures)
 
 ### Lighting
 - DirectionalLight (sun-like parallel rays)
@@ -87,7 +87,7 @@ As of now, VizPsyche has:
 | `Core/SceneObject.h` | Mesh + Transform + Color bundle |
 | `Core/Light.h` | DirectionalLight, PointLight |
 | `Core/Model.h` | glTF model loader (meshes + materials) |
-| `Core/Material.h` | PBRMaterial struct (baseColor, metallic, roughness, emissive, alpha, textures) |
+| `Core/Material.h` | Material struct (baseColor, metallic, roughness, emissive, alpha, textures) |
 | `Core/Input.h` | Keyboard, mouse, scroll polling with edge detection |
 | `Core/TinyGLTF.cpp` | tinygltf implementation (defines TINYGLTF_IMPLEMENTATION) |
 
@@ -127,7 +127,7 @@ As of now, VizPsyche has:
 | File | Purpose |
 |------|---------|
 | `resources/shaders/unlit.shader` | Unlit shader (no lighting) |
-| `resources/shaders/lit.shader` | Blinn-Phong lighting shader |
+| `resources/shaders/defaultlit.shader` | Blinn-Phong lighting shader |
 | `resources/textures/uvchecker.png` | Test texture |
 
 ---
@@ -198,7 +198,7 @@ VizEngine (namespace)
 │   ├── IsValid()
 │   └── Loads glTF/GLB files via tinygltf (ModelLoader inner class)
 │
-├── PBRMaterial (struct)
+├── Material (struct)
 │   ├── BaseColor, Metallic, Roughness
 │   ├── EmissiveFactor, AlphaMode, AlphaCutoff, DoubleSided
 │   ├── BaseColorTexture, MetallicRoughnessTexture, NormalTexture
@@ -295,7 +295,7 @@ Each OpenGL wrapper class uses a descriptive member name matching its OpenGL obj
 | Camera | Application stack | Until function returns |
 | Transform | SceneObject | Until SceneObject destroyed |
 | Model (unique_ptr) | Application | Until scope ends |
-| PBRMaterial | Model | Until Model destroyed |
+| Material | Model | Until Model destroyed |
 | Texture (in Model) | Model's TextureCache | Until Model destroyed |
 
 ### No Raw `new`/`delete`
@@ -432,7 +432,7 @@ cmake --build build --config Debug
 | UIManager, ImGui widgets | [16 Dear ImGui](16_DearImGui.md) |
 | DirectionalLight, Blinn-Phong, normals | [17 Lighting](17_Lighting.md) |
 | glTF format, tinygltf integration | [18 glTF Format](18_glTFFormat.md) |
-| Model, PBRMaterial, glTF geometry | [19 Model Loading (Geometry)](19_ModelLoaderGeometry.md) |
+| Model, Material, glTF geometry | [19 Model Loading (Geometry)](19_ModelLoaderGeometry.md) |
 | Material textures, PBR properties | [20 Model Loading (Materials)](20_ModelLoaderMaterials.md) |
 | Input class, keyboard, mouse, edge detection | [21 Input System](21_InputSystem.md) |
 | WASD movement, mouse look, zoom | [22 Camera Controller](22_CameraController.md) |
@@ -455,6 +455,8 @@ cmake --build build --config Debug
 7. **Multiple lights** - Support an array of lights in the shader
 8. **Load a glTF model** - Use `Model::LoadFromFile()` with a sample model
 9. **Model browser** - Add ImGui file picker to load models at runtime
-10. **PBR rendering** - Upgrade shader to use full PBRMaterial properties (emissive, occlusion, alpha)
+10. **PBR rendering** - Upgrade shader to use full Material properties (emissive, occlusion, alpha)
+
+
 
 

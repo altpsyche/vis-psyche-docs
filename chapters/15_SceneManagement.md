@@ -39,7 +39,6 @@ namespace VizEngine
         std::shared_ptr<Texture> TexturePtr;
         Transform ObjectTransform;
         glm::vec4 Color = glm::vec4(1.0f);
-        float Roughness = 0.5f;  // 0 = shiny, 1 = matte
         bool Active = true;
         std::string Name = "Object";
 
@@ -184,12 +183,9 @@ namespace VizEngine
             glm::mat4 model = obj.ObjectTransform.GetModelMatrix();
             glm::mat4 mvp = camera.GetViewProjectionMatrix() * model;
 
-            // Uniforms
+            // Uniforms (for unlit.shader)
             shader.SetMatrix4fv("u_MVP", mvp);
-            shader.SetMatrix4fv("u_Model", model);
             shader.SetVec4("u_ObjectColor", obj.Color);
-            shader.SetColor("u_Color", obj.Color);
-            shader.SetFloat("u_Roughness", obj.Roughness);
 
             // Texture
             if (obj.TexturePtr)
@@ -306,3 +302,5 @@ In **Chapter 16**, we'll add Dear ImGui for debug UI.
 > **Next:** [Chapter 16: Dear ImGui](16_DearImGui.md)
 
 > **Previous:** [Chapter 14: Camera System](14_CameraSystem.md)
+
+

@@ -6,47 +6,16 @@ Extend the model loader to extract glTF materials and textures.
 
 ---
 
-## Step 1: Create Material.h
+## Step 1: Material Struct
 
-**Create `VizEngine/src/VizEngine/Core/Material.h`:**
+We already created Material.h in Chapter 19. The struct stores:
 
 ```cpp
-// VizEngine/src/VizEngine/Core/Material.h
-
-#pragma once
-
-#include "VizEngine/Core.h"
-#include "VizEngine/OpenGL/Texture.h"
-#include "glm.hpp"
-#include <memory>
-
-namespace VizEngine
-{
-    struct VizEngine_API PBRMaterial
-    {
-        glm::vec4 BaseColor = glm::vec4(1.0f);
-        std::shared_ptr<Texture> BaseColorTexture;
-
-        float Metallic = 0.0f;
-        float Roughness = 0.5f;
-        std::shared_ptr<Texture> MetallicRoughnessTexture;
-
-        std::shared_ptr<Texture> NormalTexture;
-        float NormalScale = 1.0f;
-
-        glm::vec3 EmissiveFactor = glm::vec3(0.0f);
-        std::shared_ptr<Texture> EmissiveTexture;
-
-        enum class AlphaMode { Opaque, Mask, Blend };
-        AlphaMode Alpha = AlphaMode::Opaque;
-        float AlphaCutoff = 0.5f;
-
-        bool DoubleSided = false;
-
-        PBRMaterial() = default;
-    };
-
-}  // namespace VizEngine
+struct Material {
+    glm::vec4 BaseColor = glm::vec4(1.0f);
+    float Shininess = 32.0f;  // Blinn-Phong exponent
+    std::shared_ptr<Texture> BaseColorTexture;
+};
 ```
 
 ---
@@ -62,11 +31,11 @@ Add material loading to Model:
 class Model
 {
 public:
-    const std::vector<PBRMaterial>& GetMaterials() const { return m_Materials; }
-    const PBRMaterial& GetMaterialForMesh(size_t meshIndex) const;
+    const std::vector<Material>& GetMaterials() const { return m_Materials; }
+    const Material& GetMaterialForMesh(size_t meshIndex) const;
 
 private:
-    std::vector<PBRMaterial> m_Materials;
+    std::vector<Material> m_Materials;
     std::vector<size_t> m_MeshMaterialIndices;
 };
 ```
@@ -79,7 +48,7 @@ private:
 // In Model.cpp LoadFromFile implementation
 for (const auto& mat : gltf.materials)
 {
-    PBRMaterial material;
+    Material material;
 
     const auto& pbr = mat.pbrMetallicRoughness;
     material.BaseColor = glm::vec4(
@@ -89,8 +58,9 @@ for (const auto& mat : gltf.materials)
         pbr.baseColorFactor[3]
     );
 
-    material.Metallic = static_cast<float>(pbr.metallicFactor);
-    material.Roughness = static_cast<float>(pbr.roughnessFactor);
+    // Convert glTF roughness (0-1) to Blinn-Phong shininess
+    float roughness = static_cast<float>(pbr.roughnessFactor);
+    material.Shininess = glm::mix(256.0f, 8.0f, roughness);
 
     if (pbr.baseColorTexture.index >= 0)
         material.BaseColorTexture = LoadTexture(gltf, pbr.baseColorTexture.index);
@@ -98,6 +68,9 @@ for (const auto& mat : gltf.materials)
     model->m_Materials.push_back(std::move(material));
 }
 ```
+
+> [!NOTE]
+> glTF stores PBR materials with roughness (0-1). We convert to shininess for Blinn-Phong rendering. Chapter 33 will upgrade to proper PBR using roughness directly.
 
 ---
 
@@ -121,7 +94,7 @@ for (size_t i = 0; i < model->GetMeshCount(); i++)
     // Apply material properties
     const auto& mat = model->GetMaterialForMesh(i);
     obj.Color = mat.BaseColor;
-    obj.Roughness = mat.Roughness;
+    obj.Shininess = mat.Shininess;
     obj.TexturePtr = mat.BaseColorTexture;
 }
 ```
@@ -129,8 +102,7 @@ for (size_t i = 0; i < model->GetMeshCount(); i++)
 > [!NOTE]
 > - Use `Model::LoadFromFile()` (static factory), not constructor
 > - Use `scene.Add()`, not `scene.AddObject()`
-> - Use `obj.TexturePtr`, not `obj.ObjectTexture`
-> - Use `obj.Roughness`, not `obj.Shininess`
+> - Use `obj.Shininess`, not `obj.Roughness` (that's for Chapter 33)
 
 ---
 
@@ -139,8 +111,8 @@ for (size_t i = 0; i < model->GetMeshCount(); i++)
 **Model Loader (Materials) Complete**
 
 You have:
-- `PBRMaterial` struct with glTF PBR properties
-- Material extraction from glTF
+- `Material` struct with BaseColor, Shininess, Texture
+- glTF roughness → shininess conversion
 - `GetMaterialForMesh()` convenience method
 
 ---

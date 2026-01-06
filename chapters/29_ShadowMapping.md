@@ -372,7 +372,7 @@ m_ShadowDepthShader = std::make_shared<VizEngine::Shader>("resources/shaders/sha
 
 Modify the existing lit shader to sample the shadow map and apply shadows to lighting.
 
-**Update `VizEngine/src/resources/shaders/lit.shader`:**
+**Update `VizEngine/src/resources/shaders/defaultlit.shader`:**
 
 Add uniforms and shadow calculation to the fragment shader:
 
@@ -565,31 +565,31 @@ void OnRender() override
     renderer.Clear(m_ClearColor);
     
     // Use lit shader
-    m_LitShader->Bind();
+    m_DefaultLitShader->Bind();
     
     // Set lighting uniforms (existing code)
-    m_LitShader->SetVec3("u_LightDirection", m_Light.GetDirection());
-    m_LitShader->SetVec3("u_LightAmbient", m_Light.Ambient);
-    m_LitShader->SetVec3("u_LightDiffuse", m_Light.Diffuse);
-    m_LitShader->SetVec3("u_LightSpecular", m_Light.Specular);
-    m_LitShader->SetVec3("u_ViewPos", m_Camera.GetPosition());
+    m_DefaultLitShader->SetVec3("u_LightDirection", m_Light.GetDirection());
+    m_DefaultLitShader->SetVec3("u_LightAmbient", m_Light.Ambient);
+    m_DefaultLitShader->SetVec3("u_LightDiffuse", m_Light.Diffuse);
+    m_DefaultLitShader->SetVec3("u_LightSpecular", m_Light.Specular);
+    m_DefaultLitShader->SetVec3("u_ViewPos", m_Camera.GetPosition());
     
     // NEW: Set shadow mapping uniforms
-    m_LitShader->SetMatrix4fv("u_LightSpaceMatrix", m_LightSpaceMatrix);
+    m_DefaultLitShader->SetMatrix4fv("u_LightSpaceMatrix", m_LightSpaceMatrix);
     
     // Bind shadow map to texture slot 1
     if (m_ShadowMapDepth)
     {
         m_ShadowMapDepth->Bind(1);
-        m_LitShader->SetInt("u_ShadowMap", 1);
+        m_DefaultLitShader->SetInt("u_ShadowMap", 1);
     }
     else
     {
-        m_LitShader->SetInt("u_ShadowMap", 0);
+        m_DefaultLitShader->SetInt("u_ShadowMap", 0);
     }
     
     // Render scene with shadows
-    m_Scene.Render(renderer, *m_LitShader, m_Camera);
+    m_Scene.Render(renderer, *m_DefaultLitShader, m_Camera);
 }
 ```
 
@@ -636,7 +636,7 @@ m_ShadowMapFramebuffer->Unbind();
 
 **Percentage Closer Filtering (PCF)** samples multiple shadow map texels and averages the results, creating soft shadow edges.
 
-**Update `CalculateShadow()` in `lit.shader`:**
+**Update `CalculateShadow()` in `defaultlit.shader`:**
 
 ```glsl
 float CalculateShadow(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
@@ -857,3 +857,4 @@ In **Chapter 30: Cubemaps and Skybox**, we'll render 6-sided environment maps an
 > **Next:** [Chapter 30: Cubemaps and Skybox](30_CubemapsAndSkybox.md)
 
 > **Previous:** [Chapter 28: Advanced Texture Configuration](28_TextureParameters.md)
+

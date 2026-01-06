@@ -450,7 +450,7 @@ VP_INFO("Skybox ready!");
 
 ```cpp
 // Render scene with shadows
-m_Scene.Render(renderer, *m_LitShader, m_Camera);
+m_Scene.Render(renderer, *m_DefaultLitShader, m_Camera);
 
 // Render Skybox to offscreen framebuffer
 if (m_ShowSkybox && m_Skybox)
@@ -665,4 +665,5 @@ In **Chapter 32: PBR Theory**, we'll dive into physically-based rendering, under
 > **Previous:** [Chapter 30: Cubemaps and HDR](30_CubemapsAndHDR.md)
 
 > **Index:** [Table of Contents](INDEX.md)
+
 

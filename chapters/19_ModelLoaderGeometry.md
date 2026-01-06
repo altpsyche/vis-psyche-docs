@@ -45,10 +45,10 @@ namespace VizEngine
 
         // Access loaded data
         const std::vector<std::shared_ptr<Mesh>>& GetMeshes() const { return m_Meshes; }
-        const std::vector<PBRMaterial>& GetMaterials() const { return m_Materials; }
+        const std::vector<Material>& GetMaterials() const { return m_Materials; }
 
         // Get material for a mesh
-        const PBRMaterial& GetMaterialForMesh(size_t meshIndex) const;
+        const Material& GetMaterialForMesh(size_t meshIndex) const;
 
         // Info
         const std::string& GetName() const { return m_Name; }
@@ -64,12 +64,12 @@ namespace VizEngine
         std::string m_Directory;
 
         std::vector<std::shared_ptr<Mesh>> m_Meshes;
-        std::vector<PBRMaterial> m_Materials;
+        std::vector<Material> m_Materials;
         std::vector<size_t> m_MeshMaterialIndices;
 
         std::unordered_map<int, std::shared_ptr<Texture>> m_TextureCache;
 
-        static PBRMaterial s_DefaultMaterial;
+        static Material s_DefaultMaterial;
     };
 
 }  // namespace VizEngine
@@ -96,28 +96,56 @@ namespace VizEngine
 
 namespace VizEngine
 {
-    struct VizEngine_API PBRMaterial
+    /**
+     * Material for loaded models.
+     * 
+     * Chapter 33 will expand this with Roughness, Metallic for PBR.
+     */
+    struct VizEngine_API Material
     {
         glm::vec4 BaseColor = glm::vec4(1.0f);
+        float Shininess = 32.0f;  // Blinn-Phong exponent
         std::shared_ptr<Texture> BaseColorTexture;
 
-        float Metallic = 0.0f;
-        float Roughness = 0.5f;
-        std::shared_ptr<Texture> MetallicRoughnessTexture;
+        Material() = default;
+    };
 
-        std::shared_ptr<Texture> NormalTexture;
-        float NormalScale = 1.0f;
+}  // namespace VizEngine
+```
 
-        glm::vec3 EmissiveFactor = glm::vec3(0.0f);
-        std::shared_ptr<Texture> EmissiveTexture;
+> [!IMPORTANT]
+> Model uses a **static factory pattern**: `Model::LoadFromFile()` returns `unique_ptr` which is `nullptr` on failure. There is no public constructor.
 
-        enum class AlphaMode { Opaque, Mask, Blend };
-        AlphaMode Alpha = AlphaMode::Opaque;
-        float AlphaCutoff = 0.5f;
+---
 
-        bool DoubleSided = false;
+## Step 2: Create Material.h
 
-        PBRMaterial() = default;
+**Create `VizEngine/src/VizEngine/Core/Material.h`:**
+
+```cpp
+// VizEngine/src/VizEngine/Core/Material.h
+
+#pragma once
+
+#include "VizEngine/Core.h"
+#include "VizEngine/OpenGL/Texture.h"
+#include "glm.hpp"
+#include <memory>
+
+namespace VizEngine
+{
+    /**
+     * Material for loaded models.
+     * 
+     * Chapter 33 will expand this with Roughness, Metallic for PBR.
+     */
+    struct VizEngine_API Material
+    {
+        glm::vec4 BaseColor = glm::vec4(1.0f);
+        float Shininess = 32.0f;  // Blinn-Phong exponent
+        std::shared_ptr<Texture> BaseColorTexture;
+
+        Material() = default;
     };
 
 }  // namespace VizEngine
@@ -139,7 +167,7 @@ namespace VizEngine
 
 namespace VizEngine
 {
-    PBRMaterial Model::s_DefaultMaterial{};
+    Material Model::s_DefaultMaterial{};
 
     std::unique_ptr<Model> Model::LoadFromFile(const std::string& filepath)
     {
@@ -179,7 +207,7 @@ namespace VizEngine
         return model;
     }
 
-    const PBRMaterial& Model::GetMaterialForMesh(size_t meshIndex) const
+    const Material& Model::GetMaterialForMesh(size_t meshIndex) const
     {
         if (meshIndex >= m_MeshMaterialIndices.size())
             return s_DefaultMaterial;
@@ -295,3 +323,4 @@ In **Chapter 20**, we'll look at the material extraction in more detail.
 > **Next:** [Chapter 20: Model Loader (Materials)](20_ModelLoaderMaterials.md)
 
 > **Previous:** [Chapter 18: glTF Format](18_glTFFormat.md)
+

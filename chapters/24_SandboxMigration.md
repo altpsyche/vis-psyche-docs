@@ -121,7 +121,7 @@ public:
 		// =========================================================================
 		// Load Assets
 		// =========================================================================
-		m_LitShader = std::make_unique<VizEngine::Shader>("resources/shaders/lit.shader");
+		m_DefaultLitShader = std::make_unique<VizEngine::Shader>("resources/shaders/defaultlit.shader");
 		m_DefaultTexture = std::make_shared<VizEngine::Texture>("resources/textures/uvchecker.png");
 
 		// Assign default texture to basic objects (created before this point)
@@ -185,16 +185,16 @@ public:
 		auto& renderer = engine.GetRenderer();
 
 		// Set light uniforms
-		m_LitShader->Bind();
-		m_LitShader->SetVec3("u_LightDirection", m_Light.GetDirection());
-		m_LitShader->SetVec3("u_LightAmbient", m_Light.Ambient);
-		m_LitShader->SetVec3("u_LightDiffuse", m_Light.Diffuse);
-		m_LitShader->SetVec3("u_LightSpecular", m_Light.Specular);
-		m_LitShader->SetVec3("u_ViewPos", m_Camera.GetPosition());
+		m_DefaultLitShader->Bind();
+		m_DefaultLitShader->SetVec3("u_LightDirection", m_Light.GetDirection());
+		m_DefaultLitShader->SetVec3("u_LightAmbient", m_Light.Ambient);
+		m_DefaultLitShader->SetVec3("u_LightDiffuse", m_Light.Diffuse);
+		m_DefaultLitShader->SetVec3("u_LightSpecular", m_Light.Specular);
+		m_DefaultLitShader->SetVec3("u_ViewPos", m_Camera.GetPosition());
 
 		// Clear and render
 		renderer.Clear(m_ClearColor);
-		m_Scene.Render(renderer, *m_LitShader, m_Camera);
+		m_Scene.Render(renderer, *m_DefaultLitShader, m_Camera);
 	}
 
 	void OnImGuiRender() override
@@ -336,7 +336,7 @@ private:
 	VizEngine::DirectionalLight m_Light;
 
 	// Assets
-	std::unique_ptr<VizEngine::Shader> m_LitShader;
+	std::unique_ptr<VizEngine::Shader> m_DefaultLitShader;
 	std::shared_ptr<VizEngine::Texture> m_DefaultTexture;
 	std::shared_ptr<VizEngine::Mesh> m_PyramidMesh;
 	std::shared_ptr<VizEngine::Mesh> m_CubeMesh;
@@ -455,3 +455,4 @@ With the Engine/Application architecture complete, you're ready to add an event 
 > **Next:** [Chapter 25: Event System](25_EventSystem.md)
 
 > **Previous:** [Chapter 23: Engine and Game Loop](23_EngineAndGameLoop.md)
+

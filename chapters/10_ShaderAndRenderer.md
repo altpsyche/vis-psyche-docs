@@ -21,40 +21,52 @@ Create a `Shader` class that handles loading, compiling, and using GLSL shader p
 
 Use a single file with markers:
 
-**Example: `resources/shaders/basic.shader`**
+## Step 1: Create Shader.h
+
+**Create `resources/shaders/unlit.shader`:**
 
 ```glsl
 #shader vertex
 #version 460 core
 
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aColor;
+layout (location = 0) in vec4 aPos;       // Position (w=1)
+layout (location = 1) in vec3 aNormal;    // Normal (unused in unlit)
+layout (location = 2) in vec4 aColor;     // Vertex color
+layout (location = 3) in vec2 aTexCoord;  // Texture coords
 
-out vec3 vertexColor;
+out vec4 v_Color;
+out vec2 v_TexCoord;
 
 uniform mat4 u_MVP;
 
 void main()
 {
-    gl_Position = u_MVP * vec4(aPos, 1.0);
-    vertexColor = aColor;
+    gl_Position = u_MVP * aPos;
+    v_Color = aColor;
+    v_TexCoord = aTexCoord;
 }
 
 #shader fragment
 #version 460 core
 
-in vec3 vertexColor;
+in vec4 v_Color;
+in vec2 v_TexCoord;
 out vec4 FragColor;
+
+uniform vec4 u_ObjectColor;
+uniform sampler2D u_MainTex;
 
 void main()
 {
-    FragColor = vec4(vertexColor, 1.0);
+    // Sample texture and multiply with vertex color and object color
+    vec4 texColor = texture(u_MainTex, v_TexCoord);
+    FragColor = texColor * v_Color * u_ObjectColor;
 }
 ```
 
 ---
 
-## Step 1: Create Shader.h
+## Step 2: Create Shader.h
 
 **Create `VizEngine/src/VizEngine/OpenGL/Shader.h`:**
 
@@ -129,7 +141,7 @@ namespace VizEngine
 
 ---
 
-## Step 2: Create Shader.cpp
+## Step 3: Create Shader.cpp
 
 **Create `VizEngine/src/VizEngine/OpenGL/Shader.cpp`:**
 
@@ -379,7 +391,7 @@ namespace VizEngine
 ## Usage Example
 
 ```cpp
-Shader shader("resources/shaders/lit.shader");
+Shader shader("resources/shaders/defaultlit.shader");
 
 // In render loop
 shader.Bind();
@@ -422,3 +434,4 @@ In **Chapter 11**, we'll add texture support with `stb_image`.
 > **Next:** [Chapter 11: Texture System](11_Textures.md)
 
 > **Previous:** [Chapter 9: Buffer Classes](09_BufferClasses.md)
+
