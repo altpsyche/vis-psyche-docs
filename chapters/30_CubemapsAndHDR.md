@@ -608,16 +608,16 @@ namespace VizEngine
 		std::shared_ptr<Texture> equirectangularMap,
 		int resolution)
 	{
+		if (!equirectangularMap)
+		{
+			VP_CORE_ERROR("Cubemap conversion: Input texture is null!");
+			return nullptr;
+		}
+
 		// Validate resolution bounds
 		if (resolution <= 0 || resolution > 8192)
 		{
 			VP_CORE_ERROR("Cubemap conversion: Invalid resolution {} (must be 1-8192)", resolution);
-			return nullptr;
-		}
-
-		if (!equirectangularMap)
-		{
-			VP_CORE_ERROR("Cubemap conversion: Null equirectangularMap passed to EquirectangularToCubemap");
 			return nullptr;
 		}
 
