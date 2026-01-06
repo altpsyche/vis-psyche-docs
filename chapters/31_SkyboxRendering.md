@@ -287,6 +287,7 @@ namespace VizEngine
 		if (!m_Cubemap->IsCubemap())
 		{
 			VP_CORE_ERROR("Skybox: Texture is not a cubemap!");
+			throw std::runtime_error("Skybox: Cannot create skybox from non-cubemap texture");
 		}
 
 // Load skybox shader
@@ -452,7 +453,7 @@ VP_INFO("Skybox ready!");
 m_Scene.Render(renderer, *m_LitShader, m_Camera);
 
 // Render Skybox to offscreen framebuffer
-if (m_ShowSkybox)
+if (m_ShowSkybox && m_Skybox)
 {
     m_Skybox->Render(m_Camera);
 }
@@ -469,7 +470,7 @@ renderer.SetViewport(0, 0, m_WindowWidth, m_WindowHeight);
 // =========================================================================
 // Render Skybox to screen as well
 // =========================================================================
-if (m_ShowSkybox)
+if (m_ShowSkybox && m_Skybox)
 {
     m_Skybox->Render(m_Camera);
 }
