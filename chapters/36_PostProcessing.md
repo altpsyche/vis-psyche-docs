@@ -498,7 +498,7 @@ Final: BloomBlurFB2
 
 Before we implement the post-processing classes, we need to extend our core engine components with a few utility functions that we'll need for configuration and shader management.
 
-### Step 1: Add Shader Uniform Support
+### Add Shader Uniform Support
 
 We'll need to pass `vec2` uniforms (e.g., texture sizes) to our shaders for the Gaussian blur and downsampling ops.
 
@@ -515,7 +515,7 @@ void Shader::SetVec2(const std::string& name, const glm::vec2& value)
 }
 ```
 
-### Step 2: Extend UI Controls
+### Extend UI Controls
 
 For tweaking post-processing parameters, we'll need integer sliders (for iteration counts) and collapsible headers (for organizing the settings) in our `UIManager`.
 
@@ -1443,6 +1443,282 @@ if (m_Bloom)
 
 ---
 
+## Resource Cleanup
+
+### Color Grading LUT Cleanup
+
+The color grading LUT is stored as a raw OpenGL texture ID (`m_ColorGradingLUT`) rather than being wrapped in a RAII class. This means it requires **manual cleanup** in `OnDestroy()` to prevent resource leaks.
+
+**Update** `Sandbox/src/SandboxApp.cpp` `OnDestroy()` method:
+
+```cpp
+void OnDestroy() override
+{
+    // Clean up raw OpenGL resources not wrapped in RAII
+    if (m_ColorGradingLUT != 0)
+    {
+        VizEngine::Texture::DeleteTexture3D(m_ColorGradingLUT);
+        m_ColorGradingLUT = 0;
+    }
+}
+```
+
+> [!IMPORTANT]
+> **Why manual cleanup?** The `m_ColorGradingLUT` is a raw `unsigned int` (OpenGL texture ID) created via `Texture::CreateNeutralLUT3D()`. Unlike `shared_ptr<Texture>` objects that use RAII for automatic cleanup, raw texture IDs must be explicitly deleted to avoid GPU memory leaks.
+
+**Key points**:
+- **Check before deleting**: Only delete if `m_ColorGradingLUT != 0`
+- **Use correct deletion function**: `DeleteTexture3D()` for 3D textures, not `DeleteTexture()`
+- **Reset to zero**: Set `m_ColorGradingLUT = 0` after deletion to prevent double-free
+- **Other RAII objects**: Bloom, framebuffers, and textures wrapped in `shared_ptr` clean up automatically
+
+## Error Handling and Resource Validation
+
+### HDR Framebuffer Resize Robustness
+
+When the window resizes, the HDR framebuffer must be recreated with new dimensions. However, framebuffer creation can fail due to out-of-memory conditions, driver issues, or extremely large window sizes. Without proper error handling, a failed recreation would leave the application with an invalid framebuffer, causing crashes.
+
+**Solution**: Implement a **rollback mechanism** that preserves the old (valid) framebuffer before attempting to create a new one.
+
+**Update** the resize handler in `Sandbox/src/SandboxApp.cpp` (around lines 976-1017):
+
+```cpp
+// Recreate HDR framebuffer with new dimensions (Chapter 35)
+if (m_HDRFramebuffer)
+{
+    VP_INFO("Recreating HDR framebuffer: {}x{}", m_WindowWidth, m_WindowHeight);
+
+    // Preserve old resources in case new creation fails
+    auto oldFramebuffer = m_HDRFramebuffer;
+    auto oldColorTexture = m_HDRColorTexture;
+    auto oldDepthTexture = m_HDRDepthTexture;
+
+    // Attempt to create new resources
+    auto newColorTexture = std::make_shared<VizEngine::Texture>(
+        m_WindowWidth, m_WindowHeight, GL_RGB16F, GL_RGB, GL_FLOAT
+    );
+    auto newDepthTexture = std::make_shared<VizEngine::Texture>(
+        m_WindowWidth, m_WindowHeight, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_FLOAT
+    );
+
+    auto newFramebuffer = std::make_shared<VizEngine::Framebuffer>(m_WindowWidth, m_WindowHeight);
+    newFramebuffer->AttachColorTexture(newColorTexture, 0);
+    newFramebuffer->AttachDepthTexture(newDepthTexture);
+
+    // Validate new framebuffer
+    if (!newFramebuffer->IsComplete())
+    {
+        VP_ERROR("HDR Framebuffer incomplete after resize! Restoring previous framebuffer and disabling HDR.");
+        
+        // Restore old resources (they remain valid)
+        m_HDRFramebuffer = oldFramebuffer;
+        m_HDRColorTexture = oldColorTexture;
+        m_HDRDepthTexture = oldDepthTexture;
+        
+        // Disable HDR rendering to prevent crashes
+        m_HDREnabled = false;
+    }
+    else
+    {
+        // Success - swap in new resources
+        m_HDRFramebuffer = newFramebuffer;
+        m_HDRColorTexture = newColorTexture;
+        m_HDRDepthTexture = newDepthTexture;
+        m_HDREnabled = true;
+    }
+}
+```
+
+**Key improvements**:
+1. **Preserve old resources**: Store current framebuffer/textures before creating new ones
+2. **Validate before swap**: Check `IsComplete()` before replacing the working framebuffer
+3. **Rollback on failure**: Restore old resources if validation fails
+4. **Graceful degradation**: Set `m_HDREnabled = false` to fall back to LDR rendering
+
+> [!IMPORTANT]
+> The `m_HDREnabled` flag acts as a **circuit breaker**. When set to false, the application skips HDR rendering and tone mapping entirely, falling back to direct LDR rendering. This prevents crashes from invalid framebuffers while allowing the application to continue running.
+
+---
+
+### HDR Rendering Pass Validation
+
+Before using HDR resources for rendering, validate that all required components are available and functional. This prevents null pointer dereferences and invalid framebuffer access.
+
+**Update** the HDR rendering pass in `Sandbox/src/SandboxApp.cpp` (around lines 435-565):
+
+```cpp
+// =========================================================================
+// Pass 2: Render scene with PBR to HDR Framebuffer (Chapter 35)
+// =========================================================================
+// Validate HDR resources before rendering
+if (m_HDREnabled && m_HDRFramebuffer && m_DefaultLitShader && m_HDRFramebuffer->IsComplete())
+{
+    m_HDRFramebuffer->Bind();
+    renderer.Clear(m_ClearColor);
+
+    m_DefaultLitShader->Bind();
+    
+    // ... (existing HDR rendering code) ...
+    
+    m_HDRFramebuffer->Unbind();
+}
+else
+{
+    // HDR unavailable - fall back to direct LDR rendering
+    VP_WARN("HDR rendering disabled, falling back to LDR path");
+    
+    // Render directly to screen without HDR
+    renderer.Clear(m_ClearColor);
+    
+    if (m_DefaultLitShader)
+    {
+        m_DefaultLitShader->Bind();
+        
+        // ... (duplicate scene rendering setup for LDR fallback) ...
+        
+        RenderSceneObjects();
+        
+        if (m_ShowSkybox && m_Skybox)
+        {
+            m_Skybox->Render(m_Camera);
+        }
+    }
+}
+```
+
+**Validation checks**:
+- `m_HDREnabled`: Circuit breaker flag (disabled on resize failure)
+- `m_HDRFramebuffer`: Not null
+- `m_DefaultLitShader`: Not null
+- `m_HDRFramebuffer->IsComplete()`: Framebuffer is valid
+
+**LDR fallback behavior**:
+- Renders scene directly to the screen (default framebuffer)
+- Uses the same PBR shader and lighting setup
+- Skips HDR, bloom, and tone mapping
+- Continues to render scene normally (degraded but functional)
+
+---
+
+### Bloom and Tone Mapping Validation
+
+The bloom effect and tone mapping pass also require validation to prevent crashes when resources are unavailable.
+
+**Update** the bloom processing in `Sandbox/src/SandboxApp.cpp` (around line 503):
+
+```cpp
+// =========================================================================
+// Pass 3: Bloom Processing (Chapter 36)
+// =========================================================================
+std::shared_ptr<VizEngine::Texture> bloomTexture = nullptr;
+if (m_HDREnabled && m_EnableBloom && m_Bloom && m_HDRColorTexture)
+{
+    // ... bloom processing ...
+    bloomTexture = m_Bloom->Process(m_HDRColorTexture);
+}
+```
+
+**Update** the tone mapping pass in `Sandbox/src/SandboxApp.cpp` (around lines 517-568):
+
+```cpp
+// =========================================================================
+// Pass 4: Tone Mapping + Post-Processing to Screen (Chapter 35 & 36)
+// =========================================================================
+// Only perform tone mapping if HDR pipeline is active
+if (m_HDREnabled && m_ToneMappingShader && m_HDRColorTexture && m_FullscreenQuad)
+{
+    renderer.SetViewport(0, 0, m_WindowWidth, m_WindowHeight);
+    renderer.Clear(m_ClearColor);
+
+    renderer.DisableDepthTest();
+    m_ToneMappingShader->Bind();
+    
+    // ... (existing tone mapping and post-processing) ...
+    
+    m_FullscreenQuad->Render();
+}
+else if (!m_HDREnabled)
+{
+    // HDR disabled - LDR fallback already rendered directly, no tone mapping needed
+}
+```
+
+**Validation checks**:
+- **Bloom**: Requires `m_HDREnabled`, `m_Bloom`, and `m_HDRColorTexture`
+- **Tone mapping**: Requires `m_HDREnabled`, `m_ToneMappingShader`, `m_HDRColorTexture`, and `m_FullscreenQuad`
+
+> [!TIP]
+> When `m_HDREnabled` is false, the LDR fallback path already rendered directly to the screen in Pass 2, so tone mapping is skipped entirely—the screen already contains the final rendered output.
+
+---
+
+### Adding the HDR Enable Flag
+
+Add the `m_HDREnabled` flag to the member variables section of `SandboxApp.cpp` (around line 1220):
+
+```cpp
+// HDR Settings
+int m_ToneMappingMode = 3;      // 0=Reinhard, 1=ReinhardExt, 2=Exposure, 3=ACES, 4=Uncharted2
+float m_Exposure = 1.0f;
+float m_Gamma = 2.2f;
+float m_WhitePoint = 4.0f;      // For Reinhard Extended
+bool m_HDREnabled = true;       // Tracks HDR pipeline availability
+```
+
+**Initialization**: Starts as `true` (HDR enabled by default)  
+**Runtime**: Set to `false` if framebuffer creation fails during window resize
+
+---
+
+### Benefits of This Approach
+
+**1. No Crashes**: Application never dereferences null pointers or uses incomplete framebuffers  
+**2. Graceful Degradation**: Falls back to functional LDR rendering when HDR fails  
+**3. Automatic Recovery**: If a subsequent resize succeeds, HDR is automatically re-enabled  
+**4. Clear Logging**: Error messages inform developers when and why HDR was disabled  
+**5. Production-Ready**: Handles edge cases (extreme window sizes, low memory, driver issues)
+
+> [!CAUTION]
+> While this error handling is robust, in production games you may want to add additional logic:
+> - Limit maximum window size to prevent excessive memory usage
+> - Display a user-facing warning when HDR is disabled
+> - Retry framebuffer creation after a delay
+> - Implement quality presets that automatically reduce resolution under memory pressure
+
+---
+
+
+---
+
+## Summary
+
+**Post-processing effects** transform rendered images to achieve photorealistic or stylized visuals:
+
+**Bloom** simulates lens scatter, creating soft glows around bright regions:
+1. **Extract** bright pixels (threshold with soft knee)
+2. **Blur** with separable Gaussian (2-pass: horizontal, vertical)
+3. **Composite** additive blend back to HDR buffer (before tone mapping)
+
+**Color Grading** remaps colors for cinematic looks:
+- **3D LUT**: Pre-baked transformation (fast, flexible, artist-friendly)
+- **Parametric**: Real-time controls (saturation, contrast, brightness)
+- Apply **after tone mapping** in LDR space [0,1]
+
+**Architecture**:
+- Multi-pass rendering with custom framebuffers
+- Ping-pong pattern for blur iterations
+- Modularity: Each effect is independent
+- Performance: Downsampling, separable filters, optimized sampling
+
+**Pipeline order**:
+```
+Scene → HDR → Bloom Extract → Blur → Composite → Tone Map → Color Grade → Gamma → Screen
+```
+
+This chapter establishes the **post-processing foundation** used in all modern game engines (Unreal, Unity, CryEngine). Future effects (depth of field, motion blur, SSR) follow the same patterns and integrate seamlessly into this pipeline.
+
+---
+
 ## Testing and Validation
 
 ### Visual Tests
@@ -1583,63 +1859,3 @@ At this point, your engine has **industry-standard post-processing**:
 - **After**: Cinematic, film-like quality with depth and polish
 
 **Next steps**: In **Chapter 37**, we'll build a Material System that abstracts shader management and parameter binding, preparing for component-based rendering with ECS. Materials with emissive properties will automatically integrate with the bloom system we just built.
-
----
-
-## Resource Cleanup
-
-### Color Grading LUT Cleanup
-
-The color grading LUT is stored as a raw OpenGL texture ID (`m_ColorGradingLUT`) rather than being wrapped in a RAII class. This means it requires **manual cleanup** in `OnDestroy()` to prevent resource leaks.
-
-**Update** `Sandbox/src/SandboxApp.cpp` `OnDestroy()` method:
-
-```cpp
-void OnDestroy() override
-{
-    // Clean up raw OpenGL resources not wrapped in RAII
-    if (m_ColorGradingLUT != 0)
-    {
-        VizEngine::Texture::DeleteTexture3D(m_ColorGradingLUT);
-        m_ColorGradingLUT = 0;
-    }
-}
-```
-
-> [!IMPORTANT]
-> **Why manual cleanup?** The `m_ColorGradingLUT` is a raw `unsigned int` (OpenGL texture ID) created via `Texture::CreateNeutralLUT3D()`. Unlike `shared_ptr<Texture>` objects that use RAII for automatic cleanup, raw texture IDs must be explicitly deleted to avoid GPU memory leaks.
-
-**Key points**:
-- **Check before deleting**: Only delete if `m_ColorGradingLUT != 0`
-- **Use correct deletion function**: `DeleteTexture3D()` for 3D textures, not `DeleteTexture()`
-- **Reset to zero**: Set `m_ColorGradingLUT = 0` after deletion to prevent double-free
-- **Other RAII objects**: Bloom, framebuffers, and textures wrapped in `shared_ptr` clean up automatically
-
----
-
-## Summary
-
-**Post-processing effects** transform rendered images to achieve photorealistic or stylized visuals:
-
-**Bloom** simulates lens scatter, creating soft glows around bright regions:
-1. **Extract** bright pixels (threshold with soft knee)
-2. **Blur** with separable Gaussian (2-pass: horizontal, vertical)
-3. **Composite** additive blend back to HDR buffer (before tone mapping)
-
-**Color Grading** remaps colors for cinematic looks:
-- **3D LUT**: Pre-baked transformation (fast, flexible, artist-friendly)
-- **Parametric**: Real-time controls (saturation, contrast, brightness)
-- Apply **after tone mapping** in LDR space [0,1]
-
-**Architecture**:
-- Multi-pass rendering with custom framebuffers
-- Ping-pong pattern for blur iterations
-- Modularity: Each effect is independent
-- Performance: Downsampling, separable filters, optimized sampling
-
-**Pipeline order**:
-```
-Scene → HDR → Bloom Extract → Blur → Composite → Tone Map → Color Grade → Gamma → Screen
-```
-
-This chapter establishes the **post-processing foundation** used in all modern game engines (Unreal, Unity, CryEngine). Future effects (depth of field, motion blur, SSR) follow the same patterns and integrate seamlessly into this pipeline.
