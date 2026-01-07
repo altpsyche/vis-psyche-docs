@@ -1,8 +1,8 @@
 \newpage
 
-# Chapter 36: Post-Processing Effects
+# Chapter 36: Bloom Post-Processing
 
-Implement industry-standard post-processing effects including physically-based bloom and LUT-based color grading to achieve cinematic visual quality.
+Implement industry-standard bloom effect using physically-based bright-pass filtering and multi-pass Gaussian blur to achieve cinematic glow around bright regions.
 
 ---
 
@@ -17,8 +17,10 @@ In **Chapter 35**, we built a complete HDR rendering pipeline with tone mapping.
 ```
 Scene Render → HDR Framebuffer → Post-Processing → Tone Mapping → Screen
      ↓              ↓                    ↓               ↓           ↓
-  PBR + IBL    Raw HDR values     Bloom, etc.    Map to LDR   Display
+  PBR + IBL    Raw HDR values        Bloom          Map to LDR   Display
 ```
+
+This chapter focuses on the **bloom effect**, the most impactful post-processing technique for realism. Bloom simulates the natural glow that occurs when extremely bright light scatters in camera lenses or the human eye, making HDR values visible even after tone mapping. In the next chapter, we'll add color grading to complete our post-processing pipeline.
 
 ### What We're Building
 
@@ -27,13 +29,12 @@ By the end of this chapter, you'll have:
 | Feature | Description |
 |---------|-------------|
 | **Bloom Effect** | Physically-based glow around bright regions with soft threshold filtering |
-| **Gaussian Blur** | Separable 2-pass blur with linear sampling optimization |
+| **Gaussian Blur** | Separable 2-pass blur with optimized kernel weights |
 | **Bloom Class** | Reusable post-processing component with ping-pong framebuffers |
-| **Color Grading** | 3D LUT-based color transformation for cinematic looks |
-| **Parametric Controls** | Real-time saturation, contrast, and brightness adjustment |
-| **ImGui Integration** | Runtime controls for all post-processing parameters |
+| **HDR Integration** | Bloom composited before tone mapping in HDR space |
+| **ImGui Controls** | Runtime controls for threshold, intensity, and blur passes |
 
-**Visual Impact**: Bloom makes bright surfaces glow naturally (mimicking camera lens scatter), while color grading establishes mood and style (warm sunset, cool night, desaturated apocalypse).
+**Visual Impact**: Bloom makes bright surfaces glow naturally, mimicking camera lens scatter. Only pixels with luminance significantly above the scene average will bloom, creating realistic highlights on metals, lights, and emissive surfaces.
 
 ---
 
@@ -60,12 +61,12 @@ By the end of this chapter, you'll have:
 
 ### This Chapter's Focus
 
-We'll implement **bloom** and **color grading** because:
-1. **Bloom** is the most impactful effect for realism (makes HDR visible)
-2. **Color grading** is essential for establishing visual identity
-3. Together they demonstrate the full post-processing pipeline architecture
+We're implementing **bloom** because:
+1. **Most impactful** for realism (makes HDR visible)
+2. **Foundation** for the post-processing pipeline architecture
+3. **Demonstrates** multi-pass rendering with custom framebuffers
 
-**Other effects** (depth of field, motion blur, etc.) follow the same pattern and can be added incrementally.
+**Other effects** (depth of field, motion blur, etc.) follow the same pattern and can be added incrementally. Color grading will be covered in Chapter 37.
 
 ### Why Post-Processing?
 
@@ -123,7 +124,7 @@ $$Final = HDR_{original} + Blur(Extract(HDR_{original}))$$
 
 ---
 
-### Step 1: Bright Pass Filtering
+### Bright Pass Filtering
 
 **Goal**: Isolate pixels that are "over-bright" (significantly brighter than average).
 
@@ -177,7 +178,7 @@ $$
 
 ---
 
-### Step 2: Gaussian Blur
+### Gaussian Blur
 
 **Goal**: Create a soft, natural-looking glow by blurring the extracted bright regions.
 
@@ -284,7 +285,7 @@ Blurring at full resolution is expensive. **Solution**: Downsample before blurri
 
 ---
 
-### Step 3: Bloom Composite
+### Bloom Composite
 
 **Goal**: Add the blurred bloom texture to the original HDR image.
 
@@ -308,132 +309,6 @@ vec3 result = hdrColor + bloomColor * u_BloomIntensity;
 
 ---
 
-## Color Grading Theory
-
-### What is Color Grading?
-
-**Color grading** is the process of altering the colors of an image to achieve a specific aesthetic or mood. Originated in film production, where colorists adjust footage in post-production.
-
-**In games**:
-- Establish visual identity (e.g., *Mad Max* is desaturated orange/teal)
-- Guide player emotion (warm = safe, cool = danger)
-- Differentiate locations (forest = green, desert = yellow)
-- Create time-of-day variations (sunrise = pink/orange, night = blue)
-
-**Examples**:
-| Look | Color Adjustments |
-|------|-------------------|
-| **Warm Sunset** | Shift toward orange/yellow, boost saturation |
-| **Cool Night** | Shift toward blue, reduce saturation |
-| **Post-Apocalyptic** | Desaturate, crush blacks, lift shadows |
-| **Vintage Film** | Adjust curves, add grain, subtle vignette |
-
----
-
-### 3D LUT (Look-Up Table) Approach
-
-A **3D LUT** is a pre-baked color transformation stored as a 3D texture. It maps input RGB to output RGB.
-
-**Structure**:
-```
-Input RGB (0-1, 0-1, 0-1) → Sample 3D texture at (r, g, b) → Output RGB
-```
-
-**Texture coordinates = input color**  
-**Sampled value = output color**
-
-**Resolution**: Typically 16×16×16 or 32×32×32 3D texture
-
-Example (16×16×16):
-- 16 red levels
-- 16 green levels
-- 16 blue levels
-- Total: $16^3 = 4096$ color entries
-- Memory: $4096 \times 3 \times 4 bytes (RGB32F) = 48 KB$
-
-#### Neutral (Identity) LUT
-
-A neutral LUT performs no transformation:
-
-```glsl
-// For each entry (r, g, b) in [0, 15]:
-float red = r / 15.0;
-float green = g / 15.0;
-float blue = b / 15.0;
-
-LUT[r][g][b] = vec3(red, green, blue);  // Identity mapping
-```
-
-**Result**: `texture(LUT, color) == color`
-
----
-
-#### Creating Custom LUTs
-
-**Workflow**:
-1. **Export neutral LUT** as a 3D texture (or 2D "strip" format: 256×16)
-2. **Load into Photoshop/DaVinci Resolve**
-3. **Apply color adjustments**: Curves, levels, saturation, hue shifts
-4. **Export modified LUT**
-5. **Import into engine**
-
-**Advantage**: Artists use familiar color grading tools (Photoshop, DaVinci Resolve) instead of programming shader code.
-
-**Alternative**: Generate LUTs procedurally in shaders for specific looks (sepia, night vision, etc.).
-
----
-
-#### Applying the LUT in Shaders
-
-```glsl
-uniform sampler3D u_ColorGradingLUT;
-
-vec3 gradedColor = texture(u_ColorGradingLUT, ldrColor).rgb;
-```
-
-**Critical**: Apply color grading **after** tone mapping (in LDR space [0,1]), not before. Tone mapping operates on linear HDR values; color grading is a perceptual transform.
-
-**Blending** (optional):
-```glsl
-vec3 finalColor = mix(ldrColor, gradedColor, u_LUTContribution);
-```
-
-Allows fading between original and graded for artistic control.
-
----
-
-### Parametric Color Grading (Alternative/Complement)
-
-Instead of pre-baked LUTs, apply adjustments procedurally:
-
-**Saturation**:
-```glsl
-vec3 grayscale = vec3(dot(color, vec3(0.2126, 0.7152, 0.0722)));
-color = mix(grayscale, color, u_Saturation);  // 0=grayscale, 1=normal, 2=oversaturated
-```
-
-**Contrast**:
-```glsl
-color = (color - 0.5) * u_Contrast + 0.5;  // 1=normal, >1=more contrast, <1=less
-```
-
-**Brightness**:
-```glsl
-color = color + u_Brightness;  // -1 to +1
-```
-
-**Color Filter** (tint):
-```glsl
-color *= u_ColorFilter;  // e.g., vec3(1.0, 0.9, 0.8) for warm tint
-```
-
-**Advantage**: Real-time tuning, no texture required.  
-**Disadvantage**: Limited expressiveness compared to LUTs (can't do complex curve adjustments).
-
-**Best of both worlds**: Use parametric controls to generate a LUT on the GPU, giving artists real-time feedback.
-
----
-
 ## Post-Processing Pipeline Architecture
 
 ### Render Pass Order
@@ -453,8 +328,6 @@ Bloom Composite → Add bloom to HDR buffer
    ↓
 Tone Mapping → HDR→LDR (ACES Filmic, etc.)
    ↓
-Color Grading → LUT or parametric (operates in LDR [0,1])
-   ↓
 Gamma Correction → Linear→sRGB (typically 1/2.2)
    ↓
 Final Output → Screen (default framebuffer)
@@ -462,7 +335,10 @@ Final Output → Screen (default framebuffer)
 
 **Key insight**: 
 - **Bloom** operates in **HDR space** (before tone mapping)
-- **Color grading** operates in **LDR space** (after tone mapping)
+- This preserves the full dynamic range of bright values
+
+> [!NOTE]
+> Color grading (covered in Chapter 37) operates in **LDR space** (after tone mapping).
 
 ---
 
@@ -494,13 +370,13 @@ Final: BloomBlurFB2
 
 ---
 
-## Engine Extensions
+## Step 1: Engine Extensions
 
-Before we implement the post-processing classes, we need to extend our core engine components with a few utility functions that we'll need for configuration and shader management.
+Before we implement the bloom effect, we need to extend our core engine components with a few utility functions for configuration and shader management.
 
 ### Add Shader Uniform Support
 
-We'll need to pass `vec2` uniforms (e.g., texture sizes) to our shaders for the Gaussian blur and downsampling ops.
+We'll need to pass `vec2` uniforms (e.g., texture sizes) to our shaders for the Gaussian blur.
 
 **1. Update** `VizEngine/src/VizEngine/OpenGL/Shader.h` to add the declaration:
 ```cpp
@@ -517,7 +393,7 @@ void Shader::SetVec2(const std::string& name, const glm::vec2& value)
 
 ### Extend UI Controls
 
-For tweaking post-processing parameters, we'll need integer sliders (for iteration counts) and collapsible headers (for organizing the settings) in our `UIManager`.
+For tweaking bloom parameters, we'll need integer sliders (for iteration counts) and collapsible headers (for organizing the settings) in our `UIManager`.
 
 **1. Update** `VizEngine/src/VizEngine/GUI/UIManager.h` to add these declarations:
 ```cpp
@@ -543,9 +419,7 @@ bool UIManager::SliderInt(const char* label, int* value, int min, int max)
 
 ---
 
-## Bloom Implementation
-
-### Bloom Extraction Shader
+## Step 2: Create Bloom Extraction Shader
 
 **Create** `VizEngine/src/resources/shaders/bloom_extract.shader`:
 
@@ -572,7 +446,7 @@ out vec4 FragColor;
 
 in vec2 v_TexCoords;
 
-// ============================================================================
+//============================================================================
 // Uniforms
 // ============================================================================
 uniform sampler2D u_HDRBuffer;
@@ -619,7 +493,7 @@ void main()
 
 ---
 
-### Gaussian Blur Shader
+## Step 3: Create Gaussian Blur Shader
 
 **Create** `VizEngine/src/resources/shaders/bloom_blur.shader`:
 
@@ -703,54 +577,9 @@ void main()
 
 ---
 
-### Bloom Composite (Modify Tone Mapping Shader)
+## Step 4: Create Bloom Class
 
-**Update** `VizEngine/src/resources/shaders/tonemapping.shader`:
-
-Add uniforms after existing ones:
-
-```glsl
-uniform sampler2D u_BloomTexture;
-uniform float u_BloomIntensity;
-uniform bool u_EnableBloom;
-```
-
-In `main()` function, **before** tone mapping:
-
-```glsl
-void main()
-{
-    // Sample HDR color from framebuffer
-    vec3 hdrColor = texture(u_HDRBuffer, v_TexCoords).rgb;
-    
-    // ========================================================================
-    // Bloom Composite (BEFORE tone mapping, in HDR space)
-    // ========================================================================
-    if (u_EnableBloom)
-    {
-        vec3 bloomColor = texture(u_BloomTexture, v_TexCoords).rgb;
-        hdrColor += bloomColor * u_BloomIntensity;
-    }
-    
-    // Apply exposure (for all modes except Reinhard simple)
-    vec3 exposedColor = hdrColor * u_Exposure;
-    
-    // Apply tone mapping based on selected mode
-    vec3 ldrColor;
-    // ... (existing tone mapping code) ...
-```
-
-**Order is critical**:
-1. Sample HDR buffer
-2. Add bloom (in HDR space)
-3. Apply exposure
-4. Tone map to LDR
-5. Color grade (next section)
-6. Gamma correct
-
----
-
-### Bloom Class Implementation
+This class encapsulates the entire bloom pipeline: extraction, blur, and resource management.
 
 **Create** `VizEngine/src/VizEngine/Renderer/Bloom.h`:
 
@@ -998,22 +827,63 @@ namespace VizEngine
 ```
 
 **Notes**:
-- **Framebuffer validation**: The constructor checks that all framebuffers are complete and sets `m_IsValid = false` if any fail, ensuring `Process()` won't run with incomplete framebuffers.
-- **Shader validation**: The constructor checks that shaders loaded successfully via `IsValid()`. If validation fails, sets `m_IsValid = false` and returns early.
-- **Initialization order**: `m_IsValid = true` is set **only after** all validations pass (framebuffers, shaders, quad creation), guaranteeing the Bloom object is fully initialized. 
-- **Null-check in Process**: Added validation for `hdrTexture` parameter. If null, logs error and returns `nullptr` to prevent crash.
-- **Ping-pong logic with explicit targets**: Uses `horizTargetFB`/`horizTargetTex` and `vertTargetFB`/`vertTargetTex` per iteration to make read/write separation crystal clear:
-  - **Iteration start**: Determines all 4 targets upfront based on `i % 2`
-  - **Horizontal pass**: Reads `sourceTexture` → Writes `horizTargetFB`
-  - **Vertical pass**: Reads `horizTargetTex` (output of horizontal) → Writes `vertTargetFB` (opposite buffer)
-  - **Next iteration**: `sourceTexture = vertTargetTex`
-  - **Guarantee**: No pass ever reads from the texture it's writing to
-- **Multiple blur passes**: Each iteration creates a softer bloom (5 passes = 10 total blur operations: 5 horizontal + 5 vertical)
+- **Framebuffer validation**: The constructor checks that all framebuffers are complete and sets `m_IsValid = false` if any fail
+- **Shader validation**: The constructor checks that shaders loaded successfully via `IsValid()`
+- **Null-check in Process**: Added validation for `hdrTexture` parameter
+- **Ping-pong logic with explicit targets**: Uses separate variables for horizontal and vertical targets per iteration
+- **Multiple blur passes**: Each iteration creates a softer bloom (5 passes = 10 total blur operations)
 - **RGB16F textures**: Preserve HDR values during blur
 
 ---
 
-### Update CMakeLists.txt
+## Step 5: Modify Tone Mapping Shader for Bloom Composite
+
+**Update** `VizEngine/src/resources/shaders/tonemapping.shader`:
+
+Add uniforms after existing uniforms (after gamma/exposure/etc):
+
+```glsl
+// Bloom
+uniform sampler2D u_BloomTexture;
+uniform float u_BloomIntensity;
+uniform bool u_EnableBloom;
+```
+
+In `main()` function, **before** tone mapping (right after sampling HDR buffer):
+
+```glsl
+void main()
+{
+    // Sample HDR color from framebuffer
+    vec3 hdrColor = texture(u_HDRBuffer, v_TexCoords).rgb;
+    
+    // ========================================================================
+    // Bloom Composite (BEFORE tone mapping, in HDR space)
+    // ========================================================================
+    if (u_EnableBloom)
+    {
+        vec3 bloomColor = texture(u_BloomTexture, v_TexCoords).rgb;
+        hdrColor += bloomColor * u_BloomIntensity;
+    }
+    
+    // Apply exposure (for all modes except Reinhard simple)
+    vec3 exposedColor = hdrColor * u_Exposure;
+    
+    // Apply tone mapping based on selected mode
+    vec3 ldrColor;
+    // ... (existing tone mapping code) ...
+```
+
+**Order is critical**:
+1. Sample HDR buffer
+2. Add bloom (in HDR space)
+3. Apply exposure
+4. Tone map to LDR
+5. Gamma correct
+
+---
+
+## Step 6: Update CMakeLists.txt
 
 **Add to** `VizEngine/CMakeLists.txt`:
 
@@ -1027,188 +897,7 @@ namespace VizEngine
 
 ---
 
-## Color Grading Implementation
-
-### Neutral LUT Generation
-
-We'll add static methods to the `Texture` class to handle 3D LUT creation and binding. This keeps OpenGL calls encapsulated in the engine layer.
-
-**1. Update** `VizEngine/src/VizEngine/OpenGL/Texture.h` to add static methods:
-
-```cpp
-// =========================================================================
-// Static Utility Methods
-// =========================================================================
-
-/**
- * Create a neutral (identity) 3D color grading LUT.
- * @param size LUT dimensions (e.g., 16 for 16x16x16)
- * @return OpenGL texture ID for GL_TEXTURE_3D (caller owns, must delete)
- */
-static unsigned int CreateNeutralLUT3D(int size = 16);
-
-/**
- * Bind a 3D texture (e.g., color grading LUT) to a texture unit.
- * @param textureID OpenGL texture ID for GL_TEXTURE_3D
- * @param slot Texture unit (0-15)
- */
-static void BindTexture3D(unsigned int textureID, unsigned int slot);
-
-/**
- * Delete a 3D texture created by CreateNeutralLUT3D.
- * @param textureID OpenGL texture ID to delete
- */
-static void DeleteTexture3D(unsigned int textureID);
-```
-
-**2. Update** `VizEngine/src/VizEngine/OpenGL/Texture.cpp` to implement them:
-
-```cpp
-unsigned int Texture::CreateNeutralLUT3D(int size)
-{
-    const int totalTexels = size * size * size;
-    std::vector<float> lutData(totalTexels * 3);
-
-    // Generate identity mapping: input RGB = output RGB
-    for (int b = 0; b < size; ++b)
-    {
-        for (int g = 0; g < size; ++g)
-        {
-            for (int r = 0; r < size; ++r)
-            {
-                int index = (b * size * size + g * size + r) * 3;
-                lutData[index + 0] = r / float(size - 1);
-                lutData[index + 1] = g / float(size - 1);
-                lutData[index + 2] = b / float(size - 1);
-            }
-        }
-    }
-
-    // Create 3D texture
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_3D, textureID);
-
-    glTexImage3D(
-        GL_TEXTURE_3D,
-        0,                      // Mip level
-        GL_RGB16F,              // Internal format (HDR precision)
-        size, size, size,
-        0,                      // Border
-        GL_RGB,                 // Format
-        GL_FLOAT,               // Data type
-        lutData.data()
-    );
-
-    // Set texture parameters
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    glBindTexture(GL_TEXTURE_3D, 0);
-
-    VP_CORE_INFO("Neutral 3D LUT created: {}x{}x{} (ID: {})", size, size, size, textureID);
-
-    return textureID;
-}
-
-void Texture::BindTexture3D(unsigned int textureID, unsigned int slot)
-{
-    glActiveTexture(GL_TEXTURE0 + slot);
-    glBindTexture(GL_TEXTURE_3D, textureID);
-}
-
-void Texture::DeleteTexture3D(unsigned int textureID)
-{
-    if (textureID != 0)
-    {
-        glDeleteTextures(1, &textureID);
-    }
-}
-```
-
-> [!TIP]
-> By using static methods in the `Texture` class, we keep all OpenGL calls encapsulated in the engine. This prevents linker errors in applications that don't link directly against OpenGL.
-
----
-
-### Color Grading in Tone Mapping Shader
-
-**Update** `VizEngine/src/resources/shaders/tonemapping.shader`:
-
-Add uniforms:
-
-```glsl
-// Color Grading
-uniform sampler3D u_ColorGradingLUT;
-uniform bool u_EnableColorGrading;
-uniform float u_LUTContribution;  // Blend factor (0=off, 1=full)
-
-// Parametric color controls
-uniform float u_Saturation;
-uniform float u_Contrast;
-uniform float u_Brightness;
-```
-
-Add functions:
-
-```glsl
-// ============================================================================
-// Parametric Color Grading
-// ============================================================================
-
-vec3 ApplyParametricGrading(vec3 color)
-{
-    // Saturation
-    vec3 grayscale = vec3(dot(color, vec3(0.2126, 0.7152, 0.0722)));
-    color = mix(grayscale, color, u_Saturation);
-    
-    // Contrast
-    color = (color - 0.5) * u_Contrast + 0.5;
-    
-    // Brightness
-    color = color + u_Brightness;
-    
-    // Clamp to valid range
-    color = clamp(color, 0.0, 1.0);
-    
-    return color;
-}
-```
-
-Update `main()` function (after tone mapping, before gamma correction):
-
-```glsl
-    // Apply tone mapping based on selected mode
-    vec3 ldrColor;
-    // ... (existing tone mapping code) ...
-
-    // ========================================================================
-    // Color Grading (AFTER tone mapping, in LDR space [0,1])
-    // ========================================================================
-    
-    // Apply parametric grading first
-    ldrColor = ApplyParametricGrading(ldrColor);
-    
-    // Apply LUT grading (if enabled)
-    if (u_EnableColorGrading)
-    {
-        vec3 lutColor = texture(u_ColorGradingLUT, ldrColor).rgb;
-        ldrColor = mix(ldrColor, lutColor, u_LUTContribution);
-    }
-    
-    // Apply gamma correction (linear -> sRGB)
-    vec3 srgbColor = pow(ldrColor, vec3(1.0 / u_Gamma));
-    
-    FragColor = vec4(srgbColor, 1.0);
-}
-```
-
----
-
-## SandboxApp Integration
+## Step 7: Integrate Bloom into SandboxApp
 
 ### Add Members
 
@@ -1218,26 +907,20 @@ Update `main()` function (after tone mapping, before gamma correction):
 private:
     // ... existing members ...
 
-    // Bloom
+    // Bloom (Chapter 36)
     std::unique_ptr<VizEngine::Bloom> m_Bloom;
     bool m_EnableBloom = true;
     float m_BloomThreshold = 1.0f;
     float m_BloomKnee = 0.5f;
     float m_BloomIntensity = 0.04f;
     int m_BloomBlurPasses = 5;
-
-    // Color Grading
-    unsigned int m_ColorGradingLUT = 0;  // Raw OpenGL texture ID
-    bool m_EnableColorGrading = false;
-    float m_LUTContribution = 1.0f;
-    float m_Saturation = 1.0f;
-    float m_Contrast = 1.0f;
-    float m_Brightness = 0.0f;
 ```
 
 ---
 
-### OnCreate(): Initialize Bloom and LUT
+### OnCreate(): Initialize Bloom
+
+Add at the end of your existing `OnCreate()` method:
 
 ```cpp
 void OnCreate() override
@@ -1245,9 +928,9 @@ void OnCreate() override
     // ... existing setup code ...
 
     // ====================================================================
-    // Post-Processing Setup (Chapter 36)
+    // Bloom Setup (Chapter 36)
     // ====================================================================
-    VP_INFO("Setting up post-processing...");
+    VP_INFO("Setting up bloom...");
 
     // Create Bloom Processor (half resolution for performance)
     int bloomWidth = m_WindowWidth / 2;
@@ -1258,24 +941,14 @@ void OnCreate() override
     m_Bloom->SetBlurPasses(m_BloomBlurPasses);
 
     VP_INFO("Bloom initialized: {}x{}", bloomWidth, bloomHeight);
-
-    // Create Neutral Color Grading LUT (16x16x16)
-    m_ColorGradingLUT = VizEngine::Texture::CreateNeutralLUT3D(16);
-
-    if (m_ColorGradingLUT == 0)
-    {
-        VP_ERROR("Failed to create color grading LUT!");
-    }
-
-    VP_INFO("Post-processing initialized successfully");
 }
 ```
 
 ---
 
-### OnRender(): Multi-Pass Rendering
+### OnRender(): Multi-Pass Rendering with Bloom
 
-**Update render loop**:
+**Update your render loop** to add bloom processing between HDR rendering and tone mapping:
 
 ```cpp
 void OnRender() override
@@ -1312,7 +985,7 @@ void OnRender() override
     }
 
     // ====================================================================
-    // Pass 3: Tone Mapping + Color Grading to Screen
+    // Pass 3: Tone Mapping + Bloom Composite to Screen
     // ====================================================================
     renderer.SetViewport(0, 0, m_WindowWidth, m_WindowHeight);
     renderer.DisableDepthTest();
@@ -1336,18 +1009,7 @@ void OnRender() override
         bloomTexture->Bind(1);
     }
 
-    // Color grading
-    m_ToneMappingShader->SetBool("u_EnableColorGrading", m_EnableColorGrading);
-    m_ToneMappingShader->SetFloat("u_LUTContribution", m_LUTContribution);
-    m_ToneMappingShader->SetFloat("u_Saturation", m_Saturation);
-    m_ToneMappingShader->SetFloat("u_Contrast", m_Contrast);
-    m_ToneMappingShader->SetFloat("u_Brightness", m_Brightness);
-
-    if (m_EnableColorGrading && m_ColorGradingLUT != 0)
-    {
-        VizEngine::Texture::BindTexture3D(m_ColorGradingLUT, 2);
-        m_ToneMappingShader->SetInt("u_ColorGradingLUT", 2);
-    }
+    m_FramebufferColor->Bind(0);
 
     // Render fullscreen quad
     m_FullscreenQuad->Render();
@@ -1359,7 +1021,9 @@ void OnRender() override
 
 ---
 
-### OnImGuiRender(): Post-Processing Controls
+### OnImGuiRender(): Bloom Controls
+
+Add a new Post-Processing panel:
 
 ```cpp
 void OnImGuiRender() override
@@ -1389,33 +1053,6 @@ void OnImGuiRender() override
         uiManager.Text("Blur Passes: More = softer bloom");
     }
 
-    if (uiManager.CollapsingHeader("Color Grading"))
-    {
-        uiManager.Checkbox("Enable LUT##ColorGrading", &m_EnableColorGrading);
-        if (m_EnableColorGrading)
-        {
-            uiManager.SliderFloat("LUT Contribution", &m_LUTContribution, 0.0f, 1.0f);
-        }
-        
-        uiManager.Separator();
-        uiManager.Text("Parametric Controls:");
-        uiManager.SliderFloat("Saturation", &m_Saturation, 0.0f, 2.0f);
-        uiManager.SliderFloat("Contrast", &m_Contrast, 0.0f, 2.0f);
-        uiManager.SliderFloat("Brightness", &m_Brightness, -1.0f, 1.0f);
-        
-        if (uiManager.Button("Reset to Neutral"))
-        {
-            m_Saturation = 1.0f;
-            m_Contrast = 1.0f;
-            m_Brightness = 0.0f;
-        }
-        
-        uiManager.Separator();
-        uiManager.Text("Saturation: 0=grayscale, 1=normal, 2=vibrant");
-        uiManager.Text("Contrast: 0=flat, 1=normal, 2=high");
-        uiManager.Text("Brightness: -1=dark, 0=normal, +1=bright");
-    }
-
     uiManager.EndWindow();
 }
 ```
@@ -1424,302 +1061,55 @@ void OnImGuiRender() override
 
 ### OnEvent(): Handle Window Resize
 
-When the window resizes, we need to recreate the Bloom processor to match the new dimensions:
+When the window resizes, recreate the Bloom processor to match the new dimensions:
 
 ```cpp
 // In WindowResizeEvent handler, after HDR framebuffer recreation:
 if (m_Bloom)
 {
     VP_INFO("Recreating Bloom processor: {}x{}", m_WindowWidth / 2, m_WindowHeight / 2);
-    m_Bloom = std::make_unique<VizEngine::Bloom>(m_WindowWidth / 2, m_WindowHeight / 2);
-    m_Bloom->SetThreshold(m_BloomThreshold);
-    m_Bloom->SetKnee(m_BloomKnee);
-    m_Bloom->SetBlurPasses(m_BloomBlurPasses);
-}
-```
-
-> [!NOTE]
-> The color grading LUT does not need recreation on resize since it's resolution-independent.
-
----
-
-## Resource Cleanup
-
-### Color Grading LUT Cleanup
-
-The color grading LUT is stored as a raw OpenGL texture ID (`m_ColorGradingLUT`) rather than being wrapped in a RAII class. This means it requires **manual cleanup** in `OnDestroy()` to prevent resource leaks.
-
-**Update** `Sandbox/src/SandboxApp.cpp` `OnDestroy()` method:
-
-```cpp
-void OnDestroy() override
-{
-    // Clean up raw OpenGL resources not wrapped in RAII
-    if (m_ColorGradingLUT != 0)
-    {
-        VizEngine::Texture::DeleteTexture3D(m_ColorGradingLUT);
-        m_ColorGradingLUT = 0;
-    }
-}
-```
-
-> [!IMPORTANT]
-> **Why manual cleanup?** The `m_ColorGradingLUT` is a raw `unsigned int` (OpenGL texture ID) created via `Texture::CreateNeutralLUT3D()`. Unlike `shared_ptr<Texture>` objects that use RAII for automatic cleanup, raw texture IDs must be explicitly deleted to avoid GPU memory leaks.
-
-**Key points**:
-- **Check before deleting**: Only delete if `m_ColorGradingLUT != 0`
-- **Use correct deletion function**: `DeleteTexture3D()` for 3D textures, not `DeleteTexture()`
-- **Reset to zero**: Set `m_ColorGradingLUT = 0` after deletion to prevent double-free
-- **Other RAII objects**: Bloom, framebuffers, and textures wrapped in `shared_ptr` clean up automatically
-
-## Error Handling and Resource Validation
-
-### HDR Framebuffer Resize Robustness
-
-When the window resizes, the HDR framebuffer must be recreated with new dimensions. However, framebuffer creation can fail due to out-of-memory conditions, driver issues, or extremely large window sizes. Without proper error handling, a failed recreation would leave the application with an invalid framebuffer, causing crashes.
-
-**Solution**: Implement a **rollback mechanism** that preserves the old (valid) framebuffer before attempting to create a new one.
-
-**Update** the resize handler in `Sandbox/src/SandboxApp.cpp` (around lines 976-1017):
-
-```cpp
-// Recreate HDR framebuffer with new dimensions (Chapter 35)
-if (m_HDRFramebuffer)
-{
-    VP_INFO("Recreating HDR framebuffer: {}x{}", m_WindowWidth, m_WindowHeight);
-
-    // Preserve old resources in case new creation fails
-    auto oldFramebuffer = m_HDRFramebuffer;
-    auto oldColorTexture = m_HDRColorTexture;
-    auto oldDepthTexture = m_HDRDepthTexture;
-
-    // Attempt to create new resources
-    auto newColorTexture = std::make_shared<VizEngine::Texture>(
-        m_WindowWidth, m_WindowHeight, GL_RGB16F, GL_RGB, GL_FLOAT
-    );
-    auto newDepthTexture = std::make_shared<VizEngine::Texture>(
-        m_WindowWidth, m_WindowHeight, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_FLOAT
-    );
-
-    auto newFramebuffer = std::make_shared<VizEngine::Framebuffer>(m_WindowWidth, m_WindowHeight);
-    newFramebuffer->AttachColorTexture(newColorTexture, 0);
-    newFramebuffer->AttachDepthTexture(newDepthTexture);
-
-    // Validate new framebuffer
-    if (!newFramebuffer->IsComplete())
-    {
-        VP_ERROR("HDR Framebuffer incomplete after resize! Restoring previous framebuffer and disabling HDR.");
-        
-        // Restore old resources (they remain valid)
-        m_HDRFramebuffer = oldFramebuffer;
-        m_HDRColorTexture = oldColorTexture;
-        m_HDRDepthTexture = oldDepthTexture;
-        
-        // Disable HDR rendering to prevent crashes
-        m_HDREnabled = false;
-    }
-    else
-    {
-        // Success - swap in new resources
-        m_HDRFramebuffer = newFramebuffer;
-        m_HDRColorTexture = newColorTexture;
-        m_HDRDepthTexture = newDepthTexture;
-        m_HDREnabled = true;
-    }
-}
-```
-
-**Key improvements**:
-1. **Preserve old resources**: Store current framebuffer/textures before creating new ones
-2. **Validate before swap**: Check `IsComplete()` before replacing the working framebuffer
-3. **Rollback on failure**: Restore old resources if validation fails
-4. **Graceful degradation**: Set `m_HDREnabled = false` to fall back to LDR rendering
-
-> [!IMPORTANT]
-> The `m_HDREnabled` flag acts as a **circuit breaker**. When set to false, the application skips HDR rendering and tone mapping entirely, falling back to direct LDR rendering. This prevents crashes from invalid framebuffers while allowing the application to continue running.
-
----
-
-### HDR Rendering Pass Validation
-
-Before using HDR resources for rendering, validate that all required components are available and functional. This prevents null pointer dereferences and invalid framebuffer access.
-
-**Update** the HDR rendering pass in `Sandbox/src/SandboxApp.cpp` (around lines 435-565):
-
-```cpp
-// =========================================================================
-// Pass 2: Render scene with PBR to HDR Framebuffer (Chapter 35)
-// =========================================================================
-// Validate HDR resources before rendering
-if (m_HDREnabled && m_HDRFramebuffer && m_DefaultLitShader && m_HDRFramebuffer->IsComplete())
-{
-    m_HDRFramebuffer->Bind();
-    renderer.Clear(m_ClearColor);
-
-    m_DefaultLitShader->Bind();
     
-    // ... (existing HDR rendering code) ...
+    // Preserve old bloom processor and settings
+    auto oldBloom = std::move(m_Bloom);
     
-    m_HDRFramebuffer->Unbind();
-}
-else
-{
-    // HDR unavailable - fall back to direct LDR rendering
-    VP_WARN("HDR rendering disabled, falling back to LDR path");
-    
-    // Render directly to screen without HDR
-    renderer.Clear(m_ClearColor);
-    
-    if (m_DefaultLitShader)
+    try
     {
-        m_DefaultLitShader->Bind();
+        // Attempt to create new bloom processor
+        auto newBloom = std::make_unique<VizEngine::Bloom>(m_WindowWidth / 2, m_WindowHeight / 2);
         
-        // ... (duplicate scene rendering setup for LDR fallback) ...
-        
-        RenderSceneObjects();
-        
-        if (m_ShowSkybox && m_Skybox)
+        if (newBloom)
         {
-            m_Skybox->Render(m_Camera);
+            // Copy settings from old bloom to new
+            newBloom->SetThreshold(m_BloomThreshold);
+            newBloom->SetKnee(m_BloomKnee);
+            newBloom->SetBlurPasses(m_BloomBlurPasses);
+            
+            // Success - swap in new bloom processor
+            m_Bloom = std::move(newBloom);
+        }
+        else
+        {
+            // Failed to create - restore old bloom
+            VP_ERROR("Failed to create new Bloom processor, keeping previous instance");
+            m_Bloom = std::move(oldBloom);
         }
     }
+    catch (const std::exception& e)
+    {
+        // Exception during creation - restore old bloom
+        VP_ERROR("Exception while recreating Bloom processor: {}", e.what());
+        VP_ERROR("Keeping previous Bloom instance");
+        m_Bloom = std::move(oldBloom);
+    }
 }
 ```
-
-**Validation checks**:
-- `m_HDREnabled`: Circuit breaker flag (disabled on resize failure)
-- `m_HDRFramebuffer`: Not null
-- `m_DefaultLitShader`: Not null
-- `m_HDRFramebuffer->IsComplete()`: Framebuffer is valid
-
-**LDR fallback behavior**:
-- Renders scene directly to the screen (default framebuffer)
-- Uses the same PBR shader and lighting setup
-- Skips HDR, bloom, and tone mapping
-- Continues to render scene normally (degraded but functional)
-
----
-
-### Bloom and Tone Mapping Validation
-
-The bloom effect and tone mapping pass also require validation to prevent crashes when resources are unavailable.
-
-**Update** the bloom processing in `Sandbox/src/SandboxApp.cpp` (around line 503):
-
-```cpp
-// =========================================================================
-// Pass 3: Bloom Processing (Chapter 36)
-// =========================================================================
-std::shared_ptr<VizEngine::Texture> bloomTexture = nullptr;
-if (m_HDREnabled && m_EnableBloom && m_Bloom && m_HDRColorTexture)
-{
-    // ... bloom processing ...
-    bloomTexture = m_Bloom->Process(m_HDRColorTexture);
-}
-```
-
-**Update** the tone mapping pass in `Sandbox/src/SandboxApp.cpp` (around lines 517-568):
-
-```cpp
-// =========================================================================
-// Pass 4: Tone Mapping + Post-Processing to Screen (Chapter 35 & 36)
-// =========================================================================
-// Only perform tone mapping if HDR pipeline is active
-if (m_HDREnabled && m_ToneMappingShader && m_HDRColorTexture && m_FullscreenQuad)
-{
-    renderer.SetViewport(0, 0, m_WindowWidth, m_WindowHeight);
-    renderer.Clear(m_ClearColor);
-
-    renderer.DisableDepthTest();
-    m_ToneMappingShader->Bind();
-    
-    // ... (existing tone mapping and post-processing) ...
-    
-    m_FullscreenQuad->Render();
-}
-else if (!m_HDREnabled)
-{
-    // HDR disabled - LDR fallback already rendered directly, no tone mapping needed
-}
-```
-
-**Validation checks**:
-- **Bloom**: Requires `m_HDREnabled`, `m_Bloom`, and `m_HDRColorTexture`
-- **Tone mapping**: Requires `m_HDREnabled`, `m_ToneMappingShader`, `m_HDRColorTexture`, and `m_FullscreenQuad`
 
 > [!TIP]
-> When `m_HDREnabled` is false, the LDR fallback path already rendered directly to the screen in Pass 2, so tone mapping is skipped entirely—the screen already contains the final rendered output.
+> The Bloom processor contains multiple internal framebuffers. Using move semantics (`std::move`) is essential to avoid expensive framebuffer copies and ensure the old processor is properly released when the swap succeeds.
 
 ---
 
-### Adding the HDR Enable Flag
-
-Add the `m_HDREnabled` flag to the member variables section of `SandboxApp.cpp` (around line 1220):
-
-```cpp
-// HDR Settings
-int m_ToneMappingMode = 3;      // 0=Reinhard, 1=ReinhardExt, 2=Exposure, 3=ACES, 4=Uncharted2
-float m_Exposure = 1.0f;
-float m_Gamma = 2.2f;
-float m_WhitePoint = 4.0f;      // For Reinhard Extended
-bool m_HDREnabled = true;       // Tracks HDR pipeline availability
-```
-
-**Initialization**: Starts as `true` (HDR enabled by default)  
-**Runtime**: Set to `false` if framebuffer creation fails during window resize
-
----
-
-### Benefits of This Approach
-
-**1. No Crashes**: Application never dereferences null pointers or uses incomplete framebuffers  
-**2. Graceful Degradation**: Falls back to functional LDR rendering when HDR fails  
-**3. Automatic Recovery**: If a subsequent resize succeeds, HDR is automatically re-enabled  
-**4. Clear Logging**: Error messages inform developers when and why HDR was disabled  
-**5. Production-Ready**: Handles edge cases (extreme window sizes, low memory, driver issues)
-
-> [!CAUTION]
-> While this error handling is robust, in production games you may want to add additional logic:
-> - Limit maximum window size to prevent excessive memory usage
-> - Display a user-facing warning when HDR is disabled
-> - Retry framebuffer creation after a delay
-> - Implement quality presets that automatically reduce resolution under memory pressure
-
----
-
-
----
-
-## Summary
-
-**Post-processing effects** transform rendered images to achieve photorealistic or stylized visuals:
-
-**Bloom** simulates lens scatter, creating soft glows around bright regions:
-1. **Extract** bright pixels (threshold with soft knee)
-2. **Blur** with separable Gaussian (2-pass: horizontal, vertical)
-3. **Composite** additive blend back to HDR buffer (before tone mapping)
-
-**Color Grading** remaps colors for cinematic looks:
-- **3D LUT**: Pre-baked transformation (fast, flexible, artist-friendly)
-- **Parametric**: Real-time controls (saturation, contrast, brightness)
-- Apply **after tone mapping** in LDR space [0,1]
-
-**Architecture**:
-- Multi-pass rendering with custom framebuffers
-- Ping-pong pattern for blur iterations
-- Modularity: Each effect is independent
-- Performance: Downsampling, separable filters, optimized sampling
-
-**Pipeline order**:
-```
-Scene → HDR → Bloom Extract → Blur → Composite → Tone Map → Color Grade → Gamma → Screen
-```
-
-This chapter establishes the **post-processing foundation** used in all modern game engines (Unreal, Unity, CryEngine). Future effects (depth of field, motion blur, SSR) follow the same patterns and integrate seamlessly into this pipeline.
-
----
-
-## Testing and Validation
+## Step 8: Testing and Validation
 
 ### Visual Tests
 
@@ -1732,14 +1122,6 @@ This chapter establishes the **post-processing foundation** used in all modern g
 
 **No bloom on dark areas**: Ensure shadows and mid-tones don't glow (threshold working correctly)
 
-**Color grading verification**:
-1. **Saturation = 0**: Image should be grayscale
-2. **Saturation = 2**: Colors should be very vibrant (potentially oversaturated)
-3. **Contrast = 0**: Flat, washed out
-4. **Contrast = 2**: High contrast, deeper blacks, brighter whites
-5. **Brightness = -0.5**: Darker overall
-6. **Brightness = +0.5**: Brighter overall
-
 ---
 
 ### Performance Benchmarks
@@ -1747,13 +1129,11 @@ This chapter establishes the **post-processing foundation** used in all modern g
 **Expected timings** (1920×1080 scene, bloom at 960×540):
 - **Bloom extraction**: < 0.3 ms
 - **Bloom blur** (5 passes): 1-2 ms
-- **Color grading**: < 0.1 ms (single texture lookup)
-- **Total post-processing overhead**: 1.5-2.5 ms
+- **Total bloom overhead**: 1.5-2.5 ms
 
 **Optimization tips**:
 - Lower bloom resolution: 1/4 instead of 1/2 (4× faster blur)
 - Fewer blur passes: 3 instead of 5 (40% faster)
-- Disable color grading LUT if using only parametric controls
 
 ---
 
@@ -1765,43 +1145,26 @@ This chapter establishes the **post-processing foundation** used in all modern g
 | **Everything glows** | Threshold too low | Raise threshold to 1.0+ for HDR scenes |
 | **Banding in bloom** | Hard threshold | Increase `u_Knee` to 0.5 or higher |
 | **Bloom not visible** | Threshold too high or intensity = 0 | Lower threshold, increase intensity |
-| ** Blocked/pixelated bloom** | Not enough blur passes or low resolution | Increase blur passes or bloom buffer size |
-| **Color grading too strong** | LUT contribution = 1.0 with extreme LUT | Lower `u_LUTContribution` (try 0.5-0.8) |
-| **Washed out colors** | Contrast too low or saturation = 0 | Reset parametric controls to neutral |
+| **Blocky/pixelated bloom** | Not enough blur passes or low resolution | Increase blur passes or bloom buffer size |
 | **Performance issues** | Bloom resolution too high | Use 1/4 scene resolution instead of 1/2 |
 
 ---
 
-## Cross-Chapter Integration
+## Best Practices
 
-### Callbacks to Previous Chapters
+### Bloom Configuration
 
-> In **Chapter 27**, we implemented framebuffers for offscreen rendering. The bloom effect leverages this infrastructure heavily—bloom extraction, blur passes, and ping-pong rendering all use custom framebuffers.
+1. **Start subtle**: `Intensity = 0.04` is a good baseline. Increase gradually.
+2. **Threshold around 1.0**: For properly exposed HDR scenes, only pixels > 1.0 should bloom.
+3. **Use soft knee**: Values between 0.1 and 0.5 prevent banding.
+4. **Blur quality vs performance**: 5 passes is a sweet spot. 3 for performance, 7-10 for quality.
+5. **Downsample**: Always render bloom at reduced resolution (1/2 or 1/4).
 
-> In **Chapter 35**, we built the HDR pipeline with floating-point framebuffers and tone mapping. Bloom operates in this HDR space (before tone mapping), preserving the full dynamic range of bright values. Color grading operates in LDR space (after tone mapping), matching the display range [0,1].
+### Architecture Notes
 
-> The `FullscreenQuad` and multi-pass rendering techniques from **Chapter 35** are reused directly for bloom and color grading, demonstrating the modularity of our post-processing architecture.
+**Modularity**: Bloom is independent from other post-processing effects. It can be toggled without affecting anything else, allowing artists to enable/disable based on performance budgets or artistic direction.
 
----
-
-### Forward References
-
-> In **Chapter 37: Material System**, we'll add per-material emissive properties. When a material has an emissive color, it will automatically interact with bloom—emissive surfaces will glow naturally without additional code, showcasing the power of our HDR+bloom pipeline.
-
-> The post-processing architecture established in this chapter serves as the foundation for additional effects:
-> - **Depth of Field** (Chapter 38): Uses G-buffer depth to blur based on focus distance
-> - **Motion Blur** (Chapter 39): Samples velocity buffer to streak along movement
-> - **Screen-Space Reflections** (Chapter 40): Ray-marches against depth buffer for reflections
-
-> **Color grading LUTs** can be extended with temporal interpolation for cinematic sequences. Imagine a character entering a dark cave—the LUT crossfades from warm (outdoor) to cool/desaturated (cave interior) over 2 seconds, creating a smooth mood transition.
-
----
-
-### Architectural Notes
-
-**Modularity**: Each post-processing effect is independent. Bloom can be toggled without affecting color grading, and vice versa. This allows artists to enable/disable effects based on performance budgets or artistic direction.
-
-**Ping-Pong Pattern**: The dual-framebuffer approach used in bloom (swapping between `m_BlurFB1` and `m_BlurFB2`) is reusable for any multi-pass effect:
+**Ping-Pong Pattern**: The dual-framebuffer approach (swapping between `m_BlurFB1` and `m_BlurFB2`) is reusable for any multi-pass effect:
 - **Temporal Anti-Aliasing (TAA)**: Blend current frame with previous frame
 - **Iterative filters**: Repeated application of the same effect
 - **Feedback loops**: Effects that reference their own previous output
@@ -1811,51 +1174,32 @@ This chapter establishes the **post-processing foundation** used in all modern g
 - **Shadow map blurring**: PCF or PCSS with large filter kernels
 - **Ambient Occlusion**: Bilateral blur for noise reduction
 
-**Performance Scaling**: Rendering bloom at half resolution (or quarter) demonstrates resolution-independent post-processing. This technique extends to other expensive effects—render the costly effect at low resolution, upsample to full resolution for final composite.
-
----
-
-## Best Practices
-
-### Bloom
-
-1. **Start subtle**: `Intensity = 0.04` is a good baseline. Increase gradually.
-2. **Threshold around 1.0**: For properly exposed HDR scenes, only pixels > 1.0 should bloom.
-3. **Use soft knee**: Values between 0.1 and 0.5 prevent banding.
-4. **Blur quality vs performance**: 5 passes is a sweet spot. 3 for performance, 7-10 for quality.
-5. **Downsample**: Always render bloom at reduced resolution (1/2 or 1/4).
-
-### Color Grading
-
-1. **LDR space only**: Apply after tone mapping, never before.
-2. **Artist workflow**: Export neutral LUT, grade in Photoshop/DaVinci, import result.
-3. **Blend factor**: Allow artists to dial down LUT intensity (`u_LUTContribution < 1.0`).
-4. **Multiple LUTs**: Load different LUTs for different scenes/moods, crossfade between them.
-5. **Parametric as preview**: Use parametric controls for quick iteration, bake into LUT for final quality.
-
-### General Post-Processing
-
-1. **Order matters**: Bloom → Tone Map → Color Grade → Gamma is the standard pipeline.
-2. **Toggle-able**: All effects should have an enable/disable flag for debugging.
-3. **ImGui controls**: Expose all parameters for real-time tuning.
-4. **Framebuffer reuse**: Ping-pong between two buffers to minimize memory.
-5. **Profiling**: Measure GPU time per effect to identify bottlenecks.
-
 ---
 
 ## Milestone
 
-At this point, your engine has **industry-standard post-processing**:
+**Chapter 36 Complete - Bloom Post-Processing**
+
+At this point, your engine has **industry-standard bloom**:
 
 **Physically-based bloom** with soft threshold and multi-pass Gaussian blur  
-**3D LUT color grading** for cinematic looks  
-**Parametric color controls** (saturation, contrast, brightness)  
-**Complete HDR pipeline**: Scene → HDR → Bloom → Tone Map → Color Grade → sRGB  
-**Modular architecture**: Each effect is independent and toggle-able  
 **Performance-optimized**: Separable blur, downsampling, ping-pong framebuffers  
+**Complete HDR integration**: Bloom operates in HDR space before tone mapping  
+**Modular architecture**: Bloom is independent and toggle-able  
+**Runtime controls**: ImGui sliders for all bloom parameters  
 
 **Visual comparison**:
-- **Before**: Flat, game-like rendering
-- **After**: Cinematic, film-like quality with depth and polish
+- **Before**: Rendered highlights clamp to white, no glow
+- **After**: Bright surfaces have natural, soft glow that feels cinematic
 
-**Next steps**: In **Chapter 37**, we'll build a Material System that abstracts shader management and parameter binding, preparing for component-based rendering with ECS. Materials with emissive properties will automatically integrate with the bloom system we just built.
+---
+
+## What's Next
+
+In **Chapter 37: Color Grading**, we'll add the final piece of our post-processing pipeline: LUT-based color grading and parametric color controls (saturation, contrast, brightness). This will allow artists to establish mood and visual identity for different scenes.
+
+> **Next:** [Chapter 37: Color Grading](37_ColorGrading.md)
+
+> **Previous:** [Chapter 35: HDR Pipeline](35_HDRPipeline.md)
+
+> **Index:** [Table of Contents](INDEX.md)
