@@ -802,6 +802,9 @@ namespace VizEngine
         float GetIntensity() const { return m_Intensity; }
         int GetBlurPasses() const { return m_BlurPasses; }
 
+        // Validation
+        bool IsValid() const { return m_IsValid; }
+
     private:
         // Framebuffers for multi-pass rendering
         std::shared_ptr<Framebuffer> m_ExtractFB;
@@ -827,6 +830,9 @@ namespace VizEngine
         int m_BlurPasses = 5;        // Number of blur iterations (more = softer)
 
         int m_Width, m_Height;
+
+        // Validation flag
+        bool m_IsValid = false;
     };
 }
 ```
@@ -889,6 +895,16 @@ namespace VizEngine
         m_ExtractShader = std::make_shared<Shader>("../VizEngine/src/resources/shaders/bloom_extract.shader");
         m_BlurShader = std::make_shared<Shader>("../VizEngine/src/resources/shaders/bloom_blur.shader");
 
+        // Validate shaders loaded successfully
+        if (!m_ExtractShader->IsValid() || !m_BlurShader->IsValid())
+        {
+            VP_CORE_ERROR("Bloom: Failed to load shaders!");
+            m_IsValid = false;
+            return;
+        }
+
+        m_IsValid = true;
+
         // ====================================================================
         // Create Fullscreen Quad
         // ====================================================================
@@ -899,6 +915,13 @@ namespace VizEngine
 
     std::shared_ptr<Texture> Bloom::Process(std::shared_ptr<Texture> hdrTexture)
     {
+        // Early return if shaders failed to load
+        if (!m_IsValid)
+        {
+            VP_CORE_ERROR("Bloom::Process called on invalid Bloom instance");
+            return hdrTexture;  // Return input unchanged
+        }
+
         // ====================================================================
         // Pass 1: Extract Bright Regions
         // ====================================================================
@@ -966,7 +989,12 @@ namespace VizEngine
 ```
 
 **Notes**:
-- **Ping-pong**: Swaps between `m_BlurFB1` and `m_BlurFB2` to avoid reading and writing the same framebuffer
+- **Shader validation**: The constructor checks that shaders loaded successfully via `IsValid()` and sets `m_IsValid` flag. `Process()` early-returns if shaders are invalid, preventing crashes.
+- **Ping-pong logic**: Ensures source and target textures are always different to avoid read/write conflicts:
+  - Horizontal pass reads from `sourceTexture` (initially `m_ExtractTexture`), writes to `m_BlurFB1` or `m_BlurFB2`
+  - Updates `sourceTexture` to the texture just written
+  - Vertical pass reads from that texture, writes to the opposite framebuffer
+  - Each iteration properly alternates buffers so a pass never reads from the texture it's writing to
 - **Multiple blur passes**: Each iteration creates a softer bloom (5 passes = 10 total blur operations: 5 horizontal + 5 vertical)
 - **RGB16F textures**: Preserve HDR values during blur
 
