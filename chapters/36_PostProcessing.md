@@ -494,6 +494,55 @@ Final: BloomBlurFB2
 
 ---
 
+## Engine Extensions
+
+Before we implement the post-processing classes, we need to extend our core engine components with a few utility functions that we'll need for configuration and shader management.
+
+### Step 1: Add Shader Uniform Support
+
+We'll need to pass `vec2` uniforms (e.g., texture sizes) to our shaders for the Gaussian blur and downsampling ops.
+
+**1. Update** `VizEngine/src/VizEngine/OpenGL/Shader.h` to add the declaration:
+```cpp
+void SetVec2(const std::string& name, const glm::vec2& value);
+```
+
+**2. Update** `VizEngine/src/VizEngine/OpenGL/Shader.cpp` to implement it:
+```cpp
+void Shader::SetVec2(const std::string& name, const glm::vec2& value)
+{
+    glUniform2f(GetUniformLocation(name), value.x, value.y);
+}
+```
+
+### Step 2: Extend UI Controls
+
+For tweaking post-processing parameters, we'll need integer sliders (for iteration counts) and collapsible headers (for organizing the settings) in our `UIManager`.
+
+**1. Update** `VizEngine/src/VizEngine/GUI/UIManager.h` to add these declarations:
+```cpp
+// Layout
+bool CollapsingHeader(const char* label);
+
+// Integers
+bool SliderInt(const char* label, int* value, int min, int max);
+```
+
+**2. Update** `VizEngine/src/VizEngine/GUI/UIManager.cpp` to implement them:
+```cpp
+bool UIManager::CollapsingHeader(const char* label)
+{
+    return ImGui::CollapsingHeader(label);
+}
+
+bool UIManager::SliderInt(const char* label, int* value, int min, int max)
+{
+    return ImGui::SliderInt(label, value, min, max);
+}
+```
+
+---
+
 ## Bloom Implementation
 
 ### Bloom Extraction Shader
