@@ -990,32 +990,55 @@ namespace VizEngine
 
 ### Neutral LUT Generation
 
-**Option A**: Generate neutral LUT programmatically (shown below)  
-**Option B**: Load from file (artist-created)
+We'll add static methods to the `Texture` class to handle 3D LUT creation and binding. This keeps OpenGL calls encapsulated in the engine layer.
 
-**Add to Sandbox** (or create utility):
+**1. Update** `VizEngine/src/VizEngine/OpenGL/Texture.h` to add static methods:
 
 ```cpp
-std::shared_ptr<VizEngine::Texture> CreateNeutralLUT3D()
-{
-    const int lutSize = 16;  // 16x16x16 = 4096 colors
-    const int totalTexels = lutSize * lutSize * lutSize;
+// =========================================================================
+// Static Utility Methods
+// =========================================================================
 
-    // Allocate data (RGB, float)
+/**
+ * Create a neutral (identity) 3D color grading LUT.
+ * @param size LUT dimensions (e.g., 16 for 16x16x16)
+ * @return OpenGL texture ID for GL_TEXTURE_3D (caller owns, must delete)
+ */
+static unsigned int CreateNeutralLUT3D(int size = 16);
+
+/**
+ * Bind a 3D texture (e.g., color grading LUT) to a texture unit.
+ * @param textureID OpenGL texture ID for GL_TEXTURE_3D
+ * @param slot Texture unit (0-15)
+ */
+static void BindTexture3D(unsigned int textureID, unsigned int slot);
+
+/**
+ * Delete a 3D texture created by CreateNeutralLUT3D.
+ * @param textureID OpenGL texture ID to delete
+ */
+static void DeleteTexture3D(unsigned int textureID);
+```
+
+**2. Update** `VizEngine/src/VizEngine/OpenGL/Texture.cpp` to implement them:
+
+```cpp
+unsigned int Texture::CreateNeutralLUT3D(int size)
+{
+    const int totalTexels = size * size * size;
     std::vector<float> lutData(totalTexels * 3);
 
-    for (int b = 0; b < lutSize; ++b)
+    // Generate identity mapping: input RGB = output RGB
+    for (int b = 0; b < size; ++b)
     {
-        for (int g = 0; g < lutSize; ++g)
+        for (int g = 0; g < size; ++g)
         {
-            for (int r = 0; r < lutSize; ++r)
+            for (int r = 0; r < size; ++r)
             {
-                int index = (b * lutSize * lutSize + g * lutSize + r) * 3;
-
-                // Neutral mapping: input = output
-                lutData[index + 0] = r / float(lutSize - 1);
-                lutData[index + 1] = g / float(lutSize - 1);
-                lutData[index + 2] = b / float(lutSize - 1);
+                int index = (b * size * size + g * size + r) * 3;
+                lutData[index + 0] = r / float(size - 1);
+                lutData[index + 1] = g / float(size - 1);
+                lutData[index + 2] = b / float(size - 1);
             }
         }
     }
@@ -1027,12 +1050,12 @@ std::shared_ptr<VizEngine::Texture> CreateNeutralLUT3D()
 
     glTexImage3D(
         GL_TEXTURE_3D,
-        0,                   // Mip level
-        GL_RGB16F,           // Internal format (HDR for precision)
-        lutSize, lutSize, lutSize,
-        0,                   // Border
-        GL_RGB,              // Format
-        GL_FLOAT,            // Data type
+        0,                      // Mip level
+        GL_RGB16F,              // Internal format (HDR precision)
+        size, size, size,
+        0,                      // Border
+        GL_RGB,                 // Format
+        GL_FLOAT,               // Data type
         lutData.data()
     );
 
@@ -1045,20 +1068,28 @@ std::shared_ptr<VizEngine::Texture> CreateNeutralLUT3D()
 
     glBindTexture(GL_TEXTURE_3D, 0);
 
-    VP_INFO("Neutral 3D LUT created: {}x{}x{}", lutSize, lutSize, lutSize);
+    VP_CORE_INFO("Neutral 3D LUT created: {}x{}x{} (ID: {})", size, size, size, textureID);
 
-    //  Return as Texture object (requires extending Texture class to support GL_TEXTURE_3D)
-    // For now, store textureID and bind manually
-    return nullptr;  // Placeholder, see note below
+    return textureID;
+}
+
+void Texture::BindTexture3D(unsigned int textureID, unsigned int slot)
+{
+    glActiveTexture(GL_TEXTURE0 + slot);
+    glBindTexture(GL_TEXTURE_3D, textureID);
+}
+
+void Texture::DeleteTexture3D(unsigned int textureID)
+{
+    if (textureID != 0)
+    {
+        glDeleteTextures(1, &textureID);
+    }
 }
 ```
 
-> [!NOTE]
-> The `Texture` class currently only supports 2D textures. For 3D LUTs, you have two options:
-> 1. **Extend `Texture`** to support `GL_TEXTURE_3D` (recommended for production)
-> 2. **Use raw OpenGL ID** and bind manually in SandboxApp (simpler for this chapter)
-
-**For simplicity in this chapter**, we'll use raw OpenGL texture IDs for the LUT.
+> [!TIP]
+> By using static methods in the `Texture` class, we keep all OpenGL calls encapsulated in the engine. This prevents linker errors in applications that don't link directly against OpenGL.
 
 ---
 
@@ -1173,10 +1204,13 @@ void OnCreate() override
     // ... existing setup code ...
 
     // ====================================================================
-    // Create Bloom Processor
+    // Post-Processing Setup (Chapter 36)
     // ====================================================================
-    int bloomWidth = m_Framebuffer->GetWidth() / 2;   // Half resolution
-    int bloomHeight = m_Framebuffer->GetHeight() / 2;
+    VP_INFO("Setting up post-processing...");
+
+    // Create Bloom Processor (half resolution for performance)
+    int bloomWidth = m_WindowWidth / 2;
+    int bloomHeight = m_WindowHeight / 2;
     m_Bloom = std::make_unique<VizEngine::Bloom>(bloomWidth, bloomHeight);
     m_Bloom->SetThreshold(m_BloomThreshold);
     m_Bloom->SetKnee(m_BloomKnee);
@@ -1184,38 +1218,15 @@ void OnCreate() override
 
     VP_INFO("Bloom initialized: {}x{}", bloomWidth, bloomHeight);
 
-    // ====================================================================
-    // Create Neutral Color Grading LUT
-    // ====================================================================
-    // (Use the CreateNeutralLUT3D function from earlier)
-    const int lutSize = 16;
-    std::vector<float> lutData(lutSize * lutSize * lutSize * 3);
+    // Create Neutral Color Grading LUT (16x16x16)
+    m_ColorGradingLUT = VizEngine::Texture::CreateNeutralLUT3D(16);
 
-    for (int b = 0; b < lutSize; ++b)
+    if (m_ColorGradingLUT == 0)
     {
-        for (int g = 0; g < lutSize; ++g)
-        {
-            for (int r = 0; r < lutSize; ++r)
-            {
-                int index = (b * lutSize * lutSize + g * lutSize + r) * 3;
-                lutData[index + 0] = r / float(lutSize - 1);
-                lutData[index + 1] = g / float(lutSize - 1);
-                lutData[index + 2] = b / float(lutSize - 1);
-            }
-        }
+        VP_ERROR("Failed to create color grading LUT!");
     }
 
-    glGenTextures(1, &m_ColorGradingLUT);
-    glBindTexture(GL_TEXTURE_3D, m_ColorGradingLUT);
-    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB16F, lutSize, lutSize, lutSize,
-                 0, GL_RGB, GL_FLOAT, lutData.data());
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    VP_INFO("Color grading LUT created: {}x{}x{}", lutSize, lutSize, lutSize);
+    VP_INFO("Post-processing initialized successfully");
 }
 ```
 
@@ -1290,17 +1301,18 @@ void OnRender() override
     m_ToneMappingShader->SetFloat("u_Saturation", m_Saturation);
     m_ToneMappingShader->SetFloat("u_Contrast", m_Contrast);
     m_ToneMappingShader->SetFloat("u_Brightness", m_Brightness);
-    
-    if (m_EnableColorGrading)
+
+    if (m_EnableColorGrading && m_ColorGradingLUT != 0)
     {
+        VizEngine::Texture::BindTexture3D(m_ColorGradingLUT, 2);
         m_ToneMappingShader->SetInt("u_ColorGradingLUT", 2);
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_3D, m_ColorGradingLUT);
     }
 
     // Render fullscreen quad
-    m_FramebufferColor->Bind(0);
     m_FullscreenQuad->Render();
+
+    // Re-enable depth test
+    renderer.EnableDepthTest();
 }
 ```
 
@@ -1366,6 +1378,27 @@ void OnImGuiRender() override
     uiManager.EndWindow();
 }
 ```
+
+---
+
+### OnEvent(): Handle Window Resize
+
+When the window resizes, we need to recreate the Bloom processor to match the new dimensions:
+
+```cpp
+// In WindowResizeEvent handler, after HDR framebuffer recreation:
+if (m_Bloom)
+{
+    VP_INFO("Recreating Bloom processor: {}x{}", m_WindowWidth / 2, m_WindowHeight / 2);
+    m_Bloom = std::make_unique<VizEngine::Bloom>(m_WindowWidth / 2, m_WindowHeight / 2);
+    m_Bloom->SetThreshold(m_BloomThreshold);
+    m_Bloom->SetKnee(m_BloomKnee);
+    m_Bloom->SetBlurPasses(m_BloomBlurPasses);
+}
+```
+
+> [!NOTE]
+> The color grading LUT does not need recreation on resize since it's resolution-independent.
 
 ---
 
