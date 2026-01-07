@@ -39,7 +39,7 @@ chapters:
   - chapters/33_PBRImplementation.md
   - chapters/34_ImageBasedLighting.md
   - chapters/35_HDRPipeline.md
-  - chapters/36_PostProcessing.md
+  - chapters/36_Bloom.md
   - chapters/37_ColorGrading.md
 
 appendices:

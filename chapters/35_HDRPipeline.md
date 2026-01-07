@@ -1638,11 +1638,9 @@ Your engine now supports **industry-standard HDR rendering**—the same workflow
 
 ## What's Next
 
-In **Chapter 36: Material System**, we'll create a production-ready material abstraction that manages shader parameters, texture bindings, and shader variants. This will replace the manual shader binding we've been doing and prepare us for the ECS architecture in later chapters.
+In **Chapter 37: Bloom**, we'll add bloom effect, that leverage the HDR pipeline we built here.
 
-Alternatively, in **Chapter 37: Post-Processing**, we'll add bloom effect, color grading, and other post-processing effects that leverage the HDR pipeline we built here.
-
-> **Next**: [Chapter 36: Material System](36_MaterialSystem.md) or [Chapter 37: Post-Processing](37_PostProcessing.md)
+> **Next**: [Chapter 37: Bloom](37_Bloom.md)
 
 > **Previous**: [Chapter 34: Image-Based Lighting](34_ImageBasedLighting.md)
 
