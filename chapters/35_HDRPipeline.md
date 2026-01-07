@@ -898,7 +898,76 @@ Add to the OpenGL includes section (after `Framebuffer.h`):
 
 ---
 
-## Step 5: Integrate HDR Pipeline into SandboxApp
+## Step 4: Extend UIManager with Combo Widget
+
+Before we can create the HDR controls UI, we need to add a combo box (dropdown) widget to the UIManager. This is needed for selecting tone mapping operators.
+
+**Modify `VizEngine/src/VizEngine/GUI/UIManager.h`:**
+
+Add the declaration after the `Selectable` method:
+
+```cpp
+// Selection
+bool Selectable(const char* label, bool selected);
+bool Combo(const char* label, int* currentItem, const char* const items[], int itemCount);
+```
+
+**Modify `VizEngine/src/VizEngine/GUI/UIManager.cpp`:**
+
+Add the implementation:
+
+```cpp
+bool UIManager::Combo(const char* label, int* currentItem, const char* const items[], int itemCount)
+{
+    return ImGui::Combo(label, currentItem, items, itemCount);
+}
+```
+
+> [!NOTE]
+> **Why UIManager?**: Our `UIManager` wraps ImGui calls to avoid DLL boundary issues. All ImGui functionality used by client applications must go through UIManager methods.
+
+---
+
+## Step 5: Extend Renderer with Depth Test Control
+
+The fullscreen quad for tone mapping should render without depth testing (it's a 2D overlay). We need to add depth test control methods to the Renderer.
+
+**Modify `VizEngine/src/VizEngine/OpenGL/Renderer.h`:**
+
+Add the declarations after the polygon offset methods:
+
+```cpp
+// Shadow mapping helpers
+void EnablePolygonOffset(float factor, float units);
+void DisablePolygonOffset();
+
+// Depth test control (for post-processing)
+void EnableDepthTest();
+void DisableDepthTest();
+```
+
+**Modify `VizEngine/src/VizEngine/OpenGL/Renderer.cpp`:**
+
+Add the implementations:
+
+```cpp
+void Renderer::EnableDepthTest()
+{
+    glEnable(GL_DEPTH_TEST);
+}
+
+void Renderer::DisableDepthTest()
+{
+    glDisable(GL_DEPTH_TEST);
+}
+```
+
+> [!IMPORTANT]
+> **Why Renderer methods?**: We could use raw `glDisable(GL_DEPTH_TEST)` in SandboxApp, but this would require including `<glad/glad.h>` in application code. Using Renderer methods maintains the clean separation between engine and application, and prevents linker errors if someone forgets the include.
+
+---
+
+## Step 6: Integrate HDR Pipeline into SandboxApp
 
 Now we'll update the Sandbox application to use the HDR pipeline.
 
@@ -1045,7 +1114,7 @@ void OnRender() override
     renderer.Clear(m_ClearColor);
 
     // Disable depth test for fullscreen quad
-    glDisable(GL_DEPTH_TEST);
+    renderer.DisableDepthTest();
 
     // Bind tone mapping shader
     m_ToneMappingShader->Bind();
@@ -1064,7 +1133,7 @@ void OnRender() override
     m_FullscreenQuad->Render();
 
     // Re-enable depth test
-    glEnable(GL_DEPTH_TEST);
+    renderer.EnableDepthTest();
 }
 ```
 
