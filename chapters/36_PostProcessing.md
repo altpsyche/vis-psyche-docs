@@ -904,12 +904,13 @@ namespace VizEngine
             return;
         }
 
-        m_IsValid = true;
-
         // ====================================================================
         // Create Fullscreen Quad
         // ====================================================================
         m_Quad = std::make_shared<FullscreenQuad>();
+
+        // All validations passed - mark as valid
+        m_IsValid = true;
 
         VP_CORE_INFO("Bloom created: {}x{}, {} blur passes", width, height, m_BlurPasses);
     }
@@ -921,6 +922,13 @@ namespace VizEngine
         {
             VP_CORE_ERROR("Bloom::Process called on invalid Bloom instance");
             return hdrTexture;  // Return input unchanged
+        }
+
+        // Validate input parameter
+        if (!hdrTexture)
+        {
+            VP_CORE_ERROR("Bloom::Process called with null hdrTexture");
+            return nullptr;
         }
 
         // ====================================================================
@@ -991,7 +999,9 @@ namespace VizEngine
 
 **Notes**:
 - **Framebuffer validation**: The constructor checks that all framebuffers are complete and sets `m_IsValid = false` if any fail, ensuring `Process()` won't run with incomplete framebuffers.
-- **Shader validation**: The constructor checks that shaders loaded successfully via `IsValid()` and sets `m_IsValid` flag. `Process()` early-returns if shaders are invalid, preventing crashes.
+- **Shader validation**: The constructor checks that shaders loaded successfully via `IsValid()`. If validation fails, sets `m_IsValid = false` and returns early.
+- **Initialization order**: `m_IsValid = true` is set **only after** all validations pass (framebuffers, shaders, quad creation), guaranteeing the Bloom object is fully initialized. 
+- **Null-check in Process**: Added validation for `hdrTexture` parameter. If null, logs error and returns `nullptr` to prevent crash.
 - **Ping-pong logic with explicit targets**: Uses `horizTargetFB`/`horizTargetTex` and `vertTargetFB`/`vertTargetTex` per iteration to make read/write separation crystal clear:
   - **Iteration start**: Determines all 4 targets upfront based on `i % 2`
   - **Horizontal pass**: Reads `sourceTexture` → Writes `horizTargetFB`
@@ -1573,6 +1583,37 @@ At this point, your engine has **industry-standard post-processing**:
 - **After**: Cinematic, film-like quality with depth and polish
 
 **Next steps**: In **Chapter 37**, we'll build a Material System that abstracts shader management and parameter binding, preparing for component-based rendering with ECS. Materials with emissive properties will automatically integrate with the bloom system we just built.
+
+---
+
+## Resource Cleanup
+
+### Color Grading LUT Cleanup
+
+The color grading LUT is stored as a raw OpenGL texture ID (`m_ColorGradingLUT`) rather than being wrapped in a RAII class. This means it requires **manual cleanup** in `OnDestroy()` to prevent resource leaks.
+
+**Update** `Sandbox/src/SandboxApp.cpp` `OnDestroy()` method:
+
+```cpp
+void OnDestroy() override
+{
+    // Clean up raw OpenGL resources not wrapped in RAII
+    if (m_ColorGradingLUT != 0)
+    {
+        VizEngine::Texture::DeleteTexture3D(m_ColorGradingLUT);
+        m_ColorGradingLUT = 0;
+    }
+}
+```
+
+> [!IMPORTANT]
+> **Why manual cleanup?** The `m_ColorGradingLUT` is a raw `unsigned int` (OpenGL texture ID) created via `Texture::CreateNeutralLUT3D()`. Unlike `shared_ptr<Texture>` objects that use RAII for automatic cleanup, raw texture IDs must be explicitly deleted to avoid GPU memory leaks.
+
+**Key points**:
+- **Check before deleting**: Only delete if `m_ColorGradingLUT != 0`
+- **Use correct deletion function**: `DeleteTexture3D()` for 3D textures, not `DeleteTexture()`
+- **Reset to zero**: Set `m_ColorGradingLUT = 0` after deletion to prevent double-free
+- **Other RAII objects**: Bloom, framebuffers, and textures wrapped in `shared_ptr` clean up automatically
 
 ---
 
