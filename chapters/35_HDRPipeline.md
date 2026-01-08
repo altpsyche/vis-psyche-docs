@@ -1137,6 +1137,116 @@ void OnRender() override
 }
 ```
 
+**Create a helper method** for shader setup (add to private section after `RenderSceneObjects()`):
+
+```cpp
+void SetupDefaultLitShader()
+{
+    if (!m_DefaultLitShader) return;
+    
+    m_DefaultLitShader->Bind();
+    m_DefaultLitShader->SetMatrix4fv("u_View", m_Camera.GetViewMatrix());
+    m_DefaultLitShader->SetMatrix4fv("u_Projection", m_Camera.GetProjectionMatrix());
+    m_DefaultLitShader->SetVec3("u_ViewPos", m_Camera.GetPosition());
+    
+    m_DefaultLitShader->SetInt("u_LightCount", 4);
+    for (int i = 0; i < 4; ++i)
+    {
+        m_DefaultLitShader->SetVec3("u_LightPositions[" + std::to_string(i) + "]", m_PBRLightPositions[i]);
+        m_DefaultLitShader->SetVec3("u_LightColors[" + std::to_string(i) + "]", m_PBRLightColors[i]);
+    }
+    
+    m_DefaultLitShader->SetBool("u_UseDirLight", true);
+    m_DefaultLitShader->SetVec3("u_DirLightDirection", m_Light.GetDirection());
+    m_DefaultLitShader->SetVec3("u_DirLightColor", m_Light.Diffuse * 2.0f);
+    
+    m_DefaultLitShader->SetMatrix4fv("u_LightSpaceMatrix", m_LightSpaceMatrix);
+    if (m_ShadowMapDepth)
+    {
+        m_ShadowMapDepth->Bind(1);
+        m_DefaultLitShader->SetInt("u_ShadowMap", 1);
+    }
+    
+    if (m_UseIBL && m_IrradianceMap && m_PrefilteredMap && m_BRDFLut)
+    {
+        m_IrradianceMap->Bind(5);
+        m_DefaultLitShader->SetInt("u_IrradianceMap", 5);
+        m_PrefilteredMap->Bind(6);
+        m_DefaultLitShader->SetInt("u_PrefilteredMap", 6);
+        m_BRDFLut->Bind(7);
+        m_DefaultLitShader->SetInt("u_BRDF_LUT", 7);
+        m_DefaultLitShader->SetFloat("u_MaxReflectionLOD", 4.0f);
+        m_DefaultLitShader->SetBool("u_UseIBL", true);
+    }
+    else
+    {
+        m_DefaultLitShader->SetBool("u_UseIBL", false);
+    }
+}
+```
+
+**Now update `OnRender()`** to use the helper and include LDR fallback:
+
+```cpp
+void OnRender() override
+{
+    auto& engine = VizEngine::Engine::Get();
+    auto& renderer = engine.GetRenderer();
+
+    // =========================================================================
+    // Pass 1: Render Scene to HDR Framebuffer
+    // =========================================================================
+    if (m_HDREnabled && m_HDRFramebuffer && m_HDRFramebuffer->IsComplete())
+    {
+        m_HDRFramebuffer->Bind();
+        renderer.Clear(m_ClearColor);
+
+        SetupDefaultLitShader();
+        RenderSceneObjects();
+
+        if (m_ShowSkybox && m_Skybox)
+        {
+            m_Skybox->Render(m_Camera);
+        }
+
+        m_HDRFramebuffer->Unbind();
+    }
+    else
+    {
+        // LDR fallback if HDR unavailable
+        renderer.Clear(m_ClearColor);
+        SetupDefaultLitShader();
+        RenderSceneObjects();
+        
+        if (m_ShowSkybox && m_Skybox)
+        {
+            m_Skybox->Render(m_Camera);
+        }
+    }
+
+    // =========================================================================
+    // Pass 2: Tone Mapping to Screen
+    // =========================================================================
+    if (m_HDREnabled && m_ToneMappingShader && m_HDRColorTexture && m_FullscreenQuad)
+    {
+        renderer.SetViewport(0, 0, m_WindowWidth, m_WindowHeight);
+        renderer.Clear(m_ClearColor);
+        renderer.DisableDepthTest();
+
+        m_ToneMappingShader->Bind();
+        m_HDRColorTexture->Bind(0);
+        m_ToneMappingShader->SetInt("u_HDRBuffer", 0);
+        m_ToneMappingShader->SetInt("u_ToneMappingMode", m_ToneMappingMode);
+        m_ToneMappingShader->SetFloat("u_Exposure", m_Exposure);
+        m_ToneMappingShader->SetFloat("u_Gamma", m_Gamma);
+        m_ToneMappingShader->SetFloat("u_WhitePoint", m_WhitePoint);
+
+        m_FullscreenQuad->Render();
+        renderer.EnableDepthTest();
+    }
+}
+```
+
 ### Add HDR Controls to OnImGuiRender()
 
 Add a new ImGui panel for HDR controls:

@@ -786,34 +786,30 @@ namespace VizEngine
 
         for (int i = 0; i < m_BlurPasses; ++i)
         {
-            // Determine targets for this iteration (explicit to avoid read/write hazards)
-            std::shared_ptr<Framebuffer> horizTargetFB = (i % 2 == 0) ? m_BlurFB1 : m_BlurFB2;
-            std::shared_ptr<Texture> horizTargetTex = (i % 2 == 0) ? m_BlurTexture1 : m_BlurTexture2;
-            std::shared_ptr<Framebuffer> vertTargetFB = (i % 2 == 0) ? m_BlurFB2 : m_BlurFB1;
-            std::shared_ptr<Texture> vertTargetTex = (i % 2 == 0) ? m_BlurTexture2 : m_BlurTexture1;
+            // Alternate targets: if source is Blur2, write to Blur1, and vice versa
+            bool useBlur1AsHorizTarget = (sourceTexture == m_BlurTexture2);
+            
+            std::shared_ptr<Framebuffer> horizTargetFB = useBlur1AsHorizTarget ? m_BlurFB1 : m_BlurFB2;
+            std::shared_ptr<Texture> horizTargetTex = useBlur1AsHorizTarget ? m_BlurTexture1 : m_BlurTexture2;
+            std::shared_ptr<Framebuffer> vertTargetFB = useBlur1AsHorizTarget ? m_BlurFB2 : m_BlurFB1;
+            std::shared_ptr<Texture> vertTargetTex = useBlur1AsHorizTarget ? m_BlurTexture2 : m_BlurTexture1;
 
             // Horizontal pass: read from sourceTexture, write to horizTargetFB
             horizTargetFB->Bind();
             glClear(GL_COLOR_BUFFER_BIT);
-
             m_BlurShader->SetBool("u_Horizontal", true);
             m_BlurShader->SetInt("u_Image", 0);
-
             sourceTexture->Bind(0);
             m_Quad->Render();
-
             horizTargetFB->Unbind();
 
             // Vertical pass: read from horizTargetTex, write to vertTargetFB
             vertTargetFB->Bind();
             glClear(GL_COLOR_BUFFER_BIT);
-
             m_BlurShader->SetBool("u_Horizontal", false);
             m_BlurShader->SetInt("u_Image", 0);
-
             horizTargetTex->Bind(0);
             m_Quad->Render();
-
             vertTargetFB->Unbind();
 
             // Update source for next iteration
@@ -946,9 +942,17 @@ void OnCreate() override
 
 ---
 
-### OnRender(): Multi-Pass Rendering with Bloom
+### OnRender(): Add Bloom Pass
 
-**Update your render loop** to add bloom processing between HDR rendering and tone mapping:
+**Insert the bloom pass** between HDR rendering and tone mapping from Chapter 35.
+
+Your `OnRender()` from Chapter 35 currently has two passes:
+- **Pass 1**: Render to HDR framebuffer
+- **Pass 2**: Tone mapping to screen
+
+We'll add **Pass 2 (Bloom)** in between, making it a 3-pass pipeline.
+
+**Add after the HDR framebuffer unbind, before tone mapping**:
 
 ```cpp
 void OnRender() override
@@ -956,68 +960,85 @@ void OnRender() override
     auto& engine = VizEngine::Engine::Get();
     auto& renderer = engine.GetRenderer();
 
-    // ... (existing light setup) ...
-
-    // ====================================================================
-    // Pass 1: Render Scene to HDR Framebuffer
-    // ====================================================================
-    m_Framebuffer->Bind();
-    renderer.Clear(m_ClearColor);
-    renderer.EnableDepthTest();
-    
-    m_Scene.Render(renderer, *m_DefaultLitShader, m_Camera);
-    
-    m_Framebuffer->Unbind();
-
-    // ====================================================================
-    // Pass 2: Generate Bloom
-    // ====================================================================
-    std::shared_ptr<VizEngine::Texture> bloomTexture = nullptr;
-    if (m_EnableBloom)
+    // =========================================================================
+    // Pass 1: Render Scene to HDR Framebuffer (from Chapter 35)
+    // =========================================================================
+    if (m_HDREnabled && m_HDRFramebuffer && m_HDRFramebuffer->IsComplete())
     {
-        // Update bloom parameters (in case they changed via ImGui)
+        m_HDRFramebuffer->Bind();
+        renderer.Clear(m_ClearColor);
+        SetupDefaultLitShader();
+        RenderSceneObjects();
+        if (m_ShowSkybox && m_Skybox)
+        {
+            m_Skybox->Render(m_Camera);
+        }
+        m_HDRFramebuffer->Unbind();
+    }
+    else
+    {
+        // LDR fallback
+        renderer.Clear(m_ClearColor);
+        SetupDefaultLitShader();
+        RenderSceneObjects();
+        if (m_ShowSkybox && m_Skybox)
+        {
+            m_Skybox->Render(m_Camera);
+        }
+    }
+
+    // =========================================================================
+    // Pass 2: Generate Bloom (NEW - Chapter 36)
+    // =========================================================================
+    std::shared_ptr<VizEngine::Texture> bloomTexture = nullptr;
+    if (m_HDREnabled && m_EnableBloom && m_Bloom && m_HDRColorTexture)
+    {
         m_Bloom->SetThreshold(m_BloomThreshold);
         m_Bloom->SetKnee(m_BloomKnee);
         m_Bloom->SetBlurPasses(m_BloomBlurPasses);
-
-        // Process HDR buffer to generate bloom
-        bloomTexture = m_Bloom->Process(m_FramebufferColor);
+        bloomTexture = m_Bloom->Process(m_HDRColorTexture);
     }
 
-    // ====================================================================
-    // Pass 3: Tone Mapping + Bloom Composite to Screen
-    // ====================================================================
-    renderer.SetViewport(0, 0, m_WindowWidth, m_WindowHeight);
-    renderer.DisableDepthTest();
-    renderer.Clear(m_ClearColor);
-
-    m_ToneMappingShader->Bind();
-    
-    // HDR and tone mapping
-    m_ToneMappingShader->SetInt("u_HDRBuffer", 0);
-    m_ToneMappingShader->SetInt("u_ToneMappingMode", static_cast<int>(m_ToneMappingMode));
-    m_ToneMappingShader->SetFloat("u_Exposure", m_Exposure);
-    m_ToneMappingShader->SetFloat("u_Gamma", m_Gamma);
-    m_ToneMappingShader->SetFloat("u_WhitePoint", m_WhitePoint);
-
-    // Bloom
-    m_ToneMappingShader->SetBool("u_EnableBloom", m_EnableBloom);
-    m_ToneMappingShader->SetFloat("u_BloomIntensity", m_BloomIntensity);
-    if (bloomTexture)
+    // =========================================================================
+    // Pass 3: Tone Mapping + Bloom Composite (from Chapter 35, updated)
+    // =========================================================================
+    if (m_HDREnabled && m_ToneMappingShader && m_HDRColorTexture && m_FullscreenQuad)
     {
-        m_ToneMappingShader->SetInt("u_BloomTexture", 1);
-        bloomTexture->Bind(1);
+        renderer.SetViewport(0, 0, m_WindowWidth, m_WindowHeight);
+        renderer.Clear(m_ClearColor);
+        renderer.DisableDepthTest();
+
+        m_ToneMappingShader->Bind();
+        m_HDRColorTexture->Bind(0);
+        m_ToneMappingShader->SetInt("u_HDRBuffer", 0);
+        m_ToneMappingShader->SetInt("u_ToneMappingMode", m_ToneMappingMode);
+        m_ToneMappingShader->SetFloat("u_Exposure", m_Exposure);
+        m_ToneMappingShader->SetFloat("u_Gamma", m_Gamma);
+        m_ToneMappingShader->SetFloat("u_WhitePoint", m_WhitePoint);
+
+        // NEW: Bloom parameters
+        m_ToneMappingShader->SetBool("u_EnableBloom", m_EnableBloom);
+        m_ToneMappingShader->SetFloat("u_BloomIntensity", m_BloomIntensity);
+        if (bloomTexture)
+        {
+            bloomTexture->Bind(1);
+            m_ToneMappingShader->SetInt("u_BloomTexture", 1);
+        }
+
+        m_FullscreenQuad->Render();
+        renderer.EnableDepthTest();
     }
-
-    m_FramebufferColor->Bind(0);
-
-    // Render fullscreen quad
-    m_FullscreenQuad->Render();
-
-    // Re-enable depth test
-    renderer.EnableDepthTest();
 }
 ```
+
+**What Changed**:
+
+1. **Added Pass 2**: Bloom processing between HDR rendering and tone mapping
+2. **Updated Pass 3**: Added bloom uniform bindings to the existing tone mapping pass
+3. **Preserved structure**: Kept the HDR/LDR fallback and `SetupDefaultLitShader()` from Chapter 35
+
+> [!NOTE]
+> If you also implemented shadow mapping (Chapter 28), it would be **Pass 1** before HDR rendering. The numbering here reflects the HDR pipeline from Chapter 35.
 
 ---
 
