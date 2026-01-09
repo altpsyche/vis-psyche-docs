@@ -786,34 +786,36 @@ namespace VizEngine
 
         for (int i = 0; i < m_BlurPasses; ++i)
         {
-            // Alternate targets: if source is Blur2, write to Blur1, and vice versa
-            bool useBlur1AsHorizTarget = (sourceTexture == m_BlurTexture2);
+            // Ping-pong between buffer pairs to avoid read/write conflicts:
+            // - If source is Blur1, write horizontal to Blur2, vertical to Blur1
+            // - Otherwise (Extract or Blur2), write horizontal to Blur1, vertical to Blur2
+            bool sourceIsBlur1 = (sourceTexture == m_BlurTexture1);
             
-            std::shared_ptr<Framebuffer> horizTargetFB = useBlur1AsHorizTarget ? m_BlurFB1 : m_BlurFB2;
-            std::shared_ptr<Texture> horizTargetTex = useBlur1AsHorizTarget ? m_BlurTexture1 : m_BlurTexture2;
-            std::shared_ptr<Framebuffer> vertTargetFB = useBlur1AsHorizTarget ? m_BlurFB2 : m_BlurFB1;
-            std::shared_ptr<Texture> vertTargetTex = useBlur1AsHorizTarget ? m_BlurTexture2 : m_BlurTexture1;
+            std::shared_ptr<Framebuffer> intermediateFB = sourceIsBlur1 ? m_BlurFB2 : m_BlurFB1;
+            std::shared_ptr<Texture> intermediateTex = sourceIsBlur1 ? m_BlurTexture2 : m_BlurTexture1;
+            std::shared_ptr<Framebuffer> finalFB = sourceIsBlur1 ? m_BlurFB1 : m_BlurFB2;
+            std::shared_ptr<Texture> finalTex = sourceIsBlur1 ? m_BlurTexture1 : m_BlurTexture2;
 
-            // Horizontal pass: read from sourceTexture, write to horizTargetFB
-            horizTargetFB->Bind();
+            // Horizontal pass: read from sourceTexture, write to intermediateFB
+            intermediateFB->Bind();
             glClear(GL_COLOR_BUFFER_BIT);
             m_BlurShader->SetBool("u_Horizontal", true);
             m_BlurShader->SetInt("u_Image", 0);
             sourceTexture->Bind(0);
             m_Quad->Render();
-            horizTargetFB->Unbind();
+            intermediateFB->Unbind();
 
-            // Vertical pass: read from horizTargetTex, write to vertTargetFB
-            vertTargetFB->Bind();
+            // Vertical pass: read from intermediateTex, write to finalFB
+            finalFB->Bind();
             glClear(GL_COLOR_BUFFER_BIT);
             m_BlurShader->SetBool("u_Horizontal", false);
             m_BlurShader->SetInt("u_Image", 0);
-            horizTargetTex->Bind(0);
+            intermediateTex->Bind(0);
             m_Quad->Render();
-            vertTargetFB->Unbind();
+            finalFB->Unbind();
 
             // Update source for next iteration
-            sourceTexture = vertTargetTex;
+            sourceTexture = finalTex;
         }
 
         // Return final blurred result
@@ -826,7 +828,7 @@ namespace VizEngine
 - **Framebuffer validation**: The constructor checks that all framebuffers are complete and sets `m_IsValid = false` if any fail
 - **Shader validation**: The constructor checks that shaders loaded successfully via `IsValid()`
 - **Null-check in Process**: Added validation for `hdrTexture` parameter
-- **Ping-pong logic with explicit targets**: Uses separate variables for horizontal and vertical targets per iteration
+- **Ping-pong logic**: Checks if source is `Blur1` to determine buffer targets, ensuring no read/write conflicts within a pass
 - **Multiple blur passes**: Each iteration creates a softer bloom (5 passes = 10 total blur operations)
 - **RGB16F textures**: Preserve HDR values during blur
 
