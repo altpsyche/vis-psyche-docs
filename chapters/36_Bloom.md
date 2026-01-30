@@ -761,6 +761,13 @@ namespace VizEngine
         }
 
         // ====================================================================
+        // Save and disable depth test (post-processing operates in 2D)
+        // ====================================================================
+        GLboolean depthTestEnabled;
+        glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
+        glDisable(GL_DEPTH_TEST);
+
+        // ====================================================================
         // Pass 1: Extract Bright Regions
         // ====================================================================
         m_ExtractFB->Bind();
@@ -818,6 +825,12 @@ namespace VizEngine
             sourceTexture = finalTex;
         }
 
+        // ====================================================================
+        // Restore depth test state
+        // ====================================================================
+        if (depthTestEnabled)
+            glEnable(GL_DEPTH_TEST);
+
         // Return final blurred result
         return sourceTexture;
     }
@@ -825,6 +838,7 @@ namespace VizEngine
 ```
 
 **Notes**:
+- **Depth test state management**: Saves depth test state, disables for 2D post-processing, then restores. This prevents rendering artifacts if called when depth test is enabled.
 - **Framebuffer validation**: The constructor checks that all framebuffers are complete and sets `m_IsValid = false` if any fail
 - **Shader validation**: The constructor checks that shaders loaded successfully via `IsValid()`
 - **Null-check in Process**: Added validation for `hdrTexture` parameter

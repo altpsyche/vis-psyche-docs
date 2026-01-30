@@ -193,112 +193,177 @@ This ensures color grading works with perceptually uniform values in the [0,1] r
 
 ---
 
-## Step 1: Extend Texture Class for 3D LUTs
+## Step 1: Texture3D RAII Class
 
-We'll add static methods to the `Texture` class to handle 3D LUT creation and binding. This keeps OpenGL calls encapsulated in the engine layer.
+We use a dedicated `Texture3D` class with RAII (Resource Acquisition Is Initialization) to manage 3D textures. This ensures automatic cleanup when the texture goes out of scope—no manual deletion required.
 
-**1. Update** `VizEngine/src/VizEngine/OpenGL/Texture.h` to add static methods:
+**Create** `VizEngine/src/VizEngine/OpenGL/Texture3D.h`:
 
 ```cpp
-// =========================================================================
-// Static Utility Methods
-// =========================================================================
+#pragma once
 
-/**
- * Create a neutral (identity) 3D color grading LUT.
- * @param size LUT dimensions (e.g., 16 for 16x16x16)
- * @return OpenGL texture ID for GL_TEXTURE_3D (caller owns, must delete)
- */
-static unsigned int CreateNeutralLUT3D(int size = 16);
+#include "VizEngine/Core.h"
+#include <glad/glad.h>
+#include <memory>
 
-/**
- * Bind a 3D texture (e.g., color grading LUT) to a texture unit.
- * @param textureID OpenGL texture ID for GL_TEXTURE_3D
- * @param slot Texture unit (0-15)
- */
-static void BindTexture3D(unsigned int textureID, unsigned int slot);
+namespace VizEngine
+{
+    /**
+     * RAII wrapper for OpenGL 3D textures.
+     * Used for color grading LUTs and volumetric textures.
+     */
+    class VizEngine_API Texture3D
+    {
+    public:
+        /**
+         * Create a neutral (identity) color grading LUT.
+         * @param size LUT dimensions (e.g., 16 for 16x16x16)
+         */
+        static std::unique_ptr<Texture3D> CreateNeutralLUT(int size = 16);
 
-/**
- * Delete a 3D texture created by CreateNeutralLUT3D.
- * @param textureID OpenGL texture ID to delete
- */
-static void DeleteTexture3D(unsigned int textureID);
+        /**
+         * Create from raw data.
+         * @param width, height, depth Dimensions
+         * @param data RGB float data (size * size * size * 3 floats)
+         */
+        Texture3D(int width, int height, int depth, const float* data);
+
+        ~Texture3D();
+
+        // Non-copyable
+        Texture3D(const Texture3D&) = delete;
+        Texture3D& operator=(const Texture3D&) = delete;
+
+        // Movable
+        Texture3D(Texture3D&& other) noexcept;
+        Texture3D& operator=(Texture3D&& other) noexcept;
+
+        void Bind(unsigned int slot = 0) const;
+        void Unbind() const;
+
+        unsigned int GetID() const { return m_Texture; }
+        int GetWidth() const { return m_Width; }
+        int GetHeight() const { return m_Height; }
+        int GetDepth() const { return m_Depth; }
+
+    private:
+        Texture3D() = default;  // For factory method
+
+        unsigned int m_Texture = 0;
+        int m_Width = 0;
+        int m_Height = 0;
+        int m_Depth = 0;
+    };
+}
 ```
+
+> [!NOTE]
+> **Why RAII?** The destructor automatically calls `glDeleteTextures`, preventing GPU memory leaks. When `unique_ptr<Texture3D>` goes out of scope, cleanup happens automatically—no manual `OnDestroy()` code needed.
 
 ---
 
-## Step 2: Generate Neutral LUT
+## Step 2: Implement Texture3D
 
-**2. Update** `VizEngine/src/VizEngine/OpenGL/Texture.cpp` to implement the static methods:
+**Create** `VizEngine/src/VizEngine/OpenGL/Texture3D.cpp`:
 
 ```cpp
-unsigned int Texture::CreateNeutralLUT3D(int size)
-{
-    const int totalTexels = size * size * size;
-    std::vector<float> lutData(totalTexels * 3);
+#include "Texture3D.h"
+#include "VizEngine/Log.h"
+#include <vector>
 
-    // Generate identity mapping: input RGB = output RGB
-    for (int b = 0; b < size; ++b)
+namespace VizEngine
+{
+    std::unique_ptr<Texture3D> Texture3D::CreateNeutralLUT(int size)
     {
-        for (int g = 0; g < size; ++g)
+        std::vector<float> data(size * size * size * 3);
+
+        // Generate identity mapping: input RGB = output RGB
+        for (int b = 0; b < size; ++b)
         {
-            for (int r = 0; r < size; ++r)
+            for (int g = 0; g < size; ++g)
             {
-                int index = (b * size * size + g * size + r) * 3;
-                lutData[index + 0] = r / float(size - 1);
-                lutData[index + 1] = g / float(size - 1);
-                lutData[index + 2] = b / float(size - 1);
+                for (int r = 0; r < size; ++r)
+                {
+                    int index = (b * size * size + g * size + r) * 3;
+                    data[index + 0] = static_cast<float>(r) / (size - 1);
+                    data[index + 1] = static_cast<float>(g) / (size - 1);
+                    data[index + 2] = static_cast<float>(b) / (size - 1);
+                }
             }
+        }
+
+        auto lut = std::unique_ptr<Texture3D>(new Texture3D());
+        lut->m_Width = size;
+        lut->m_Height = size;
+        lut->m_Depth = size;
+
+        glGenTextures(1, &lut->m_Texture);
+        glBindTexture(GL_TEXTURE_3D, lut->m_Texture);
+
+        glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB16F,
+            size, size, size, 0,
+            GL_RGB, GL_FLOAT, data.data());
+
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+        glBindTexture(GL_TEXTURE_3D, 0);
+
+        VP_CORE_INFO("Texture3D LUT created: {}x{}x{}, ID={}", size, size, size, lut->m_Texture);
+
+        return lut;
+    }
+
+    Texture3D::Texture3D(int width, int height, int depth, const float* data)
+        : m_Width(width), m_Height(height), m_Depth(depth)
+    {
+        glGenTextures(1, &m_Texture);
+        glBindTexture(GL_TEXTURE_3D, m_Texture);
+
+        glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB16F,
+            width, height, depth, 0,
+            GL_RGB, GL_FLOAT, data);
+
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+        glBindTexture(GL_TEXTURE_3D, 0);
+    }
+
+    Texture3D::~Texture3D()
+    {
+        if (m_Texture != 0)
+        {
+            VP_CORE_INFO("Texture3D destroyed: ID={}", m_Texture);
+            glDeleteTextures(1, &m_Texture);
+            m_Texture = 0;
         }
     }
 
-    // Create 3D texture
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_3D, textureID);
+    // Move constructor and assignment operator...
+    // (Transfer ownership, zero out source)
 
-    glTexImage3D(
-        GL_TEXTURE_3D,
-        0,                      // Mip level
-        GL_RGB16F,              // Internal format (HDR precision)
-        size, size, size,
-        0,                      // Border
-        GL_RGB,                 // Format
-        GL_FLOAT,               // Data type
-        lutData.data()
-    );
-
-    // Set texture parameters
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    glBindTexture(GL_TEXTURE_3D, 0);
-
-    VP_CORE_INFO("Neutral 3D LUT created: {}x{}x{} (ID: {})", size, size, size, textureID);
-
-    return textureID;
-}
-
-void Texture::BindTexture3D(unsigned int textureID, unsigned int slot)
-{
-    glActiveTexture(GL_TEXTURE0 + slot);
-    glBindTexture(GL_TEXTURE_3D, textureID);
-}
-
-void Texture::DeleteTexture3D(unsigned int textureID)
-{
-    if (textureID != 0)
+    void Texture3D::Bind(unsigned int slot) const
     {
-        glDeleteTextures(1, &textureID);
+        glActiveTexture(GL_TEXTURE0 + slot);
+        glBindTexture(GL_TEXTURE_3D, m_Texture);
+    }
+
+    void Texture3D::Unbind() const
+    {
+        glBindTexture(GL_TEXTURE_3D, 0);
     }
 }
 ```
 
 > [!TIP]
-> By using static methods in the `Texture` class, we keep all OpenGL calls encapsulated in the engine. This prevents linker errors in applications that don't link directly against OpenGL.
+> **Add to CMakeLists.txt**: Include `src/VizEngine/OpenGL/Texture3D.cpp` in `VIZENGINE_SOURCES` and `src/VizEngine/OpenGL/Texture3D.h` in `VIZENGINE_HEADERS`.
 
 ---
 
@@ -418,13 +483,16 @@ private:
     // ... existing members including bloom from Chapter 36 ...
 
     // Color Grading (Chapter 37)
-    unsigned int m_ColorGradingLUT = 0;  // Raw OpenGL texture ID
+    std::unique_ptr<VizEngine::Texture3D> m_ColorGradingLUT;  // RAII wrapper
     bool m_EnableColorGrading = false;
     float m_LUTContribution = 1.0f;
     float m_Saturation = 1.0f;
     float m_Contrast = 1.0f;
     float m_Brightness = 0.0f;
 ```
+
+> [!NOTE]
+> **RAII vs Raw ID**: Using `unique_ptr<Texture3D>` instead of `unsigned int` means automatic cleanup—no manual deletion in `OnDestroy()` required.
 
 ---
 
@@ -442,10 +510,10 @@ void OnCreate() override
     // ====================================================================
     VP_INFO("Setting up color grading...");
 
-    // Create Neutral Color Grading LUT (16x16x16)
-    m_ColorGradingLUT = VizEngine::Texture::CreateNeutralLUT3D(16);
+    // Create Neutral Color Grading LUT (16x16x16) using RAII wrapper
+    m_ColorGradingLUT = VizEngine::Texture3D::CreateNeutralLUT(16);
 
-    if (m_ColorGradingLUT == 0)
+    if (!m_ColorGradingLUT)
     {
         VP_ERROR("Failed to create color grading LUT!");
     }
@@ -497,10 +565,10 @@ void OnRender() override
     m_ToneMappingShader->SetFloat("u_Contrast", m_Contrast);
     m_ToneMappingShader->SetFloat("u_Brightness", m_Brightness);
 
-    if (m_EnableColorGrading && m_ColorGradingLUT != 0)
+    if (m_EnableColorGrading && m_ColorGradingLUT)
     {
-        VizEngine::Texture::BindTexture3D(m_ColorGradingLUT, 2);
-        m_ToneMappingShader->SetInt("u_ColorGradingLUT", 2);
+        m_ColorGradingLUT->Bind(VizEngine::TextureSlots::ColorGradingLUT);
+        m_ToneMappingShader->SetInt("u_ColorGradingLUT", VizEngine::TextureSlots::ColorGradingLUT);
     }
 
     m_FramebufferColor->Bind(0);
@@ -582,37 +650,35 @@ void OnImGuiRender() override
 
 ---
 
-## Step 6: Resource Cleanup
+## Step 6: Resource Cleanup (RAII)
 
-### Color Grading LUT Cleanup
+### Automatic Cleanup via RAII
 
-The color grading LUT is stored as a raw OpenGL texture ID (`m_ColorGradingLUT`) rather than being wrapped in a RAII class. This means it requires **manual cleanup** in `OnDestroy()` to prevent resource leaks.
+Because `m_ColorGradingLUT` is a `unique_ptr<Texture3D>`, cleanup is **automatic**. When the `SandboxApp` object is destroyed, the `unique_ptr` destructor runs, which calls `Texture3D::~Texture3D()`, which calls `glDeleteTextures`.
 
-**Update** `Sandbox/src/SandboxApp.cpp` `OnDestroy()` method:
+**No manual cleanup required:**
 
 ```cpp
 void OnDestroy() override
 {
-    // Clean up raw OpenGL resources not wrapped in RAII
-    if (m_ColorGradingLUT != 0)
-    {
-        VizEngine::Texture::DeleteTexture3D(m_ColorGradingLUT);
-        m_ColorGradingLUT = 0;
-    }
+    // No manual cleanup needed for m_ColorGradingLUT!
+    // unique_ptr<Texture3D> handles deletion automatically via RAII.
+
+    // Other cleanup (if any)...
 }
 ```
 
-> [!IMPORTANT]
-> **Why manual cleanup?** The `m_ColorGradingLUT` is a raw `unsigned int` (OpenGL texture ID) created via `Texture::CreateNeutralLUT3D()`. Unlike `shared_ptr<Texture>` objects that use RAII for automatic cleanup, raw texture IDs must be explicitly deleted to avoid GPU memory leaks.
+> [!TIP]
+> **RAII Advantage**: By wrapping OpenGL resources in classes with proper destructors, we eliminate memory leak bugs. The compiler ensures cleanup happens—even if exceptions are thrown or early returns occur.
 
 **Key points**:
-- **Check before deleting**: Only delete if `m_ColorGradingLUT != 0`
-- **Use correct deletion function**: `DeleteTexture3D()` for 3D textures, not `DeleteTexture()`
-- **Reset to zero**: Set `m_ColorGradingLUT = 0` after deletion to prevent double-free
-- **Other RAII objects**: Bloom, framebuffers, and textures wrapped in `shared_ptr` clean up automatically
+- **No manual deletion**: `unique_ptr` destructor handles it
+- **No null checks**: `unique_ptr::reset()` handles null automatically
+- **No double-free bugs**: Move semantics prevent aliasing
+- **Resolution-independent**: LUT doesn't need recreation on window resize (it's a lookup table, not a render target)
 
 > [!NOTE]
-> The color grading LUT does not need recreation on window resize since it's resolution-independent (it's a lookup table, not a rendering target).
+> This RAII pattern is consistent with how we handle `Texture`, `Shader`, `Framebuffer`, and other GPU resources throughout the engine.
 
 ---
 

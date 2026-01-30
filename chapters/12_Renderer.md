@@ -12,6 +12,9 @@ Create a `Renderer` class to centralize drawing operations and OpenGL state mana
 |--------|---------|
 | `Clear(float*)` | Clear screen with color |
 | `ClearDepth()` | Clear depth buffer only |
+| `SetViewport(x, y, w, h)` | Set OpenGL viewport |
+| `PushViewport()` | Save current viewport to stack |
+| `PopViewport()` | Restore viewport from stack |
 | `Draw(VAO, IBO, Shader)` | Issue draw call |
 
 ---
@@ -30,6 +33,8 @@ Create a `Renderer` class to centralize drawing operations and OpenGL state mana
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
 #include "VizEngine/Core.h"
+#include <vector>
+#include <array>
 
 namespace VizEngine
 {
@@ -38,10 +43,22 @@ namespace VizEngine
     public:
         void Clear(float clearColor[4]);
         void ClearDepth();
+        void SetViewport(int x, int y, int width, int height);
         void Draw(const VertexArray& va, const IndexBuffer& ib, const Shader& shader) const;
+
+        // Viewport stack for safe state management
+        void PushViewport();
+        void PopViewport();
+        void GetViewport(int& x, int& y, int& width, int& height) const;
+
+    private:
+        std::vector<std::array<int, 4>> m_ViewportStack;
     };
 }
 ```
+
+> [!TIP]
+> The viewport stack (`PushViewport`/`PopViewport`) is essential for multi-pass rendering. When rendering to a shadow map at a different resolution, save the current viewport, render to the shadow map, then restore—preventing hard-coded viewport restoration bugs.
 
 ---
 
@@ -53,8 +70,8 @@ namespace VizEngine
 // VizEngine/src/VizEngine/OpenGL/Renderer.cpp
 
 #include "Renderer.h"
-#include "Commons.h"
 #include "VizEngine/Log.h"
+#include <glad/glad.h>
 
 namespace VizEngine
 {
@@ -67,6 +84,41 @@ namespace VizEngine
     void Renderer::ClearDepth()
     {
         glClear(GL_DEPTH_BUFFER_BIT);
+    }
+
+    void Renderer::SetViewport(int x, int y, int width, int height)
+    {
+        glViewport(x, y, width, height);
+    }
+
+    void Renderer::PushViewport()
+    {
+        std::array<int, 4> viewport;
+        glGetIntegerv(GL_VIEWPORT, viewport.data());
+        m_ViewportStack.push_back(viewport);
+    }
+
+    void Renderer::PopViewport()
+    {
+        if (m_ViewportStack.empty())
+        {
+            VP_CORE_WARN("Renderer::PopViewport() called with empty stack");
+            return;
+        }
+
+        auto& vp = m_ViewportStack.back();
+        glViewport(vp[0], vp[1], vp[2], vp[3]);
+        m_ViewportStack.pop_back();
+    }
+
+    void Renderer::GetViewport(int& x, int& y, int& width, int& height) const
+    {
+        GLint viewport[4];
+        glGetIntegerv(GL_VIEWPORT, viewport);
+        x = viewport[0];
+        y = viewport[1];
+        width = viewport[2];
+        height = viewport[3];
     }
 
     void Renderer::Draw(const VertexArray& va, const IndexBuffer& ib, const Shader& shader) const
@@ -152,6 +204,8 @@ Benefits of centralized Draw:
 You have:
 - `Clear(float[4])` for screen clearing
 - `ClearDepth()` for depth-only clear
+- `SetViewport()` for viewport control
+- `PushViewport()`/`PopViewport()` for safe multi-pass rendering
 - `Draw(VAO, IBO, Shader)` for draw calls
 - Centralized OpenGL draw logic
 

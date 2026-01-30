@@ -147,6 +147,55 @@ Application Code                     GPU
 
 ---
 
+## TextureSlots Constants
+
+Before implementing materials, we define standardized texture slot assignments. This prevents slot collisions between different texture types and makes the code self-documenting.
+
+**The constants are defined in** `VizEngine/src/VizEngine/OpenGL/Commons.h`:
+
+```cpp
+namespace VizEngine
+{
+    /**
+     * Standard texture slot assignments for PBR rendering.
+     * Use these constants to avoid slot collisions between materials and manual binding.
+     */
+    namespace TextureSlots
+    {
+        // Material textures (0-4)
+        constexpr int Albedo = 0;
+        constexpr int Normal = 1;
+        constexpr int MetallicRoughness = 2;
+        constexpr int AO = 3;
+        constexpr int Emissive = 4;
+
+        // IBL textures (5-7)
+        constexpr int Irradiance = 5;
+        constexpr int Prefiltered = 6;
+        constexpr int BRDF_LUT = 7;
+
+        // Shadow map (8)
+        constexpr int ShadowMap = 8;
+
+        // Post-processing (9-11)
+        constexpr int HDRBuffer = 9;
+        constexpr int BloomTexture = 10;
+        constexpr int ColorGradingLUT = 11;
+
+        // User/custom (12-15)
+        constexpr int Custom0 = 12;
+        constexpr int Custom1 = 13;
+        constexpr int Custom2 = 14;
+        constexpr int Custom3 = 15;
+    }
+}
+```
+
+> [!TIP]
+> **Why standardized slots?** OpenGL has 16 texture units (0-15). By defining constants, we ensure materials, IBL, shadows, and post-processing never accidentally use the same slot. This eliminates a common source of rendering bugs.
+
+---
+
 ## Step 1: Create MaterialParameter Type
 
 We need a type-safe way to store different parameter types (float, vec3, vec4, int, textures).
@@ -159,14 +208,14 @@ We need a type-safe way to store different parameter types (float, vec3, vec4, i
 #pragma once
 
 #include "VizEngine/Core.h"
-#include <glm/glm.hpp>
+#include "glm.hpp"
 #include <variant>
 #include <memory>
+#include <string>
 
 namespace VizEngine
 {
     class Texture;
-    class Cubemap;
 
     /**
      * Type-safe storage for material parameter values.
@@ -181,49 +230,23 @@ namespace VizEngine
         glm::vec4,
         glm::mat3,
         glm::mat4,
-        std::shared_ptr<Texture>,
-        std::shared_ptr<Cubemap>
+        std::shared_ptr<Texture>
     >;
 
     /**
-     * Material parameter with name and value.
-     */
-    struct VizEngine_API MaterialParameter
-    {
-        std::string Name;
-        MaterialParameterValue Value;
-
-        MaterialParameter() = default;
-        MaterialParameter(const std::string& name, const MaterialParameterValue& value)
-            : Name(name), Value(value) {}
-    };
-
-    /**
      * Texture slot binding information.
+     * Handles both 2D textures and cubemaps via the IsCubemap flag.
      */
     struct VizEngine_API TextureSlot
     {
         std::string UniformName;            // e.g., "u_AlbedoTexture"
         std::shared_ptr<Texture> TextureRef;
         int Slot = 0;                       // Texture unit (0-15)
+        bool IsCubemap = false;             // True if texture is a cubemap
 
         TextureSlot() = default;
-        TextureSlot(const std::string& name, std::shared_ptr<Texture> tex, int slot)
-            : UniformName(name), TextureRef(tex), Slot(slot) {}
-    };
-
-    /**
-     * Cubemap slot binding information.
-     */
-    struct VizEngine_API CubemapSlot
-    {
-        std::string UniformName;            // e.g., "u_IrradianceMap"
-        std::shared_ptr<Cubemap> CubemapRef;
-        int Slot = 0;                       // Texture unit (0-15)
-
-        CubemapSlot() = default;
-        CubemapSlot(const std::string& name, std::shared_ptr<Cubemap> cube, int slot)
-            : UniformName(name), CubemapRef(cube), Slot(slot) {}
+        TextureSlot(const std::string& name, std::shared_ptr<Texture> tex, int slot, bool isCube = false)
+            : UniformName(name), TextureRef(tex), Slot(slot), IsCubemap(isCube) {}
     };
 }
 ```
@@ -243,7 +266,7 @@ namespace VizEngine
 #pragma once
 
 #include "VizEngine/Core.h"
-#include "VizEngine/Core/MaterialParameter.h"
+#include "VizEngine/Renderer/MaterialParameter.h"
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -253,7 +276,6 @@ namespace VizEngine
 {
     class Shader;
     class Texture;
-    class Cubemap;
 
     /**
      * RenderMaterial encapsulates a shader and its parameters.
@@ -263,10 +285,13 @@ namespace VizEngine
      *   auto material = std::make_shared<RenderMaterial>(shader);
      *   material->SetFloat("u_Roughness", 0.5f);
      *   material->SetTexture("u_AlbedoTexture", texture, 0);
-     *   
+     *
      *   // In render loop:
      *   material->Bind();
      *   // Render mesh...
+     *
+     * Note: Named "RenderMaterial" to avoid conflict with existing Material struct
+     *       used for glTF model loading.
      */
     class VizEngine_API RenderMaterial
     {
@@ -277,7 +302,7 @@ namespace VizEngine
          * @param name Optional material name for debugging
          */
         RenderMaterial(std::shared_ptr<Shader> shader, const std::string& name = "Unnamed");
-        virtual ~Material() = default;
+        virtual ~RenderMaterial() = default;
 
         // =====================================================================
         // Core Operations
@@ -316,19 +341,12 @@ namespace VizEngine
          * @param name Uniform name (e.g., "u_AlbedoTexture")
          * @param texture Texture to bind
          * @param slot Texture unit (0-15)
+         * @param isCubemap True if texture is a cubemap
          */
-        void SetTexture(const std::string& name, std::shared_ptr<Texture> texture, int slot);
-
-        /**
-         * Set cubemap for a uniform sampler.
-         * @param name Uniform name (e.g., "u_IrradianceMap")
-         * @param cubemap Cubemap to bind
-         * @param slot Texture unit (0-15)
-         */
-        void SetCubemap(const std::string& name, std::shared_ptr<Cubemap> cubemap, int slot);
+        void SetTexture(const std::string& name, std::shared_ptr<Texture> texture, int slot, bool isCubemap = false);
 
         // =====================================================================
-        // Parameter Getters
+        // Parameter Query
         // =====================================================================
 
         template<typename T>
@@ -371,11 +389,6 @@ namespace VizEngine
          */
         virtual void BindTextures();
 
-        /**
-         * Bind all cubemaps to their slots.
-         */
-        virtual void BindCubemaps();
-
     protected:
         std::string m_Name;
         std::shared_ptr<Shader> m_Shader;
@@ -383,9 +396,8 @@ namespace VizEngine
         // Parameter storage
         std::unordered_map<std::string, MaterialParameterValue> m_Parameters;
 
-        // Texture bindings
+        // Texture bindings (handles both 2D textures and cubemaps)
         std::vector<TextureSlot> m_TextureSlots;
-        std::vector<CubemapSlot> m_CubemapSlots;
     };
 }
 ```
@@ -402,7 +414,6 @@ namespace VizEngine
 #include "RenderMaterial.h"
 #include "VizEngine/OpenGL/Shader.h"
 #include "VizEngine/OpenGL/Texture.h"
-#include "VizEngine/OpenGL/Cubemap.h"
 #include "VizEngine/Log.h"
 
 namespace VizEngine
@@ -412,7 +423,7 @@ namespace VizEngine
     {
         if (!m_Shader)
         {
-            VP_CORE_WARN("Material '{}' created with null shader", name);
+            VP_CORE_WARN("RenderMaterial '{}' created with null shader", name);
         }
     }
 
@@ -426,7 +437,6 @@ namespace VizEngine
 
         m_Shader->Bind();
         BindTextures();
-        BindCubemaps();
         UploadParameters();
     }
 
@@ -486,7 +496,7 @@ namespace VizEngine
     // Texture Binding
     // =========================================================================
 
-    void RenderMaterial::SetTexture(const std::string& name, std::shared_ptr<Texture> texture, int slot)
+    void RenderMaterial::SetTexture(const std::string& name, std::shared_ptr<Texture> texture, int slot, bool isCubemap)
     {
         // Check if slot already exists, update it
         for (auto& texSlot : m_TextureSlots)
@@ -495,29 +505,13 @@ namespace VizEngine
             {
                 texSlot.TextureRef = texture;
                 texSlot.Slot = slot;
+                texSlot.IsCubemap = isCubemap;
                 return;
             }
         }
 
         // Add new slot
-        m_TextureSlots.emplace_back(name, texture, slot);
-    }
-
-    void RenderMaterial::SetCubemap(const std::string& name, std::shared_ptr<Cubemap> cubemap, int slot)
-    {
-        // Check if slot already exists, update it
-        for (auto& cubeSlot : m_CubemapSlots)
-        {
-            if (cubeSlot.UniformName == name)
-            {
-                cubeSlot.CubemapRef = cubemap;
-                cubeSlot.Slot = slot;
-                return;
-            }
-        }
-
-        // Add new slot
-        m_CubemapSlots.emplace_back(name, cubemap, slot);
+        m_TextureSlots.emplace_back(name, texture, slot, isCubemap);
     }
 
     // =========================================================================
@@ -575,7 +569,7 @@ namespace VizEngine
                 {
                     m_Shader->SetMatrix4fv(name, arg);
                 }
-                // Textures and cubemaps are handled separately in BindTextures/BindCubemaps
+                // Textures are handled separately in BindTextures
             }, value);
         }
     }
@@ -590,20 +584,6 @@ namespace VizEngine
             {
                 texSlot.TextureRef->Bind(texSlot.Slot);
                 m_Shader->SetInt(texSlot.UniformName, texSlot.Slot);
-            }
-        }
-    }
-
-    void RenderMaterial::BindCubemaps()
-    {
-        if (!m_Shader) return;
-
-        for (const auto& cubeSlot : m_CubemapSlots)
-        {
-            if (cubeSlot.CubemapRef)
-            {
-                cubeSlot.CubemapRef->Bind(cubeSlot.Slot);
-                m_Shader->SetInt(cubeSlot.UniformName, cubeSlot.Slot);
             }
         }
     }
@@ -623,8 +603,8 @@ The PBR material pre-configures all the uniforms needed for our `defaultlit.shad
 
 #pragma once
 
-#include "Material.h"
-#include <glm/glm.hpp>
+#include "RenderMaterial.h"
+#include "glm.hpp"
 
 namespace VizEngine
 {
@@ -679,8 +659,8 @@ namespace VizEngine
         // IBL (Environment) Maps
         // =====================================================================
 
-        void SetIrradianceMap(std::shared_ptr<Cubemap> irradianceMap);
-        void SetPrefilteredMap(std::shared_ptr<Cubemap> prefilteredMap);
+        void SetIrradianceMap(std::shared_ptr<Texture> irradianceMap);
+        void SetPrefilteredMap(std::shared_ptr<Texture> prefilteredMap);
         void SetBRDFLUT(std::shared_ptr<Texture> brdfLut);
         void SetUseIBL(bool useIBL);
 
@@ -697,19 +677,17 @@ namespace VizEngine
         // =====================================================================
 
         void SetModelMatrix(const glm::mat4& model);
+        void SetNormalMatrix(const glm::mat3& normalMatrix);
         void SetViewMatrix(const glm::mat4& view);
         void SetProjectionMatrix(const glm::mat4& projection);
         void SetViewPosition(const glm::vec3& viewPos);
 
-        // =====================================================================
-        // Convenience Methods
-        // =====================================================================
-
         /**
-         * Set all matrices at once.
+         * Set all matrices at once (including normal matrix).
          */
-        void SetTransforms(const glm::mat4& model, const glm::mat4& view, 
-                          const glm::mat4& projection, const glm::vec3& viewPos);
+        void SetTransforms(const glm::mat4& model, const glm::mat4& view,
+                          const glm::mat4& projection, const glm::vec3& viewPos,
+                          const glm::mat3& normalMatrix);
 
     protected:
         void UploadParameters() override;
@@ -739,12 +717,12 @@ namespace VizEngine
 #include "PBRMaterial.h"
 #include "VizEngine/OpenGL/Shader.h"
 #include "VizEngine/OpenGL/Texture.h"
-#include "VizEngine/OpenGL/Cubemap.h"
+#include "VizEngine/OpenGL/Commons.h"  // TextureSlots constants
 
 namespace VizEngine
 {
     PBRMaterial::PBRMaterial(std::shared_ptr<Shader> shader, const std::string& name)
-        : Material(shader, name)
+        : RenderMaterial(shader, name)
     {
         // Set default PBR values
         SetFloat("u_Metallic", m_Metallic);
@@ -806,14 +784,14 @@ namespace VizEngine
     }
 
     // =========================================================================
-    // Texture Maps
+    // Texture Maps (using TextureSlots constants from Commons.h)
     // =========================================================================
 
     void PBRMaterial::SetAlbedoTexture(std::shared_ptr<Texture> texture)
     {
         if (texture)
         {
-            SetTexture("u_AlbedoTexture", texture, 0);
+            SetTexture("u_AlbedoTexture", texture, TextureSlots::Albedo);
             m_HasAlbedoTexture = true;
             SetBool("u_UseAlbedoTexture", true);
         }
@@ -828,7 +806,7 @@ namespace VizEngine
     {
         if (texture)
         {
-            SetTexture("u_NormalTexture", texture, 1);
+            SetTexture("u_NormalTexture", texture, TextureSlots::Normal);
             m_HasNormalTexture = true;
             SetBool("u_UseNormalMap", true);
         }
@@ -843,7 +821,7 @@ namespace VizEngine
     {
         if (texture)
         {
-            SetTexture("u_MetallicRoughnessTexture", texture, 2);
+            SetTexture("u_MetallicRoughnessTexture", texture, TextureSlots::MetallicRoughness);
             SetBool("u_UseMetallicRoughnessTexture", true);
         }
         else
@@ -856,7 +834,7 @@ namespace VizEngine
     {
         if (texture)
         {
-            SetTexture("u_AOTexture", texture, 3);
+            SetTexture("u_AOTexture", texture, TextureSlots::AO);
             SetBool("u_UseAOTexture", true);
         }
         else
@@ -869,7 +847,7 @@ namespace VizEngine
     {
         if (texture)
         {
-            SetTexture("u_EmissiveTexture", texture, 4);
+            SetTexture("u_EmissiveTexture", texture, TextureSlots::Emissive);
             SetBool("u_UseEmissiveTexture", true);
         }
         else
@@ -879,22 +857,22 @@ namespace VizEngine
     }
 
     // =========================================================================
-    // IBL Maps
+    // IBL Maps (using TextureSlots constants)
     // =========================================================================
 
-    void PBRMaterial::SetIrradianceMap(std::shared_ptr<Cubemap> irradianceMap)
+    void PBRMaterial::SetIrradianceMap(std::shared_ptr<Texture> irradianceMap)
     {
         if (irradianceMap)
         {
-            SetCubemap("u_IrradianceMap", irradianceMap, 5);
+            SetTexture("u_IrradianceMap", irradianceMap, TextureSlots::Irradiance, true);  // true = cubemap
         }
     }
 
-    void PBRMaterial::SetPrefilteredMap(std::shared_ptr<Cubemap> prefilteredMap)
+    void PBRMaterial::SetPrefilteredMap(std::shared_ptr<Texture> prefilteredMap)
     {
         if (prefilteredMap)
         {
-            SetCubemap("u_PrefilteredMap", prefilteredMap, 6);
+            SetTexture("u_PrefilteredMap", prefilteredMap, TextureSlots::Prefiltered, true);  // true = cubemap
         }
     }
 
@@ -902,7 +880,7 @@ namespace VizEngine
     {
         if (brdfLut)
         {
-            SetTexture("u_BRDFLut", brdfLut, 7);
+            SetTexture("u_BRDF_LUT", brdfLut, TextureSlots::BRDF_LUT);  // Note: uniform name must match shader
         }
     }
 
@@ -920,7 +898,7 @@ namespace VizEngine
     {
         if (shadowMap)
         {
-            SetTexture("u_ShadowMap", shadowMap, 8);
+            SetTexture("u_ShadowMap", shadowMap, TextureSlots::ShadowMap);
         }
     }
 
@@ -944,6 +922,11 @@ namespace VizEngine
         SetMat4("u_Model", model);
     }
 
+    void PBRMaterial::SetNormalMatrix(const glm::mat3& normalMatrix)
+    {
+        SetMat3("u_NormalMatrix", normalMatrix);
+    }
+
     void PBRMaterial::SetViewMatrix(const glm::mat4& view)
     {
         SetMat4("u_View", view);
@@ -960,9 +943,11 @@ namespace VizEngine
     }
 
     void PBRMaterial::SetTransforms(const glm::mat4& model, const glm::mat4& view,
-                                    const glm::mat4& projection, const glm::vec3& viewPos)
+                                    const glm::mat4& projection, const glm::vec3& viewPos,
+                                    const glm::mat3& normalMatrix)
     {
         SetModelMatrix(model);
+        SetNormalMatrix(normalMatrix);
         SetViewMatrix(view);
         SetProjectionMatrix(projection);
         SetViewPosition(viewPos);
@@ -1016,7 +1001,7 @@ namespace VizEngine
         glm::vec4 GetColor() const;
 
         // Texture
-        void SetTexture(std::shared_ptr<Texture> texture);
+        void SetMainTexture(std::shared_ptr<Texture> texture);
         void SetUseTexture(bool useTexture);
 
         // Transforms
@@ -1056,11 +1041,11 @@ namespace VizEngine
         return m_Color;
     }
 
-    void UnlitMaterial::SetTexture(std::shared_ptr<Texture> texture)
+    void UnlitMaterial::SetMainTexture(std::shared_ptr<Texture> texture)
     {
         if (texture)
         {
-            RenderMaterial::SetTexture("u_Texture", texture, 0);
+            SetTexture("u_Texture", texture, 0);
             SetBool("u_UseTexture", true);
         }
         else
@@ -1097,6 +1082,7 @@ Provide convenient factory methods for creating common material types.
 #include "VizEngine/Core.h"
 #include <memory>
 #include <string>
+#include "glm.hpp"
 
 namespace VizEngine
 {
@@ -1104,8 +1090,6 @@ namespace VizEngine
     class PBRMaterial;
     class UnlitMaterial;
     class Shader;
-    class Texture;
-    class Cubemap;
 
     /**
      * Factory for creating pre-configured materials.
@@ -1417,13 +1401,20 @@ void RenderSceneObjects()
     {
         if (!obj.Active || !obj.MeshPtr) continue;
 
+        // Compute model and normal matrices (normal matrix computed on CPU for performance)
+        glm::mat4 model = obj.ObjectTransform.GetModelMatrix();
+        glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
+
+        // Per-object transforms
+        m_DefaultPBRMaterial->SetModelMatrix(model);
+        m_DefaultPBRMaterial->SetNormalMatrix(normalMatrix);
+
         // Per-object material properties
-        m_DefaultPBRMaterial->SetModelMatrix(obj.ObjectTransform.GetModelMatrix());
         m_DefaultPBRMaterial->SetAlbedo(glm::vec3(obj.Color));
         m_DefaultPBRMaterial->SetMetallic(obj.Metallic);
         m_DefaultPBRMaterial->SetRoughness(obj.Roughness);
         m_DefaultPBRMaterial->SetAO(1.0f);
-        
+
         if (obj.TexturePtr)
         {
             m_DefaultPBRMaterial->SetAlbedoTexture(obj.TexturePtr);
@@ -1438,10 +1429,13 @@ void RenderSceneObjects()
 
         // Draw
         obj.MeshPtr->Bind();
-        renderer.Draw(obj.MeshPtr->GetVertexArray(), obj.MeshPtr->GetIndexBuffer(), 
+        renderer.Draw(obj.MeshPtr->GetVertexArray(), obj.MeshPtr->GetIndexBuffer(),
                      *m_DefaultPBRMaterial->GetShader());
     }
 }
+
+> [!NOTE]
+> **Normal Matrix Optimization**: The normal matrix is computed as `transpose(inverse(mat3(model)))` once per object on the CPU, avoiding expensive per-vertex inverse() calls in the shader. See **Chapter 33** for details.
 ```
 
 ---
