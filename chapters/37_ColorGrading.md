@@ -734,6 +734,6 @@ In **Chapter 38: Material System**, we'll build an abstraction layer for shaders
 
 > **Next:** [Chapter 38: Material System](38_MaterialSystem.md)
 
-> **Previous:** [Chapter 36: Bloom Post-Processing](36_BloomPostProcessing.md)
+> **Previous:** [Chapter 36: Bloom](36_Bloom.md)
 
 > **Index:** [Table of Contents](INDEX.md)

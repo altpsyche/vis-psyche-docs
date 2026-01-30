@@ -41,6 +41,7 @@ chapters:
   - chapters/35_HDRPipeline.md
   - chapters/36_Bloom.md
   - chapters/37_ColorGrading.md
+  - chapters/38_MaterialSystem.md
 
 appendices:
   - chapters/A_Reference.md

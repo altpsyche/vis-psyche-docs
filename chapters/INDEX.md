@@ -63,6 +63,7 @@ A step-by-step guide to building a 3D rendering engine from scratch using C++ an
 - [Chapter 35: HDR Pipeline](35_HDRPipeline.md)
 - [Chapter 36: Bloom](36_Bloom.md)
 - [Chapter 37: Color Grading](37_ColorGrading.md)
+- [Chapter 38: Material System](38_MaterialSystem.md)
 
 ### Appendices
 - [Appendix A: Code Reference](A_Reference.md)

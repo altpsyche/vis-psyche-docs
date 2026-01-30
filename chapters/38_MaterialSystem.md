@@ -50,7 +50,7 @@ By the end of this chapter, you'll have:
 
 | Feature | Description |
 |---------|-------------|
-| **Material Class** | Encapsulates shader + parameters + textures |
+| **RenderMaterial Class** | Encapsulates shader + parameters + textures |
 | **Material Parameters** | Type-safe storage for floats, vectors, textures |
 | **PBR Material** | Pre-configured material for physically-based rendering |
 | **Unlit Material** | Simple material for UI elements and debug rendering |
@@ -87,7 +87,7 @@ With a Material System:
 ```
 Application Code                     GPU
      │                                │
-     ├─→ Material::Bind() ───────────→│ (encapsulates all uniforms)
+     ├─→ RenderMaterial::Bind() ─────→│ (encapsulates all uniforms)
      │                                │
 ```
 
@@ -109,7 +109,7 @@ Application Code                     GPU
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        Material (Base Class)                     │
+│                    RenderMaterial (Base Class)                   │
 │  - Shader reference                                              │
 │  - Parameter storage (map<string, variant>)                      │
 │  - Texture slots                                                 │
@@ -133,7 +133,7 @@ Application Code                     GPU
 
 ```
 ┌─────────────┐      ┌─────────────┐      ┌─────────────────┐
-│  Material   │──────│   Shader    │──────│  GPU Program    │
+│RenderMaterial│──────│   Shader    │──────│  GPU Program    │
 │  Instance   │      │  (shared)   │      │  (compiled)     │
 └─────────────┘      └─────────────┘      └─────────────────┘
        │                    │
@@ -151,10 +151,10 @@ Application Code                     GPU
 
 We need a type-safe way to store different parameter types (float, vec3, vec4, int, textures).
 
-**Create** `VizEngine/src/VizEngine/Core/MaterialParameter.h`:
+**Create** `VizEngine/src/VizEngine/Renderer/MaterialParameter.h`:
 
 ```cpp
-// VizEngine/src/VizEngine/Core/MaterialParameter.h
+// VizEngine/src/VizEngine/Renderer/MaterialParameter.h
 
 #pragma once
 
@@ -231,20 +231,14 @@ namespace VizEngine
 > [!NOTE]
 > We use `std::variant` (C++17) for type-safe parameter storage. This provides compile-time checking while allowing flexible parameter types.
 
-> [!IMPORTANT]
-> **Implementation Adaptation**: In our actual codebase:
-> - The class is named `RenderMaterial` (not `Material`) to avoid conflict with the existing `Material` struct used for glTF loading in `VizEngine/Core/Material.h`.
-> - We use `Texture` with `IsCubemap()` flag instead of a separate `Cubemap` class for environment maps.
-> - The `TextureSlot` includes an `IsCubemap` boolean field to handle both 2D textures and cubemaps.
-
 ---
 
-## Step 2: Create Material Base Class
+## Step 2: Create RenderMaterial Base Class
 
-**Create** `VizEngine/src/VizEngine/Renderer/Material.h`:
+**Create** `VizEngine/src/VizEngine/Renderer/RenderMaterial.h`:
 
 ```cpp
-// VizEngine/src/VizEngine/Renderer/Material.h
+// VizEngine/src/VizEngine/Renderer/RenderMaterial.h
 
 #pragma once
 
@@ -262,11 +256,11 @@ namespace VizEngine
     class Cubemap;
 
     /**
-     * Material encapsulates a shader and its parameters.
+     * RenderMaterial encapsulates a shader and its parameters.
      * Provides a single Bind() call that sets all uniforms.
      *
      * Usage:
-     *   auto material = std::make_shared<Material>(shader);
+     *   auto material = std::make_shared<RenderMaterial>(shader);
      *   material->SetFloat("u_Roughness", 0.5f);
      *   material->SetTexture("u_AlbedoTexture", texture, 0);
      *   
@@ -274,7 +268,7 @@ namespace VizEngine
      *   material->Bind();
      *   // Render mesh...
      */
-    class VizEngine_API Material
+    class VizEngine_API RenderMaterial
     {
     public:
         /**
@@ -282,7 +276,7 @@ namespace VizEngine
          * @param shader Shader program to use for rendering
          * @param name Optional material name for debugging
          */
-        Material(std::shared_ptr<Shader> shader, const std::string& name = "Unnamed");
+        RenderMaterial(std::shared_ptr<Shader> shader, const std::string& name = "Unnamed");
         virtual ~Material() = default;
 
         // =====================================================================
@@ -398,14 +392,14 @@ namespace VizEngine
 
 ---
 
-## Step 3: Implement Material Base Class
+## Step 3: Implement RenderMaterial Base Class
 
-**Create** `VizEngine/src/VizEngine/Renderer/Material.cpp`:
+**Create** `VizEngine/src/VizEngine/Renderer/RenderMaterial.cpp`:
 
 ```cpp
-// VizEngine/src/VizEngine/Renderer/Material.cpp
+// VizEngine/src/VizEngine/Renderer/RenderMaterial.cpp
 
-#include "Material.h"
+#include "RenderMaterial.h"
 #include "VizEngine/OpenGL/Shader.h"
 #include "VizEngine/OpenGL/Texture.h"
 #include "VizEngine/OpenGL/Cubemap.h"
@@ -413,7 +407,7 @@ namespace VizEngine
 
 namespace VizEngine
 {
-    Material::Material(std::shared_ptr<Shader> shader, const std::string& name)
+    RenderMaterial::RenderMaterial(std::shared_ptr<Shader> shader, const std::string& name)
         : m_Shader(shader), m_Name(name)
     {
         if (!m_Shader)
@@ -422,11 +416,11 @@ namespace VizEngine
         }
     }
 
-    void Material::Bind()
+    void RenderMaterial::Bind()
     {
         if (!m_Shader)
         {
-            VP_CORE_ERROR("Material::Bind() called with null shader: {}", m_Name);
+            VP_CORE_ERROR("RenderMaterial::Bind() called with null shader: {}", m_Name);
             return;
         }
 
@@ -436,7 +430,7 @@ namespace VizEngine
         UploadParameters();
     }
 
-    void Material::Unbind()
+    void RenderMaterial::Unbind()
     {
         if (m_Shader)
         {
@@ -448,42 +442,42 @@ namespace VizEngine
     // Parameter Setters
     // =========================================================================
 
-    void Material::SetFloat(const std::string& name, float value)
+    void RenderMaterial::SetFloat(const std::string& name, float value)
     {
         m_Parameters[name] = value;
     }
 
-    void Material::SetInt(const std::string& name, int value)
+    void RenderMaterial::SetInt(const std::string& name, int value)
     {
         m_Parameters[name] = value;
     }
 
-    void Material::SetBool(const std::string& name, bool value)
+    void RenderMaterial::SetBool(const std::string& name, bool value)
     {
         m_Parameters[name] = value;
     }
 
-    void Material::SetVec2(const std::string& name, const glm::vec2& value)
+    void RenderMaterial::SetVec2(const std::string& name, const glm::vec2& value)
     {
         m_Parameters[name] = value;
     }
 
-    void Material::SetVec3(const std::string& name, const glm::vec3& value)
+    void RenderMaterial::SetVec3(const std::string& name, const glm::vec3& value)
     {
         m_Parameters[name] = value;
     }
 
-    void Material::SetVec4(const std::string& name, const glm::vec4& value)
+    void RenderMaterial::SetVec4(const std::string& name, const glm::vec4& value)
     {
         m_Parameters[name] = value;
     }
 
-    void Material::SetMat3(const std::string& name, const glm::mat3& value)
+    void RenderMaterial::SetMat3(const std::string& name, const glm::mat3& value)
     {
         m_Parameters[name] = value;
     }
 
-    void Material::SetMat4(const std::string& name, const glm::mat4& value)
+    void RenderMaterial::SetMat4(const std::string& name, const glm::mat4& value)
     {
         m_Parameters[name] = value;
     }
@@ -492,7 +486,7 @@ namespace VizEngine
     // Texture Binding
     // =========================================================================
 
-    void Material::SetTexture(const std::string& name, std::shared_ptr<Texture> texture, int slot)
+    void RenderMaterial::SetTexture(const std::string& name, std::shared_ptr<Texture> texture, int slot)
     {
         // Check if slot already exists, update it
         for (auto& texSlot : m_TextureSlots)
@@ -509,7 +503,7 @@ namespace VizEngine
         m_TextureSlots.emplace_back(name, texture, slot);
     }
 
-    void Material::SetCubemap(const std::string& name, std::shared_ptr<Cubemap> cubemap, int slot)
+    void RenderMaterial::SetCubemap(const std::string& name, std::shared_ptr<Cubemap> cubemap, int slot)
     {
         // Check if slot already exists, update it
         for (auto& cubeSlot : m_CubemapSlots)
@@ -530,7 +524,7 @@ namespace VizEngine
     // Parameter Query
     // =========================================================================
 
-    bool Material::HasParameter(const std::string& name) const
+    bool RenderMaterial::HasParameter(const std::string& name) const
     {
         return m_Parameters.find(name) != m_Parameters.end();
     }
@@ -539,7 +533,7 @@ namespace VizEngine
     // Upload Logic
     // =========================================================================
 
-    void Material::UploadParameters()
+    void RenderMaterial::UploadParameters()
     {
         if (!m_Shader) return;
 
@@ -586,7 +580,7 @@ namespace VizEngine
         }
     }
 
-    void Material::BindTextures()
+    void RenderMaterial::BindTextures()
     {
         if (!m_Shader) return;
 
@@ -600,7 +594,7 @@ namespace VizEngine
         }
     }
 
-    void Material::BindCubemaps()
+    void RenderMaterial::BindCubemaps()
     {
         if (!m_Shader) return;
 
@@ -644,7 +638,7 @@ namespace VizEngine
      *   pbrMaterial->SetMetallic(1.0f);
      *   pbrMaterial->SetRoughness(0.3f);
      */
-    class VizEngine_API PBRMaterial : public Material
+    class VizEngine_API PBRMaterial : public RenderMaterial
     {
     public:
         /**
@@ -981,7 +975,7 @@ namespace VizEngine
     void PBRMaterial::UploadParameters()
     {
         // Call base implementation to upload all stored parameters
-        Material::UploadParameters();
+        RenderMaterial::UploadParameters();
 
         // Any PBR-specific upload logic can be added here
         // (currently all handled by base class via stored parameters)
@@ -1002,7 +996,7 @@ For UI elements, skyboxes, and debug rendering, we need a simple unlit material.
 
 #pragma once
 
-#include "Material.h"
+#include "RenderMaterial.h"
 #include <glm/glm.hpp>
 
 namespace VizEngine
@@ -1011,7 +1005,7 @@ namespace VizEngine
      * Simple unlit material for UI, debug rendering, and effects.
      * Uses unlit.shader - no lighting calculations.
      */
-    class VizEngine_API UnlitMaterial : public Material
+    class VizEngine_API UnlitMaterial : public RenderMaterial
     {
     public:
         UnlitMaterial(std::shared_ptr<Shader> shader, const std::string& name = "Unlit Material");
@@ -1045,7 +1039,7 @@ namespace VizEngine
 namespace VizEngine
 {
     UnlitMaterial::UnlitMaterial(std::shared_ptr<Shader> shader, const std::string& name)
-        : Material(shader, name)
+        : RenderMaterial(shader, name)
     {
         SetVec4("u_Color", m_Color);
         SetBool("u_UseTexture", false);
@@ -1066,7 +1060,7 @@ namespace VizEngine
     {
         if (texture)
         {
-            Material::SetTexture("u_Texture", texture, 0);
+            RenderMaterial::SetTexture("u_Texture", texture, 0);
             SetBool("u_UseTexture", true);
         }
         else
@@ -1106,7 +1100,7 @@ Provide convenient factory methods for creating common material types.
 
 namespace VizEngine
 {
-    class Material;
+    class RenderMaterial;
     class PBRMaterial;
     class UnlitMaterial;
     class Shader;
@@ -1308,13 +1302,13 @@ Add the new material files to the build:
     src/VizEngine/Core/MaterialParameter.h
 
 # In VIZENGINE_SOURCES (Renderer subsection)
-    src/VizEngine/Renderer/Material.cpp
+    src/VizEngine/Renderer/RenderMaterial.cpp
     src/VizEngine/Renderer/PBRMaterial.cpp
     src/VizEngine/Renderer/UnlitMaterial.cpp
     src/VizEngine/Renderer/MaterialFactory.cpp
 
 # In VIZENGINE_HEADERS (Renderer subsection)
-    src/VizEngine/Renderer/Material.h
+    src/VizEngine/Renderer/RenderMaterial.h
     src/VizEngine/Renderer/PBRMaterial.h
     src/VizEngine/Renderer/UnlitMaterial.h
     src/VizEngine/Renderer/MaterialFactory.h
@@ -1332,8 +1326,8 @@ Export the new material classes in the main header:
 // Add after existing includes:
 
 // Material System (Chapter 38)
-#include "VizEngine/Core/MaterialParameter.h"
-#include "VizEngine/Renderer/Material.h"
+#include "VizEngine/Renderer/MaterialParameter.h"
+#include "VizEngine/Renderer/RenderMaterial.h"
 #include "VizEngine/Renderer/PBRMaterial.h"
 #include "VizEngine/Renderer/UnlitMaterial.h"
 #include "VizEngine/Renderer/MaterialFactory.h"
@@ -1540,7 +1534,7 @@ At this point, your engine has:
 
 **Architectural comparison**:
 - **Before**: Shader uniforms scattered across render code
-- **After**: Materials encapsulate all rendering state
+- **After**: RenderMaterials encapsulate all rendering state
 
 **Code cleanup**:
 - **Before**: 30+ lines per object for uniform setup

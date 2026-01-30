@@ -102,17 +102,17 @@ At the end of Part VII, the engine contains:
 | 30 | Cubemaps and HDR | Environment mapping, reflections | Complete
 | 31 | Skybox Rendering | Environment mapping, reflections | Complete
 
-**Part X: Physically Based Rendering** In Progress
+**Part X: Physically Based Rendering** Complete
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
 | 32 | PBR Theory | Energy conservation, microfacets | Complete
 | 33 | PBR Implementation | Cook-Torrance, metallic-roughness | Complete
 | 34 | Image-Based Lighting | Irradiance, prefiltered environment | Complete
-| 35 | HDR Pipeline | Floating-point framebuffers, exposure | In Progress
-| 36 | Bloom | Bloom | In Progress
-| 37 | Color Grading | Color grading | In Progress
-| 38 | Material System | Material abstraction, parameter binding, shader variants | In Progress
+| 35 | HDR Pipeline | Floating-point framebuffers, exposure | Complete
+| 36 | Bloom | Bloom | Complete
+| 37 | Color Grading | Color grading | Complete
+| 38 | Material System | Material abstraction, parameter binding, shader variants | Complete
 
 **Deliverable**: Production-quality rendering in OpenGL with material abstraction.
 
