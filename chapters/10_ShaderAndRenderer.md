@@ -116,9 +116,11 @@ namespace VizEngine
         void SetBool(const std::string& name, bool value);
         void SetInt(const std::string& name, int value);
         void SetFloat(const std::string& name, float value);
+        void SetVec2(const std::string& name, const glm::vec2& value);
         void SetVec3(const std::string& name, const glm::vec3& value);
         void SetVec4(const std::string& name, const glm::vec4& value);
         void SetColor(const std::string& name, const glm::vec4& value);
+        void SetMatrix3fv(const std::string& name, const glm::mat3& matrix);
         void SetMatrix4fv(const std::string& name, const glm::mat4& matrix);
 
     private:
@@ -363,6 +365,11 @@ namespace VizEngine
         glUniform1f(GetUniformLocation(name), value);
     }
 
+    void Shader::SetVec2(const std::string& name, const glm::vec2& value)
+    {
+        glUniform2fv(GetUniformLocation(name), 1, glm::value_ptr(value));
+    }
+
     void Shader::SetVec3(const std::string& name, const glm::vec3& value)
     {
         glUniform3fv(GetUniformLocation(name), 1, glm::value_ptr(value));
@@ -376,6 +383,11 @@ namespace VizEngine
     void Shader::SetColor(const std::string& name, const glm::vec4& value)
     {
         SetVec4(name, value);
+    }
+
+    void Shader::SetMatrix3fv(const std::string& name, const glm::mat3& matrix)
+    {
+        glUniformMatrix3fv(GetUniformLocation(name), 1, GL_FALSE, glm::value_ptr(matrix));
     }
 
     void Shader::SetMatrix4fv(const std::string& name, const glm::mat4& matrix)
@@ -423,7 +435,7 @@ You have:
 - Combined shader file format
 - Shader parsing and compilation
 - Uniform location caching
-- `SetMatrix4fv`, `SetVec3`, `SetVec4`, etc.
+- `SetMatrix3fv`, `SetMatrix4fv`, `SetVec2`, `SetVec3`, `SetVec4`, etc.
 
 ---
 
