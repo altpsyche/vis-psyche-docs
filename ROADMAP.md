@@ -34,11 +34,11 @@ At the end of Part VII, the engine contains:
 
 | Purpose | Library | Part |
 |---------|---------|------|
-| Entity-Component System | EnTT | XII |
-| Physics | Jolt Physics | XIII |
-| Graphics Abstraction | NVRHI | XV |
-| Audio | miniaudio | XVII |
-| Serialization | nlohmann/json | XIII |
+| Entity-Component System | EnTT | XIII |
+| Physics | Jolt Physics | XV |
+| Graphics Abstraction | NVRHI | XVII |
+| Audio | miniaudio | XX |
+| Serialization | nlohmann/json | XIV |
 
 ---
 
@@ -67,11 +67,11 @@ At the end of Part VII, the engine contains:
 | Phase | Focus | Parts | Chapters | Status |
 |-------|-------|-------|----------|--------|
 | 1. Foundation | Engine/Application separation | VIII | 23–26 | Complete
-| 2. Advanced OpenGL | Framebuffers, shadows, PBR, materials, reflections | IX–X | 27–39 | In Progress
-| 3. Engine Systems | ECS, serialization, physics | XI–XIII | 40–53 | (Not Started)
-| 4. Modern Graphics | Vulkan/D3D12 concepts, NVRHI, render graph | XIV–XVI | 54–66 | (Not Started)
-| 5. Editor | Scene editor with tooling | XVII | 67–72 | (Not Started)
-| 6. Game Development | Checkpoint puzzle game | XVIII–XIX | 73–80 | (Not Started)
+| 2. Advanced OpenGL | OpenGL essentials, PBR, deferred, screen-space | IX–XII | 27–50 | In Progress
+| 3. Engine Systems | ECS, serialization, physics | XIII–XV | 51–64 | (Not Started)
+| 4. Modern Graphics | Vulkan/D3D12 concepts, NVRHI, render graph | XVI–XVIII | 65–77 | (Not Started)
+| 5. Editor | Scene editor with tooling | XIX | 78–83 | (Not Started)
+| 6. Game Development | Checkpoint puzzle game | XX–XXI | 84–91 | (Not Started)
 
 ---
 
@@ -102,59 +102,80 @@ At the end of Part VII, the engine contains:
 | 30 | Cubemaps and HDR | Environment mapping, reflections | Complete
 | 31 | Skybox Rendering | Environment mapping, reflections | Complete
 
-**Part X: Physically Based Rendering** Complete
+**Part X: OpenGL Essentials** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 32 | PBR Theory | Energy conservation, microfacets | Complete
-| 33 | PBR Implementation | Cook-Torrance, metallic-roughness | Complete
-| 34 | Image-Based Lighting | Irradiance, prefiltered environment | Complete
-| 35 | HDR Pipeline | Floating-point framebuffers, exposure | Complete
-| 36 | Bloom | Bloom | Complete
-| 37 | Color Grading | Color grading | Complete
-| 38 | Material System | Material abstraction, parameter binding, shader variants | Complete
-| 39 | Advanced Reflections | SSR, reflection probes, planar reflections, lower hemisphere | Planned
+| 32 | Depth & Stencil Testing | Depth functions, stencil buffer, outlines, mirrors | Planned
+| 33 | Blending & Transparency | Alpha blending, sorting, order-independent transparency | Planned
+| 34 | Normal Mapping | Tangent space, TBN matrix, surface detail without geometry | Planned
+| 35 | Instancing | GPU instancing, instance buffers, rendering many objects | Planned
 
-**Deliverable**: Production-quality rendering in OpenGL with material abstraction and advanced reflection techniques.
+> **Why These Topics?** These foundational OpenGL techniques are prerequisites for production rendering. Stencil testing enables mirrors and outlines. Blending is essential for particles and UI. Normal mapping adds surface detail. Instancing is critical for performance.
 
-> **Transition Point**: Ch 34 bridges manual rendering (Ch 1-33) to production ECS architecture (Ch 40+). Material System abstracts shader management, preparing for component-based rendering. Ch 39 adds advanced reflection techniques before moving to ECS.
+**Part XI: Physically Based Rendering** In Progress
+
+| Ch | Title | Topics | Status |
+|----|-------|--------|--------|
+| 36 | PBR Theory | Energy conservation, microfacets | Complete
+| 37 | PBR Implementation | Cook-Torrance, metallic-roughness | Complete
+| 38 | Image-Based Lighting | Irradiance, prefiltered environment | Complete
+| 39 | HDR Pipeline | Floating-point framebuffers, exposure, tone mapping | Complete
+| 40 | Bloom | Bright pass, Gaussian blur, composite | Complete
+| 41 | Color Grading | 3D LUT, parametric controls, saturation/contrast | Complete
+| 42 | Material System | Material abstraction, parameter binding, shader variants | Complete
+
+**Part XII: Deferred Rendering & Screen-Space** (Not Started)
+
+| Ch | Title | Topics | Status |
+|----|-------|--------|--------|
+| 43 | Deferred Shading | G-buffer, geometry pass, lighting pass, many lights | Planned
+| 44 | SSAO | Screen-space ambient occlusion, blur, depth reconstruction | Planned
+| 45 | Screen-Space Reflections | Ray marching, hierarchical tracing, fallback to IBL | Planned
+| 46 | Reflection Probes | Baked probes, probe blending, parallax correction | Planned
+
+> **Why Deferred Before SSR?** SSR requires a G-buffer with world-space positions and normals. Deferred shading naturally provides this data. SSAO uses the same depth/normal information, making it a natural companion.
+
+**Deliverable**: Production-quality rendering in OpenGL with deferred shading, material abstraction, and advanced screen-space techniques.
+
+> **Transition Point**: Part XII completes the rendering foundation. Deferred shading enables efficient multi-light scenarios and provides the G-buffer infrastructure for screen-space effects. Part XIII introduces ECS to organize game objects using these rendering capabilities.
 
 ---
 
 ## Phase 3: Engine Systems
 
-**Part XI: Entity-Component System** (Not Started)
+**Part XIII: Entity-Component System** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 40 | ECS with EnTT | Entities, components, iteration | (Not Started)
-| 41 | Core Components | Transform, MeshRenderer, Camera, Light | (Not Started)
-| 42 | Systems Architecture | Render system, scene renderer, hierarchy | (Not Started)
+| 47 | ECS with EnTT | Entities, components, iteration | Planned
+| 48 | Core Components | Transform, MeshRenderer, Camera, Light | Planned
+| 49 | Systems Architecture | Render system, scene renderer, hierarchy | Planned
 
-> **Production Features**: Ch 38's Material System and Ch 39's Advanced Reflections automate multi-pass rendering (shadows, post-processing, reflections) that was implemented manually in earlier chapters.
+> **Production Features**: The Material System (Ch 42) and Screen-Space Techniques (Ch 43-46) provide the rendering foundation. ECS organizes game objects to use these capabilities efficiently.
 
-**Part XII: Engine Infrastructure** (Not Started)
+**Part XIV: Engine Infrastructure** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 43 | Debug Infrastructure | Conditional compilation (`VP_DEBUG`), debug framebuffers, GPU labels | (Not Started) |
-| 44 | Resource Management | Asset manager, path resolution, hot-reload, shader caching | (Not Started) |
-| 45 | Configuration System | Config files (JSON/YAML), quality settings, runtime parameters | (Not Started) |
-| 46 | Serialization | JSON scene format, save/load, prefabs, component serialization | (Not Started) |
-| 47 | Threading Fundamentals | Job system, thread-safe containers, async asset loading | (Not Started) |
-| 48 | Error Handling & Logging | Error policies, log filtering, production builds | (Not Started) |
+| 50 | Debug Infrastructure | Conditional compilation (`VP_DEBUG`), debug framebuffers, GPU labels | Planned
+| 51 | Resource Management | Asset manager, path resolution, hot-reload, shader caching | Planned
+| 52 | Configuration System | Config files (JSON/YAML), quality settings, runtime parameters | Planned
+| 53 | Serialization | JSON scene format, save/load, prefabs, component serialization | Planned
+| 54 | Threading Fundamentals | Job system, thread-safe containers, async asset loading | Planned
+| 55 | Error Handling & Logging | Error policies, log filtering, production builds | Planned
 
 > **Production Features**: Asset Manager with hot-reload enables rapid iteration. Reference-counted resources prevent memory leaks.
 
-**Part XIII: Physics** (Not Started)
+**Part XV: Physics** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 49 | Physics World | Jolt setup, simulation loop, debug draw | (Not Started)
-| 50 | Collision System | Shapes, layers, filtering, triggers | (Not Started)
-| 51 | Queries and Raycasting | Ray/shape queries, object picking | (Not Started)
-| 52 | Character Controller | Kinematic body, ground detection, slopes | (Not Started)
-| 53 | Physics Debugging | Visualization, profiling, common issues | (Not Started)
+| 56 | Physics World | Jolt setup, simulation loop, debug draw | Planned
+| 57 | Collision System | Shapes, layers, filtering, triggers | Planned
+| 58 | Queries and Raycasting | Ray/shape queries, object picking | Planned
+| 59 | Character Controller | Kinematic body, ground detection, slopes | Planned
+| 60 | Physics Debugging | Visualization, profiling, common issues | Planned
 
 **Deliverable**: Complete engine with ECS, serialization, threading, physics.
 
@@ -162,33 +183,33 @@ At the end of Part VII, the engine contains:
 
 ## Phase 4: Modern Graphics
 
-**Part XIV: Understanding Modern APIs** (Not Started)
+**Part XVI: Understanding Modern APIs** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 54 | GPU Architecture | Queues, command processors, async compute | (Not Started)
-| 55 | Vulkan Concepts | Instance, device, queues, command buffers | (Not Started)
-| 56 | D3D12 Concepts | Devices, command lists, descriptor heaps | (Not Started)
-| 57 | Memory Management | Heaps, allocation strategies, residency | (Not Started)
-| 58 | Synchronization | Fences, semaphores, barriers, hazards | (Not Started)
-| 59 | Pipeline State | PSOs, root signatures, descriptor sets | (Not Started)
+| 61 | GPU Architecture | Queues, command processors, async compute | Planned
+| 62 | Vulkan Concepts | Instance, device, queues, command buffers | Planned
+| 63 | D3D12 Concepts | Devices, command lists, descriptor heaps | Planned
+| 64 | Memory Management | Heaps, allocation strategies, residency | Planned
+| 65 | Synchronization | Fences, semaphores, barriers, hazards | Planned
+| 66 | Pipeline State | PSOs, root signatures, descriptor sets | Planned
 
-**Part XV: NVRHI Integration** (Not Started)
-
-| Ch | Title | Topics | Status |
-|----|-------|--------|--------|
-| 60 | NVRHI Architecture | How it maps to Vulkan/D3D12/OpenGL | (Not Started)
-| 61 | Porting Buffers and Textures | Resource creation, views, memory | (Not Started)
-| 62 | Shader Compilation | HLSL to SPIR-V, DXC, offline compilation | (Not Started)
-| 63 | Shader Permutations | Variants, defines, caching, reflection | (Not Started)
-| 64 | Porting Pipelines | Graphics/compute PSOs, binding layouts | (Not Started)
-
-**Part XVI: Frame Architecture** (Not Started)
+**Part XVII: NVRHI Integration** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 65 | Render Graph Concepts | Frame graphs, resource lifetimes, render passes | (Not Started)
-| 66 | Implementing Render Graph | Automatic barriers, resource aliasing, pass ordering | (Not Started)
+| 67 | NVRHI Architecture | How it maps to Vulkan/D3D12/OpenGL | Planned
+| 68 | Porting Buffers and Textures | Resource creation, views, memory | Planned
+| 69 | Shader Compilation | HLSL to SPIR-V, DXC, offline compilation | Planned
+| 70 | Shader Permutations | Variants, defines, caching, reflection | Planned
+| 71 | Porting Pipelines | Graphics/compute PSOs, binding layouts | Planned
+
+**Part XVIII: Frame Architecture** (Not Started)
+
+| Ch | Title | Topics | Status |
+|----|-------|--------|--------|
+| 72 | Render Graph Concepts | Frame graphs, resource lifetimes, render passes | Planned
+| 73 | Implementing Render Graph | Automatic barriers, resource aliasing, pass ordering | Planned
 
 > **Production Features**: Render Graph automates resource barriers, enables async compute, and optimizes resource memory usage through aliasing.
 
@@ -198,16 +219,16 @@ At the end of Part VII, the engine contains:
 
 ## Phase 5: Editor
 
-**Part XVII: Editor Application** (Not Started)
+**Part XIX: Editor Application** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 67 | Editor Architecture | EditorApp, docking, play mode | (Not Started)
-| 68 | Scene Hierarchy | Entity tree, selection, parenting | (Not Started)
-| 69 | Inspector and Properties | Component editing, add/remove | (Not Started)
-| 70 | Viewport and Gizmos | Framebuffer viewport, transform handles | (Not Started)
-| 71 | Asset Browser | File browsing, thumbnails, drag-and-drop | (Not Started)
-| 72 | Undo System | Command pattern, history, macros | (Not Started)
+| 74 | Editor Architecture | EditorApp, docking, play mode | Planned
+| 75 | Scene Hierarchy | Entity tree, selection, parenting | Planned
+| 76 | Inspector and Properties | Component editing, add/remove | Planned
+| 77 | Viewport and Gizmos | Framebuffer viewport, transform handles | Planned
+| 78 | Asset Browser | File browsing, thumbnails, drag-and-drop | Planned
+| 79 | Undo System | Command pattern, history, macros | Planned
 
 **Deliverable**: Functional level editor with asset management.
 
@@ -215,23 +236,23 @@ At the end of Part VII, the engine contains:
 
 ## Phase 6: Game Development
 
-**Part XVIII: Game Systems** (Not Started)
+**Part XX: Game Systems** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 73 | First-Person Controller | Movement, physics character | (Not Started)
-| 74 | Object Interaction | Pick up, inspect, place | (Not Started)
-| 75 | Document System | Inspection UI, stamps, decisions | (Not Started)
-| 76 | Audio | miniaudio, ambience, 3D sound | (Not Started)
-| 77 | Game State | State machine, transitions, persistence | (Not Started)
+| 80 | First-Person Controller | Movement, physics character | Planned
+| 81 | Object Interaction | Pick up, inspect, place | Planned
+| 82 | Document System | Inspection UI, stamps, decisions | Planned
+| 83 | Audio | miniaudio, ambience, 3D sound | Planned
+| 84 | Game State | State machine, transitions, persistence | Planned
 
-**Part XIX: Polish and Ship** (Not Started)
+**Part XXI: Polish and Ship** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 78 | Visual Polish | Particles, atmosphere, tuning | (Not Started)
-| 79 | Performance | Profiling, culling, optimization | (Not Started)
-| 80 | Distribution | Release builds, packaging | (Not Started)
+| 85 | Visual Polish | Particles, atmosphere, tuning | Planned
+| 86 | Performance | Profiling, culling, optimization | Planned
+| 87 | Distribution | Release builds, packaging | Planned
 
 **Deliverable**: Complete, polished, multi-API game.
 
@@ -250,18 +271,20 @@ At the end of Part VII, the engine contains:
 | VII | Input and Controls | 21–22 | Complete |
 | VIII | Application Lifecycle | 23–26 | Complete |
 | IX | Advanced Techniques | 27–31 | Complete |
-| X | Physically Based Rendering | 32–39 | In Progress |
-| XI | Entity-Component System | 40–42 | Planned |
-| XII | Engine Infrastructure | 43–48 | Planned |
-| XIII | Physics | 49–53 | Planned |
-| XIV | Understanding Modern APIs | 54–59 | Planned |
-| XV | NVRHI Integration | 60–64 | Planned |
-| XVI | Frame Architecture | 65–66 | Planned |
-| XVII | Editor | 67–72 | Planned |
-| XVIII | Game Systems | 73–77 | Planned |
-| XIX | Polish and Ship | 78–80 | Planned |
+| X | OpenGL Essentials | 32–35 | Planned |
+| XI | Physically Based Rendering | 36–42 | In Progress |
+| XII | Deferred Rendering & Screen-Space | 43–46 | Planned |
+| XIII | Entity-Component System | 47–49 | Planned |
+| XIV | Engine Infrastructure | 50–55 | Planned |
+| XV | Physics | 56–60 | Planned |
+| XVI | Understanding Modern APIs | 61–66 | Planned |
+| XVII | NVRHI Integration | 67–71 | Planned |
+| XVIII | Frame Architecture | 72–73 | Planned |
+| XIX | Editor | 74–79 | Planned |
+| XX | Game Systems | 80–84 | Planned |
+| XXI | Polish and Ship | 85–87 | Planned |
 
-**Total**: 80 chapters across 19 parts
+**Total**: 87 chapters across 21 parts
 
 ---
 
@@ -271,7 +294,7 @@ VizPsyche uses a **layered architecture** that maintains educational primitives 
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  Production Layer (Ch 36+)                      │
+│  Production Layer (Ch 47+)                      │
 │  - SceneRenderer automates multi-pass rendering │
 │  - Material System manages shader parameters    │
 │  - Asset Manager with hot-reload                │
@@ -279,7 +302,7 @@ VizPsyche uses a **layered architecture** that maintains educational primitives 
 └─────────────────────────────────────────────────┘
                      ↓ (uses)
 ┌─────────────────────────────────────────────────┐
-│  Educational Layer (Ch 1-35) - Always Available │
+│  Educational Layer (Ch 1-46) - Always Available │
 │  - Direct Framebuffer, Shader, Texture access   │
 │  - Manual render passes                         │
 │  - Raw OpenGL understanding                     │
@@ -288,12 +311,12 @@ VizPsyche uses a **layered architecture** that maintains educational primitives 
 
 ### Design Principle: **Opt-In Complexity**
 
-**Chapters 1-36** (Educational):
-- Students implement techniques manually (shadow mapping, post-processing)
+**Chapters 1-46** (Educational):
+- Students implement techniques manually (shadow mapping, deferred shading, SSR)
 - Direct access to primitives (framebuffers, shaders, textures)
 - Understand **how** rendering techniques work
 
-**Chapters 37+** (Production):
+**Chapters 47+** (Production):
 - Abstractions automate what was learned manually
 - SceneRenderer renders shadows in one line
 - Material System replaces manual shader binding
@@ -330,6 +353,8 @@ void OnRender() {
 | Decision | Rationale |
 |----------|-----------|
 | OpenGL before abstraction | Learn concretely before abstracting |
+| OpenGL Essentials before PBR | Depth/stencil, blending, normal mapping are prerequisites |
+| Deferred Shading before SSR | G-buffer provides position/normal data for screen-space effects |
 | Dedicated modern API theory | Deep understanding, not just NVRHI usage |
 | Separate shader permutations chapter | Complex system affecting entire pipeline |
 | Render graph as its own part | Modern architecture, enables async compute |
