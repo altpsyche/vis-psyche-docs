@@ -908,7 +908,7 @@ private:
     // Bloom (Chapter 36)
     std::unique_ptr<VizEngine::Bloom> m_Bloom;
     bool m_EnableBloom = true;
-    float m_BloomThreshold = 1.0f;
+    float m_BloomThreshold = 1.5f;   // Higher threshold for properly balanced scenes
     float m_BloomKnee = 0.5f;
     float m_BloomIntensity = 0.04f;
     int m_BloomBlurPasses = 5;
@@ -1137,9 +1137,9 @@ if (m_Bloom)
 ### Visual Tests
 
 **Bloom verification**:
-1. **Enable bloom**, set threshold to 1.0, intensity to 0.04
+1. **Enable bloom**, set threshold to 1.5, intensity to 0.04
 2. **Expected**: Bright specular highlights and emissive surfaces have soft glow
-3. **Adjust threshold**: Lower values (0.5) = more pixels bloom; higher (2.0) = only very bright
+3. **Adjust threshold**: Lower values (0.5) = more pixels bloom; higher (2.0+) = only very bright
 4. **Adjust knee**: Higher values (0.5-1.0) = smoother transition, no banding
 5. **Adjust blur passes**: 1 = sharp glow, 10 = very soft, diffuse halo
 
@@ -1165,7 +1165,7 @@ if (m_Bloom)
 | Problem | Cause | Solution |
 |---------|-------|----------|
 | **Bloom too strong** | Intensity too high | Lower `u_BloomIntensity` (try 0.02-0.06) |
-| **Everything glows** | Threshold too low | Raise threshold to 1.0+ for HDR scenes |
+| **Everything glows** | Threshold too low | Raise threshold to 1.5+ for properly lit HDR scenes |
 | **Banding in bloom** | Hard threshold | Increase `u_Knee` to 0.5 or higher |
 | **Bloom not visible** | Threshold too high or intensity = 0 | Lower threshold, increase intensity |
 | **Blocky/pixelated bloom** | Not enough blur passes or low resolution | Increase blur passes or bloom buffer size |
@@ -1178,7 +1178,7 @@ if (m_Bloom)
 ### Bloom Configuration
 
 1. **Start subtle**: `Intensity = 0.04` is a good baseline. Increase gradually.
-2. **Threshold around 1.0**: For properly exposed HDR scenes, only pixels > 1.0 should bloom.
+2. **Threshold around 1.5**: For properly exposed HDR scenes with balanced lighting, a threshold of 1.5 ensures only genuinely bright pixels bloom. Lower to 1.0 if your scene is darker.
 3. **Use soft knee**: Values between 0.1 and 0.5 prevent banding.
 4. **Blur quality vs performance**: 5 passes is a sweet spot. 3 for performance, 7-10 for quality.
 5. **Downsample**: Always render bloom at reduced resolution (1/2 or 1/4).

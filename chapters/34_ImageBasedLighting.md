@@ -33,6 +33,7 @@ Real-world lighting comes from **everywhere**—the sky, reflected surfaces, dis
 | **Prefiltered Environment** | Multi-mip cubemap with roughness-based blur for specular |
 | **BRDF LUT** | 2D texture storing Fresnel scale/bias for split-sum approximation |
 | **Updated PBR Shader** | IBL sampling replacing placeholder ambient |
+| **IBL Intensity Control** | Slider to balance direct vs. ambient lighting (default 0.3) |
 | **Generation Time** | ~2-5 seconds one-time cost at startup |
 
 ---
@@ -920,6 +921,7 @@ uniform samplerCube u_PrefilteredMap;
 uniform sampler2D u_BRDF_LUT;
 uniform float u_MaxReflectionLOD;
 uniform bool u_UseIBL;
+uniform float u_IBLIntensity;  // Controls strength of environment lighting (0.0-2.0)
 ```
 
 Add a new Fresnel-Schlick with roughness function after the existing `FresnelSchlick`:
@@ -964,7 +966,7 @@ if (u_UseIBL)
     vec3 specularIBL = prefilteredColor * (F0 * envBRDF.x + envBRDF.y);
     
     // ----- Combine -----
-    ambient = (kD_IBL * diffuseIBL + specularIBL) * u_AO;
+    ambient = (kD_IBL * diffuseIBL + specularIBL) * u_AO * u_IBLIntensity;
 }
 else
 {
@@ -990,6 +992,7 @@ std::shared_ptr<VizEngine::Texture> m_IrradianceMap;
 std::shared_ptr<VizEngine::Texture> m_PrefilteredMap;
 std::shared_ptr<VizEngine::Texture> m_BRDFLut;
 bool m_UseIBL = true;
+float m_IBLIntensity = 0.3f;  // Balance between direct and ambient lighting
 ```
 
 **Modify `Sandbox/src/SandboxApp.cpp` `OnCreate()`:**
@@ -1021,19 +1024,21 @@ if (m_UseIBL && m_IrradianceMap && m_PrefilteredMap && m_BRDFLut)
 {
     m_IrradianceMap->Bind(5);
     m_DefaultLitShader->SetInt("u_IrradianceMap", 5);
-    
+
     m_PrefilteredMap->Bind(6);
     m_DefaultLitShader->SetInt("u_PrefilteredMap", 6);
-    
+
     m_BRDFLut->Bind(7);
     m_DefaultLitShader->SetInt("u_BRDF_LUT", 7);
-    
+
     m_DefaultLitShader->SetFloat("u_MaxReflectionLOD", 4.0f);  // maxMipLevels - 1
     m_DefaultLitShader->SetBool("u_UseIBL", true);
+    m_DefaultLitShader->SetFloat("u_IBLIntensity", m_IBLIntensity);
 }
 else
 {
     m_DefaultLitShader->SetBool("u_UseIBL", false);
+    m_DefaultLitShader->SetFloat("u_IBLIntensity", 0.0f);
 }
 ```
 
@@ -1045,7 +1050,8 @@ Add IBL controls:
 if (ImGui::CollapsingHeader("Image-Based Lighting"))
 {
     ImGui::Checkbox("Use IBL", &m_UseIBL);
-    
+    ImGui::SliderFloat("IBL Intensity", &m_IBLIntensity, 0.0f, 2.0f);
+
     if (m_IrradianceMap && m_PrefilteredMap && m_BRDFLut)
     {
         ImGui::Text("Irradiance: 32x32 cubemap");
@@ -1110,6 +1116,8 @@ Create a grid of spheres varying metallic (0→1) and roughness (0→1):
 |---------|-------|----------|
 | **Black/missing reflections** | IBL textures not bound | Check texture binding order (slots 5, 6, 7) |
 | **Too dark with IBL** | Missing diffuse IBL | Verify `u_IrradianceMap` sampling works |
+| **Scene looks flat/washed out** | IBL ambient too strong | Lower `u_IBLIntensity` (try 0.2-0.5) |
+| **No contrast between light/shadow** | IBL overwhelming direct lights | Reduce IBL intensity or increase direct light intensity |
 | **Seams in irradiance** | Hemisphere sampling incomplete | Check theta range is `[0, π/2]` |
 | **Blocky prefilter** | Too few samples | Increase `SAMPLE_COUNT` in shader |
 | **Wrong roughness response** | Mip level miscalculation | Verify `roughness * maxMipLevels` in lookup |
