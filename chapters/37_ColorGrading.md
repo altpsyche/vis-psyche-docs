@@ -275,7 +275,17 @@ namespace VizEngine
 {
     std::unique_ptr<Texture3D> Texture3D::CreateNeutralLUT(int size)
     {
+        // Early validation to prevent division by zero
+        if (size <= 0)
+        {
+            VP_CORE_ERROR("Texture3D::CreateNeutralLUT: Invalid size {} (must be > 0)", size);
+            return nullptr;
+        }
+
         std::vector<float> data(size * size * size * 3);
+
+        // Safe denominator to prevent division by zero when size <= 1
+        const float denom = (size > 1) ? static_cast<float>(size - 1) : 1.0f;
 
         // Generate identity mapping: input RGB = output RGB
         for (int b = 0; b < size; ++b)
@@ -285,9 +295,9 @@ namespace VizEngine
                 for (int r = 0; r < size; ++r)
                 {
                     int index = (b * size * size + g * size + r) * 3;
-                    data[index + 0] = static_cast<float>(r) / (size - 1);
-                    data[index + 1] = static_cast<float>(g) / (size - 1);
-                    data[index + 2] = static_cast<float>(b) / (size - 1);
+                    data[index + 0] = static_cast<float>(r) / denom;
+                    data[index + 1] = static_cast<float>(g) / denom;
+                    data[index + 2] = static_cast<float>(b) / denom;
                 }
             }
         }

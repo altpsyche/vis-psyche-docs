@@ -664,6 +664,12 @@ namespace VizEngine
         void SetBRDFLUT(std::shared_ptr<Texture> brdfLut);
         void SetUseIBL(bool useIBL);
 
+        // Lower hemisphere fallback (prevents black reflections on flat surfaces)
+        void SetLowerHemisphereColor(const glm::vec3& color);
+        glm::vec3 GetLowerHemisphereColor() const;
+        void SetLowerHemisphereIntensity(float intensity);
+        float GetLowerHemisphereIntensity() const;
+
         // =====================================================================
         // Shadow Mapping
         // =====================================================================
@@ -703,6 +709,10 @@ namespace VizEngine
         bool m_UseShadows = false;
         bool m_HasAlbedoTexture = false;
         bool m_HasNormalTexture = false;
+
+        // Lower hemisphere fallback
+        glm::vec3 m_LowerHemisphereColor = glm::vec3(0.1f, 0.1f, 0.15f);
+        float m_LowerHemisphereIntensity = 0.5f;
     };
 }
 ```
@@ -733,6 +743,10 @@ namespace VizEngine
         SetBool("u_UseNormalMap", false);
         SetBool("u_UseIBL", false);
         SetBool("u_UseShadows", false);
+
+        // Lower hemisphere defaults (prevents black reflections on flat surfaces)
+        SetVec3("u_LowerHemisphereColor", m_LowerHemisphereColor);
+        SetFloat("u_LowerHemisphereIntensity", m_LowerHemisphereIntensity);
     }
 
     // =========================================================================
@@ -888,6 +902,28 @@ namespace VizEngine
     {
         m_UseIBL = useIBL;
         SetBool("u_UseIBL", useIBL);
+    }
+
+    void PBRMaterial::SetLowerHemisphereColor(const glm::vec3& color)
+    {
+        m_LowerHemisphereColor = color;
+        SetVec3("u_LowerHemisphereColor", color);
+    }
+
+    glm::vec3 PBRMaterial::GetLowerHemisphereColor() const
+    {
+        return m_LowerHemisphereColor;
+    }
+
+    void PBRMaterial::SetLowerHemisphereIntensity(float intensity)
+    {
+        m_LowerHemisphereIntensity = glm::clamp(intensity, 0.0f, 2.0f);
+        SetFloat("u_LowerHemisphereIntensity", m_LowerHemisphereIntensity);
+    }
+
+    float PBRMaterial::GetLowerHemisphereIntensity() const
+    {
+        return m_LowerHemisphereIntensity;
     }
 
     // =========================================================================
@@ -1050,6 +1086,8 @@ namespace VizEngine
         }
         else
         {
+            // Clear the stored texture slot to prevent BindTextures from binding stale texture
+            RenderMaterial::SetTexture("u_Texture", nullptr, 0);
             SetBool("u_UseTexture", false);
         }
     }
@@ -1356,6 +1394,10 @@ if (m_UseIBL && m_IrradianceMap && m_PrefilteredMap && m_BRDFLut)
     m_DefaultPBRMaterial->SetPrefilteredMap(m_PrefilteredMap);
     m_DefaultPBRMaterial->SetBRDFLUT(m_BRDFLut);
     m_DefaultPBRMaterial->SetUseIBL(true);
+
+    // Lower hemisphere fallback (prevents black reflections on flat surfaces)
+    m_DefaultPBRMaterial->SetLowerHemisphereColor(glm::vec3(0.1f, 0.1f, 0.15f));
+    m_DefaultPBRMaterial->SetLowerHemisphereIntensity(0.5f);
 }
 
 if (m_ShadowMapDepth)
@@ -1499,15 +1541,17 @@ void RenderSceneObjects()
 
 > In **Chapter 33**, we implemented the Cook-Torrance BRDF with manual uniform setup. The Material System now encapsulates all those uniforms (`u_Albedo`, `u_Metallic`, `u_Roughness`, `u_AO`) in a type-safe interface.
 
-> In **Chapter 34**, we added IBL with irradiance and prefiltered maps. The `PBRMaterial` class provides `SetIrradianceMap()` and `SetPrefilteredMap()` methods that handle cubemap binding.
+> In **Chapter 34**, we added IBL with irradiance and prefiltered maps. The `PBRMaterial` class provides `SetIrradianceMap()` and `SetPrefilteredMap()` methods that handle cubemap binding. The lower hemisphere fallback (`SetLowerHemisphereColor()`, `SetLowerHemisphereIntensity()`) prevents black reflections on flat metallic surfaces by blending in an ambient color for downward-facing reflections.
 
 > The shadow mapping from **Chapter 29** is integrated via `SetShadowMap()` and `SetLightSpaceMatrix()`, keeping all rendering concerns in one place.
 
 ### Forward References
 
-> In **Chapter 39: ECS with EnTT**, we'll create a `MeshRendererComponent` that stores a `std::shared_ptr<Material>`. The renderer will iterate over entities with `MeshRendererComponent` and call `material->Bind()` for each.
+> **Chapter 39: Advanced Reflections** extends the lower hemisphere fallback with more sophisticated techniques: Screen Space Reflections (SSR), reflection probes for localized environments, and planar reflections for mirrors and water.
 
-> **Chapter 40: Core Components** will introduce `MaterialComponent` as a reusable building block, enabling material assignment in the scene editor.
+> In **Chapter 40: ECS with EnTT**, we'll create a `MeshRendererComponent` that stores a `std::shared_ptr<Material>`. The renderer will iterate over entities with `MeshRendererComponent` and call `material->Bind()` for each.
+
+> **Chapter 41: Core Components** will introduce `MaterialComponent` as a reusable building block, enabling material assignment in the scene editor.
 
 > The Material System prepares for **shader variants** (Part XV) by abstracting which shader is used from how it's configured.
 
@@ -1519,12 +1563,13 @@ void RenderSceneObjects()
 
 At this point, your engine has:
 
-**Material abstraction** that encapsulates shader + parameters + textures  
-**Type-safe parameters** using C++17 `std::variant` for compile-time safety  
-**PBRMaterial class** pre-configured for metallic-roughness workflow  
-**UnlitMaterial class** for UI and debug rendering  
-**MaterialFactory** with convenient presets (Gold, Chrome, Plastic)  
-**Clean render interface**: `material->Bind()` replaces 15+ manual uniform calls  
+**Material abstraction** that encapsulates shader + parameters + textures
+**Type-safe parameters** using C++17 `std::variant` for compile-time safety
+**PBRMaterial class** pre-configured for metallic-roughness workflow
+**UnlitMaterial class** for UI and debug rendering
+**MaterialFactory** with convenient presets (Gold, Chrome, Plastic)
+**Clean render interface**: `material->Bind()` replaces 15+ manual uniform calls
+**Lower hemisphere fallback** prevents black reflections on flat metallic surfaces
 
 **Architectural comparison**:
 - **Before**: Shader uniforms scattered across render code
@@ -1534,13 +1579,15 @@ At this point, your engine has:
 - **Before**: 30+ lines per object for uniform setup
 - **After**: 5-10 lines with material interface
 
-The Material System is the **bridge** between manual rendering (Chapters 1-37) and component-based architecture (Chapters 39+). You now have the abstraction layer needed for a professional ECS-based renderer.
+The Material System is the **bridge** between manual rendering (Chapters 1-37) and component-based architecture (Chapters 40+). You now have the abstraction layer needed for a professional ECS-based renderer.
 
 ---
 
 ## What's Next
 
-In **Chapter 39: ECS with EnTT**, we'll integrate the industry-standard EnTT library to create a proper Entity-Component System. Materials will become components attached to entities, and a RenderSystem will automatically render all entities with `MeshRendererComponent`.
+In **Chapter 39: Advanced Reflections**, we'll implement more sophisticated reflection techniques including Screen Space Reflections (SSR), reflection probes, and planar reflections. These build on the lower hemisphere fallback to create fully realistic reflections for any surface orientation.
+
+In **Chapter 40: ECS with EnTT**, we'll integrate the industry-standard EnTT library to create a proper Entity-Component System. Materials will become components attached to entities, and a RenderSystem will automatically render all entities with `MeshRendererComponent`.
 
 > **Next:** [Chapter 39: ECS with EnTT](39_ECSWithEnTT.md)
 

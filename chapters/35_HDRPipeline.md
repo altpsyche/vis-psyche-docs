@@ -1179,31 +1179,42 @@ void OnRender() override
 void SetupDefaultLitShader()
 {
     if (!m_DefaultLitShader) return;
-    
+
     m_DefaultLitShader->Bind();
     m_DefaultLitShader->SetMatrix4fv("u_View", m_Camera.GetViewMatrix());
     m_DefaultLitShader->SetMatrix4fv("u_Projection", m_Camera.GetProjectionMatrix());
     m_DefaultLitShader->SetVec3("u_ViewPos", m_Camera.GetPosition());
-    
+
     m_DefaultLitShader->SetInt("u_LightCount", 4);
     for (int i = 0; i < 4; ++i)
     {
         m_DefaultLitShader->SetVec3("u_LightPositions[" + std::to_string(i) + "]", m_PBRLightPositions[i]);
         m_DefaultLitShader->SetVec3("u_LightColors[" + std::to_string(i) + "]", m_PBRLightColors[i]);
     }
-    
+
     m_DefaultLitShader->SetBool("u_UseDirLight", true);
     m_DefaultLitShader->SetVec3("u_DirLightDirection", m_Light.GetDirection());
-    m_DefaultLitShader->SetVec3("u_DirLightColor", m_Light.Diffuse);
+    m_DefaultLitShader->SetVec3("u_DirLightColor", m_Light.Diffuse * 2.0f);
     
     m_DefaultLitShader->SetMatrix4fv("u_LightSpaceMatrix", m_LightSpaceMatrix);
+    
+    // Shadow mapping (only enable if shadow map resource is valid)
     if (m_ShadowMapDepth)
     {
+        m_DefaultLitShader->SetMatrix4fv("u_LightSpaceMatrix", m_LightSpaceMatrix);
         m_ShadowMapDepth->Bind(1);
         m_DefaultLitShader->SetInt("u_ShadowMap", 1);
+        m_DefaultLitShader->SetBool("u_UseShadows", true);
     }
-    
-    if (m_UseIBL && m_IrradianceMap && m_PrefilteredMap && m_BRDFLut)
+    else
+    {
+        m_DefaultLitShader->SetBool("u_UseShadows", false);
+    }
+
+    // IBL (only enable if all IBL resources are valid)
+    const bool iblResourcesValid = m_UseIBL && m_IrradianceMap && m_PrefilteredMap && m_BRDFLut;
+    m_DefaultLitShader->SetBool("u_UseIBL", iblResourcesValid);
+    if (iblResourcesValid)
     {
         m_IrradianceMap->Bind(5);
         m_DefaultLitShader->SetInt("u_IrradianceMap", 5);
@@ -1212,11 +1223,6 @@ void SetupDefaultLitShader()
         m_BRDFLut->Bind(7);
         m_DefaultLitShader->SetInt("u_BRDF_LUT", 7);
         m_DefaultLitShader->SetFloat("u_MaxReflectionLOD", 4.0f);
-        m_DefaultLitShader->SetBool("u_UseIBL", true);
-    }
-    else
-    {
-        m_DefaultLitShader->SetBool("u_UseIBL", false);
     }
 }
 ```
@@ -1362,6 +1368,11 @@ void OnResize(int width, int height) override
     {
         VP_INFO("Recreating HDR framebuffer for new window size: {}x{}", width, height);
 
+        // Preserve old resources in case new creation fails
+        auto oldFramebuffer = m_HDRFramebuffer;
+        auto oldColorTexture = m_HDRColorTexture;
+        auto oldDepthTexture = m_HDRDepthTexture;
+
         // Create new textures
         m_HDRColorTexture = std::make_shared<VizEngine::Texture>(
             width, height, GL_RGB16F, GL_RGB, GL_FLOAT
@@ -1377,11 +1388,35 @@ void OnResize(int width, int height) override
 
         if (!m_HDRFramebuffer->IsComplete())
         {
-            VP_ERROR("HDR Framebuffer incomplete after resize!");
+            VP_ERROR("HDR Framebuffer incomplete after resize! Restoring previous.");
+            // Restore old resources and disable HDR
+            m_HDRFramebuffer = oldFramebuffer;
+            m_HDRColorTexture = oldColorTexture;
+            m_HDRDepthTexture = oldDepthTexture;
+            m_HDREnabled = false;
+        }
+        else
+        {
+            // Validate tone-mapping resources before enabling HDR
+            const bool hdrResourcesOk =
+                m_ToneMappingShader && m_ToneMappingShader->IsValid() && m_FullscreenQuad;
+
+            if (hdrResourcesOk)
+            {
+                m_HDREnabled = true;
+            }
+            else
+            {
+                VP_WARN("HDR framebuffer resized, but tone-mapping resources are missing; keeping HDR disabled.");
+                m_HDREnabled = false;
+            }
         }
     }
 }
 ```
+
+> [!IMPORTANT]
+> **Tone-Mapping Resource Validation**: After successfully recreating the HDR framebuffer, we validate that the tone-mapping shader and fullscreen quad are available before enabling HDR. This prevents rendering issues if resources are missing.
 
 ---
 

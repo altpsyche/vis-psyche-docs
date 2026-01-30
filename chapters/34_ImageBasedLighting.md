@@ -1141,6 +1141,184 @@ FragColor = vec4(texture(u_BRDF_LUT, vec2(dot(N, V), u_Roughness)).rg, 0.0, 1.0)
 
 ---
 
+## Lower Hemisphere Fallback
+
+### The Problem with Flat Metallic Surfaces
+
+After implementing IBL, you may notice that flat metallic surfaces (like a cube face) can appear completely black when facing certain directions. This is actually **physically correct**—a flat mirror reflects what's in front of it, and if that direction points to a dark area of the environment (like below the horizon), you see dark.
+
+**Curved surfaces** (spheres, duck) always have areas at grazing angles where the Fresnel effect kicks in, producing bright highlights regardless of reflection direction. **Flat surfaces** don't have this gradation—they show the raw environment reflection.
+
+### Why Engines Like Unreal Don't Have This Issue
+
+Professional engines use multiple reflection techniques layered together:
+
+| Technique | Description |
+|-----------|-------------|
+| **Screen Space Reflections (SSR)** | Traces rays in screen space to reflect visible objects |
+| **Reflection Capture Probes** | Local cubemaps placed throughout the scene |
+| **Planar Reflections** | Renders scene from mirrored camera for flat surfaces |
+| **Lower Hemisphere Color** | Fallback color for reflections pointing below horizon |
+
+For our simple IBL implementation, we add a **lower hemisphere color** as a quick, effective solution.
+
+### Implementation
+
+Add uniforms for the reflection fallback:
+
+```glsl
+// Lower hemisphere fallback (prevents black reflections on flat surfaces)
+uniform vec3 u_LowerHemisphereColor;  // Color for reflections pointing below horizon
+uniform float u_LowerHemisphereIntensity;  // Blend intensity (0 = off, 1 = full)
+```
+
+Add helper functions for environment sampling with fallback. The implementation uses two strategies:
+1. **Direction-based**: Blend fallback color when reflection points below horizon
+2. **Darkness-based**: Detect dark environment samples and blend fallback regardless of direction
+
+```glsl
+// ----------------------------------------------------------------------------
+// Environment Reflection Fallback
+// Provides a minimum reflection floor to prevent pure black reflections on
+// flat metallic surfaces. Works in two ways:
+// 1. Blends in fallback color for downward-facing reflections (below horizon)
+// 2. Adds minimum ambient to ALL dark reflections (prevents black regardless of direction)
+// ----------------------------------------------------------------------------
+vec3 SampleEnvironmentWithFallback(samplerCube envMap, vec3 direction, float lod)
+{
+    vec3 envColor = textureLod(envMap, direction, lod).rgb;
+
+    // Calculate luminance of the environment sample
+    float envLuminance = dot(envColor, vec3(0.2126, 0.7152, 0.0722));
+
+    // Fallback color (what we blend in when environment is dark)
+    vec3 fallbackColor = u_LowerHemisphereColor;
+
+    // Factor 1: How much the direction points below horizon
+    float downFactor = max(-direction.y, 0.0);  // 0 at horizon, 1 pointing straight down
+    downFactor = smoothstep(0.0, 0.5, downFactor);
+
+    // Factor 2: How dark is the environment sample (inverse luminance)
+    // This ensures even horizontal reflections into dark areas get some color
+    float darknessFactor = 1.0 - smoothstep(0.0, 0.1, envLuminance);
+
+    // Combine factors: use whichever is stronger
+    float blendFactor = max(downFactor, darknessFactor * 0.7) * u_LowerHemisphereIntensity;
+
+    return mix(envColor, fallbackColor, blendFactor);
+}
+
+vec3 SampleIrradianceWithFallback(samplerCube irrMap, vec3 normal)
+{
+    vec3 irrColor = texture(irrMap, normal).rgb;
+
+    // Calculate luminance
+    float irrLuminance = dot(irrColor, vec3(0.2126, 0.7152, 0.0722));
+
+    // Fallback color (dimmer for diffuse)
+    vec3 fallbackColor = u_LowerHemisphereColor * 0.5;
+
+    // Factor 1: Normals pointing down
+    float downFactor = max(-normal.y, 0.0);
+    downFactor = smoothstep(0.0, 0.5, downFactor);
+
+    // Factor 2: Dark irradiance samples
+    float darknessFactor = 1.0 - smoothstep(0.0, 0.05, irrLuminance);
+
+    // Combine factors
+    float blendFactor = max(downFactor, darknessFactor * 0.5) * u_LowerHemisphereIntensity;
+
+    return mix(irrColor, fallbackColor, blendFactor);
+}
+```
+
+Update the IBL sampling in the main function, including a **minimum metallic reflection floor** that bypasses the BRDF for shiny metals:
+
+```glsl
+// Sample irradiance with fallback
+vec3 irradiance = SampleIrradianceWithFallback(u_IrradianceMap, N);
+vec3 diffuseIBL = irradiance * albedo;
+
+// Sample pre-filtered environment with fallback
+float mipLevel = u_Roughness * u_MaxReflectionLOD;
+vec3 prefilteredColor = SampleEnvironmentWithFallback(u_PrefilteredMap, R, mipLevel);
+
+// Look up BRDF integration
+vec2 envBRDF = texture(u_BRDF_LUT, vec2(max(dot(N, V), 0.0), u_Roughness)).rg;
+
+// Reconstruct specular: F0 * scale + bias
+vec3 specularIBL = prefilteredColor * (F0 * envBRDF.x + envBRDF.y);
+
+// ----- Minimum Metallic Reflection Floor -----
+// For highly metallic surfaces, ensure a minimum reflection based on the fallback color
+// This prevents pure black even when environment and BRDF combine to near-zero
+float metallicFactor = u_Metallic * (1.0 - u_Roughness);  // Strongest for shiny metals
+vec3 minReflection = u_LowerHemisphereColor * F0 * metallicFactor * u_LowerHemisphereIntensity;
+specularIBL = max(specularIBL, minReflection);
+```
+
+> [!WARNING]
+> **This is an approximation, not physically accurate.** The minimum metallic reflection floor bypasses the BRDF integration to guarantee visible reflections on shiny metals. This is a common technique in real-time rendering where visual quality takes precedence over physical accuracy.
+
+### PBRMaterial API
+
+Add lower hemisphere support to `PBRMaterial`:
+
+```cpp
+// PBRMaterial.h
+void SetLowerHemisphereColor(const glm::vec3& color);
+glm::vec3 GetLowerHemisphereColor() const;
+void SetLowerHemisphereIntensity(float intensity);
+float GetLowerHemisphereIntensity() const;
+
+// Member variables
+glm::vec3 m_LowerHemisphereColor = glm::vec3(0.1f, 0.1f, 0.15f);  // Slightly blue-ish
+float m_LowerHemisphereIntensity = 0.5f;
+```
+
+### UI Controls
+
+Add controls in the IBL panel:
+
+```cpp
+uiManager.Separator();
+uiManager.Text("Lower Hemisphere");
+uiManager.ColorEdit3("Ground Color", &m_LowerHemisphereColor.x);
+uiManager.SliderFloat("Ground Intensity", &m_LowerHemisphereIntensity, 0.0f, 2.0f);
+```
+
+### How It Works
+
+The fallback system has three layers of protection against black reflections:
+
+| Layer | Trigger | Effect |
+|-------|---------|--------|
+| **Direction-based** | Reflection points below horizon (R.y < 0) | Blends in fallback color |
+| **Darkness-based** | Environment sample luminance near zero | Blends in fallback color |
+| **Metallic floor** | High metallic + low roughness | Guarantees minimum reflection |
+
+### Results
+
+| Before | After |
+|--------|-------|
+| Flat metallic cube = **pure black** | Flat metallic cube = **visible reflection** |
+| Vertical walls reflecting dark areas = **black** | Vertical walls = **fallback color** |
+| Only Fresnel at curved edges visible | Full surface shows some reflection |
+
+### Trade-offs
+
+| Aspect | Reality |
+|--------|---------|
+| **Physically accurate?** | No - this is an approximation |
+| **Why do it anyway?** | Pure black metals look wrong to human eyes |
+| **Production engines?** | Use the same technique as a fallback layer |
+| **Better alternatives?** | SSR, reflection probes (Chapter 39) |
+
+> [!NOTE]
+> This is a common real-time rendering approximation. The "minimum metallic reflection floor" bypasses the BRDF to guarantee visibility. For production quality, layer this with Screen Space Reflections (SSR) or reflection probes, covered in **Chapter 39: Advanced Reflections**.
+
+---
+
 ## Milestone
 
 **Chapter 34 Complete - Image-Based Lighting**
@@ -1150,9 +1328,16 @@ You have implemented:
 - **Specular pre-filtered map** - Roughness-mipped cubemap for specular reflections
 - **BRDF integration LUT** - Universal Fresnel scale/bias lookup
 - **Split-sum approximation** - Real-time IBL matching Unreal Engine's approach
+- **Reflection fallback system** - Three-layer protection against black reflections:
+  - Direction-based fallback for below-horizon reflections
+  - Darkness detection for any dark environment samples
+  - Minimum metallic floor for shiny metals
 - **Full PBR pipeline** - Direct + ambient lighting with physically-based materials
 
 Your engine now renders materials that respond correctly to **both** direct lighting and environment lighting—the same approach used by AAA game engines.
+
+> [!TIP]
+> The reflection fallback is an approximation technique common in real-time rendering. For production-quality reflections, see **Chapter 39: Advanced Reflections** which covers Screen Space Reflections (SSR), reflection probes, and planar reflections.
 
 ---
 
