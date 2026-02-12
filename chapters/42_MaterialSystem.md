@@ -645,6 +645,9 @@ namespace VizEngine
         void SetAO(float ao);
         float GetAO() const;
 
+        void SetAlpha(float alpha);
+        float GetAlpha() const;
+
         // =====================================================================
         // Texture Maps
         // =====================================================================
@@ -704,6 +707,7 @@ namespace VizEngine
         float m_Metallic = 0.0f;
         float m_Roughness = 0.5f;
         float m_AO = 1.0f;
+        float m_Alpha = 1.0f;
 
         bool m_UseIBL = false;
         bool m_UseShadows = false;
@@ -741,6 +745,7 @@ namespace VizEngine
         SetVec3("u_Albedo", m_Albedo);
         SetBool("u_UseAlbedoTexture", false);
         SetBool("u_UseNormalMap", false);
+        SetFloat("u_Alpha", m_Alpha);
         SetBool("u_UseIBL", false);
         SetBool("u_UseShadows", false);
 
@@ -1018,7 +1023,7 @@ For UI elements, skyboxes, and debug rendering, we need a simple unlit material.
 #pragma once
 
 #include "RenderMaterial.h"
-#include <glm/glm.hpp>
+#include "glm.hpp"
 
 namespace VizEngine
 {
@@ -1194,6 +1199,21 @@ namespace VizEngine
          */
         static std::shared_ptr<PBRMaterial> CreateChrome(const std::string& name = "Chrome");
 
+        /**
+         * Create a copper material.
+         */
+        static std::shared_ptr<PBRMaterial> CreateCopper(const std::string& name = "Copper");
+
+        // =====================================================================
+        // Shader Cache Management
+        // =====================================================================
+
+        /**
+         * Clear cached shaders.
+         * Call when shaders need to be reloaded (e.g., hot-reload).
+         */
+        static void ClearCache();
+
     private:
         // Cached default shaders (lazy loaded)
         static std::shared_ptr<Shader> s_DefaultPBRShader;
@@ -1308,6 +1328,21 @@ namespace VizEngine
         material->SetRoughness(0.1f);
         return material;
     }
+
+    std::shared_ptr<PBRMaterial> MaterialFactory::CreateCopper(const std::string& name)
+    {
+        auto material = CreatePBR(name);
+        material->SetAlbedo(glm::vec3(0.955f, 0.637f, 0.538f));  // Copper color
+        material->SetMetallic(1.0f);
+        material->SetRoughness(0.35f);
+        return material;
+    }
+
+    void MaterialFactory::ClearCache()
+    {
+        s_DefaultPBRShader = nullptr;
+        s_DefaultUnlitShader = nullptr;
+    }
 }
 ```
 
@@ -1372,7 +1407,7 @@ private:
     // ... existing members ...
 
     // Material System (Chapter 42)
-    std::shared_ptr<VizEngine::PBRMaterial> m_DefaultPBRMaterial;
+    std::shared_ptr<VizEngine::PBRMaterial> m_PBRMaterial;
 ```
 
 **In** `OnCreate()`, initialize the material:
@@ -1383,27 +1418,27 @@ private:
 // =========================================================================
 VP_INFO("Setting up material system...");
 
-m_DefaultPBRMaterial = std::make_shared<VizEngine::PBRMaterial>(
-    m_DefaultLitShader, "Default PBR"
+m_PBRMaterial = std::make_shared<VizEngine::PBRMaterial>(
+    m_DefaultLitShader, "Scene PBR Material"
 );
 
 // Configure shared settings (IBL, shadows, etc.)
 if (m_UseIBL && m_IrradianceMap && m_PrefilteredMap && m_BRDFLut)
 {
-    m_DefaultPBRMaterial->SetIrradianceMap(m_IrradianceMap);
-    m_DefaultPBRMaterial->SetPrefilteredMap(m_PrefilteredMap);
-    m_DefaultPBRMaterial->SetBRDFLUT(m_BRDFLut);
-    m_DefaultPBRMaterial->SetUseIBL(true);
+    m_PBRMaterial->SetIrradianceMap(m_IrradianceMap);
+    m_PBRMaterial->SetPrefilteredMap(m_PrefilteredMap);
+    m_PBRMaterial->SetBRDFLUT(m_BRDFLut);
+    m_PBRMaterial->SetUseIBL(true);
 
     // Lower hemisphere fallback (prevents black reflections on flat surfaces)
-    m_DefaultPBRMaterial->SetLowerHemisphereColor(glm::vec3(0.1f, 0.1f, 0.15f));
-    m_DefaultPBRMaterial->SetLowerHemisphereIntensity(0.5f);
+    m_PBRMaterial->SetLowerHemisphereColor(glm::vec3(0.1f, 0.1f, 0.15f));
+    m_PBRMaterial->SetLowerHemisphereIntensity(0.5f);
 }
 
 if (m_ShadowMapDepth)
 {
-    m_DefaultPBRMaterial->SetShadowMap(m_ShadowMapDepth);
-    m_DefaultPBRMaterial->SetUseShadows(true);
+    m_PBRMaterial->SetShadowMap(m_ShadowMapDepth);
+    m_PBRMaterial->SetUseShadows(true);
 }
 
 VP_INFO("Material system initialized");
@@ -1420,13 +1455,13 @@ void RenderSceneObjects()
     auto& renderer = engine.GetRenderer();
 
     // Set view-dependent uniforms once
-    m_DefaultPBRMaterial->SetViewMatrix(m_Camera.GetViewMatrix());
-    m_DefaultPBRMaterial->SetProjectionMatrix(m_Camera.GetProjectionMatrix());
-    m_DefaultPBRMaterial->SetViewPosition(m_Camera.GetPosition());
-    m_DefaultPBRMaterial->SetLightSpaceMatrix(m_LightSpaceMatrix);
+    m_PBRMaterial->SetViewMatrix(m_Camera.GetViewMatrix());
+    m_PBRMaterial->SetProjectionMatrix(m_Camera.GetProjectionMatrix());
+    m_PBRMaterial->SetViewPosition(m_Camera.GetPosition());
+    m_PBRMaterial->SetLightSpaceMatrix(m_LightSpaceMatrix);
 
     // Set lighting uniforms (could be moved to material if lights are static)
-    auto shader = m_DefaultPBRMaterial->GetShader();
+    auto shader = m_PBRMaterial->GetShader();
     shader->Bind();
     shader->SetInt("u_LightCount", 4);
     for (int i = 0; i < 4; ++i)
@@ -1436,7 +1471,7 @@ void RenderSceneObjects()
     }
     shader->SetBool("u_UseDirLight", true);
     shader->SetVec3("u_DirLightDirection", m_Light.GetDirection());
-    shader->SetVec3("u_DirLightColor", m_Light.Diffuse * 2.0f);
+    shader->SetVec3("u_DirLightColor", m_Light.Diffuse);
 
     // Render each object
     for (auto& obj : m_Scene)
@@ -1448,37 +1483,38 @@ void RenderSceneObjects()
         glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
 
         // Per-object transforms
-        m_DefaultPBRMaterial->SetModelMatrix(model);
-        m_DefaultPBRMaterial->SetNormalMatrix(normalMatrix);
+        m_PBRMaterial->SetModelMatrix(model);
+        m_PBRMaterial->SetNormalMatrix(normalMatrix);
 
         // Per-object material properties
-        m_DefaultPBRMaterial->SetAlbedo(glm::vec3(obj.Color));
-        m_DefaultPBRMaterial->SetMetallic(obj.Metallic);
-        m_DefaultPBRMaterial->SetRoughness(obj.Roughness);
-        m_DefaultPBRMaterial->SetAO(1.0f);
+        m_PBRMaterial->SetAlbedo(glm::vec3(obj.Color));
+        m_PBRMaterial->SetAlpha(obj.Color.a);
+        m_PBRMaterial->SetMetallic(obj.Metallic);
+        m_PBRMaterial->SetRoughness(obj.Roughness);
+        m_PBRMaterial->SetAO(1.0f);
 
         if (obj.TexturePtr)
         {
-            m_DefaultPBRMaterial->SetAlbedoTexture(obj.TexturePtr);
+            m_PBRMaterial->SetAlbedoTexture(obj.TexturePtr);
         }
         else
         {
-            m_DefaultPBRMaterial->SetAlbedoTexture(nullptr);
+            m_PBRMaterial->SetAlbedoTexture(nullptr);
         }
 
         // Bind material (uploads all uniforms)
-        m_DefaultPBRMaterial->Bind();
+        m_PBRMaterial->Bind();
 
         // Draw
         obj.MeshPtr->Bind();
         renderer.Draw(obj.MeshPtr->GetVertexArray(), obj.MeshPtr->GetIndexBuffer(),
-                     *m_DefaultPBRMaterial->GetShader());
+                     *m_PBRMaterial->GetShader());
     }
 }
+```
 
 > [!NOTE]
 > **Normal Matrix Optimization**: The normal matrix is computed as `transpose(inverse(mat3(model)))` once per object on the CPU, avoiding expensive per-vertex inverse() calls in the shader. See **Chapter 37** for details.
-```
 
 ---
 

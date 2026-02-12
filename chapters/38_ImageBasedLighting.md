@@ -799,18 +799,22 @@ std::shared_ptr<Texture> CubemapUtils::GeneratePrefilteredMap(
     glGetIntegerv(GL_VIEWPORT, prevViewport);
 
     unsigned int maxMipLevels = 5;
+
+    // Create one RBO and reuse it across mip levels (resized per mip)
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, resolution, resolution);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
     for (unsigned int mip = 0; mip < maxMipLevels; ++mip)
     {
         // Calculate mip dimensions
         unsigned int mipWidth = static_cast<unsigned int>(resolution * std::pow(0.5f, mip));
         unsigned int mipHeight = mipWidth;
 
-        // Create depth buffer for this mip size
-        unsigned int rbo;
-        glGenRenderbuffers(1, &rbo);
-        glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+        // Resize the existing RBO for this mip level
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
         glViewport(0, 0, mipWidth, mipHeight);
 
@@ -829,9 +833,9 @@ std::shared_ptr<Texture> CubemapUtils::GeneratePrefilteredMap(
             cubeVAO->Bind();
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
-
-        glDeleteRenderbuffers(1, &rbo);
     }
+
+    glDeleteRenderbuffers(1, &rbo);
 
     framebuffer->Unbind();
     glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
@@ -1005,8 +1009,8 @@ After environment cubemap generation:
 // ============================================================================
 auto iblStart = std::chrono::high_resolution_clock::now();
 
-m_IrradianceMap = VizEngine::CubemapUtils::GenerateIrradianceMap(m_EnvironmentCubemap, 32);
-m_PrefilteredMap = VizEngine::CubemapUtils::GeneratePrefilteredMap(m_EnvironmentCubemap, 512);
+m_IrradianceMap = VizEngine::CubemapUtils::GenerateIrradianceMap(m_SkyboxCubemap, 32);
+m_PrefilteredMap = VizEngine::CubemapUtils::GeneratePrefilteredMap(m_SkyboxCubemap, 512);
 m_BRDFLut = VizEngine::CubemapUtils::GenerateBRDFLUT(512);
 
 auto iblEnd = std::chrono::high_resolution_clock::now();

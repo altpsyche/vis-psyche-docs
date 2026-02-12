@@ -616,7 +616,7 @@ namespace VizEngine
         /**
          * Process HDR texture to generate bloom.
          * @param hdrTexture Input HDR framebuffer color attachment
-         * @return Bloom texture (same resolution as input)
+         * @return Bloom texture (same resolution as bloom buffers)
          */
         std::shared_ptr<Texture> Process(std::shared_ptr<Texture> hdrTexture);
 
@@ -717,13 +717,14 @@ namespace VizEngine
         {
             VP_CORE_ERROR("Bloom: Framebuffers not complete!");
             m_IsValid = false;
+            return;
         }
 
         // ====================================================================
         // Load Shaders
         // ====================================================================
-        m_ExtractShader = std::make_shared<Shader>("../VizEngine/src/resources/shaders/bloom_extract.shader");
-        m_BlurShader = std::make_shared<Shader>("../VizEngine/src/resources/shaders/bloom_blur.shader");
+        m_ExtractShader = std::make_shared<Shader>("resources/shaders/bloom_extract.shader");
+        m_BlurShader = std::make_shared<Shader>("resources/shaders/bloom_blur.shader");
 
         // Validate shaders loaded successfully
         if (!m_ExtractShader->IsValid() || !m_BlurShader->IsValid())
@@ -1077,17 +1078,11 @@ void OnImGuiRender() override
 
     if (uiManager.CollapsingHeader("Bloom"))
     {
-        uiManager.Checkbox("Enable##Bloom", &m_EnableBloom);
+        uiManager.Checkbox("Enable Bloom", &m_EnableBloom);
         uiManager.SliderFloat("Threshold", &m_BloomThreshold, 0.0f, 5.0f);
-        uiManager.SliderFloat("Knee (Soft)", &m_BloomKnee, 0.0f, 1.0f);
-        uiManager.SliderFloat("Intensity", &m_BloomIntensity, 0.0f, 1.0f);
+        uiManager.SliderFloat("Knee", &m_BloomKnee, 0.0f, 1.0f);
+        uiManager.SliderFloat("Intensity", &m_BloomIntensity, 0.0f, 0.2f);
         uiManager.SliderInt("Blur Passes", &m_BloomBlurPasses, 1, 10);
-        
-        uiManager.Separator();
-        uiManager.Text("Threshold: Minimum brightness for bloom");
-        uiManager.Text("Knee: Smooth transition around threshold");
-        uiManager.Text("Intensity: Bloom strength (0.04 typical)");
-        uiManager.Text("Blur Passes: More = softer bloom");
     }
 
     uiManager.EndWindow();

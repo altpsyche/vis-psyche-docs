@@ -8,7 +8,7 @@ Understand the physics and mathematics behind Physically Based Rendering—the f
 
 ## Introduction
 
-In **Chapters 21-22**, we implemented Blinn-Phong lighting—a model that has served games and real-time graphics for decades. While Blinn-Phong produces reasonable results, it has fundamental limitations:
+In **Chapter 17**, we implemented Blinn-Phong lighting—a model that has served games and real-time graphics for decades. While Blinn-Phong produces reasonable results, it has fundamental limitations:
 
 | Blinn-Phong Limitation | Physical Issue |
 |------------------------|----------------|
@@ -351,7 +351,8 @@ kD *= (1.0 - metallic);      // Metals have no diffuse
 ```glsl
 // Combine diffuse and specular
 vec3 diffuse = kD * albedo / PI;
-vec3 specular = (D * F * G) / max(4.0 * NdotV * NdotL, 0.001);
+float denominator = 4.0 * NdotV * NdotL + 0.0001;
+vec3 specular = (D * F * G) / denominator;
 
 vec3 Lo = (diffuse + specular) * radiance * NdotL;
 ```

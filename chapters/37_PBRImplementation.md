@@ -101,9 +101,9 @@ out vec3 v_Normal;
 out vec2 v_TexCoords;
 
 uniform mat4 u_Model;
+uniform mat3 u_NormalMatrix;      // Pre-computed: transpose(inverse(mat3(model)))
 uniform mat4 u_View;
 uniform mat4 u_Projection;
-uniform mat3 u_NormalMatrix;      // Pre-computed: transpose(inverse(mat3(model)))
 
 void main()
 {
@@ -449,7 +449,7 @@ In your application (e.g., `SandboxApp.cpp`), load the PBR shader:
 
 ```cpp
 // In OnCreate()
-m_PBRShader = std::make_unique<VizEngine::Shader>("resources/shaders/pbr.shader");
+m_DefaultLitShader = std::make_shared<VizEngine::Shader>("resources/shaders/defaultlit.shader");
 ```
 
 ### Setting Up Lights
@@ -469,37 +469,37 @@ glm::vec3 m_PBRLightPositions[4] = {
     glm::vec3( 10.0f, -10.0f, 10.0f)
 };
 
-float m_PBRLightIntensity = 300.0f;
+float m_PBRLightIntensity = 30.0f;
 glm::vec3 m_PBRLightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 glm::vec3 m_PBRLightColors[4];  // = color * intensity
 ```
 
 > [!NOTE]
-> **High Intensity Values**: PBR uses physical light units. Values like 300.0 represent bright lights; the tone mapping operator compresses the range to displayable values.
+> **High Intensity Values**: PBR uses physical light units. Values like 30.0 represent moderately bright lights; the tone mapping operator compresses the range to displayable values.
 
 ### Rendering with PBR
 
 ```cpp
 // In OnRender()
-m_PBRShader->Bind();
+m_DefaultLitShader->Bind();
 
 // Set camera matrices
-m_PBRShader->SetMatrix4fv("u_View", m_Camera.GetViewMatrix());
-m_PBRShader->SetMatrix4fv("u_Projection", m_Camera.GetProjectionMatrix());
-m_PBRShader->SetVec3("u_ViewPos", m_Camera.GetPosition());
+m_DefaultLitShader->SetMatrix4fv("u_View", m_Camera.GetViewMatrix());
+m_DefaultLitShader->SetMatrix4fv("u_Projection", m_Camera.GetProjectionMatrix());
+m_DefaultLitShader->SetVec3("u_ViewPos", m_Camera.GetPosition());
 
 // Set point lights
-m_PBRShader->SetInt("u_LightCount", 4);
+m_DefaultLitShader->SetInt("u_LightCount", 4);
 for (int i = 0; i < 4; ++i)
 {
-    m_PBRShader->SetVec3("u_LightPositions[" + std::to_string(i) + "]", m_PBRLightPositions[i]);
-    m_PBRShader->SetVec3("u_LightColors[" + std::to_string(i) + "]", m_PBRLightColors[i]);
+    m_DefaultLitShader->SetVec3("u_LightPositions[" + std::to_string(i) + "]", m_PBRLightPositions[i]);
+    m_DefaultLitShader->SetVec3("u_LightColors[" + std::to_string(i) + "]", m_PBRLightColors[i]);
 }
 
 // Set directional light
-m_PBRShader->SetBool("u_UseDirLight", true);
-m_PBRShader->SetVec3("u_DirLightDirection", m_Light.GetDirection());
-m_PBRShader->SetVec3("u_DirLightColor", m_Light.Diffuse * 2.0f);
+m_DefaultLitShader->SetBool("u_UseDirLight", true);
+m_DefaultLitShader->SetVec3("u_DirLightDirection", m_Light.GetDirection());
+m_DefaultLitShader->SetVec3("u_DirLightColor", m_Light.Diffuse);
 
 // Render scene objects
 for (auto& obj : m_Scene)
@@ -507,32 +507,32 @@ for (auto& obj : m_Scene)
     if (!obj.Active || !obj.MeshPtr) continue;
 
     glm::mat4 model = obj.ObjectTransform.GetModelMatrix();
-    m_PBRShader->SetMatrix4fv("u_Model", model);
+    m_DefaultLitShader->SetMatrix4fv("u_Model", model);
 
     // Pre-compute normal matrix on CPU (40-60% faster than per-vertex inverse)
     glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
-    m_PBRShader->SetMatrix3fv("u_NormalMatrix", normalMatrix);
+    m_DefaultLitShader->SetMatrix3fv("u_NormalMatrix", normalMatrix);
 
     // Set material properties from SceneObject
-    m_PBRShader->SetVec3("u_Albedo", glm::vec3(obj.Color));
-    m_PBRShader->SetFloat("u_Metallic", obj.Metallic);
-    m_PBRShader->SetFloat("u_Roughness", obj.Roughness);
-    m_PBRShader->SetFloat("u_AO", 1.0f);
+    m_DefaultLitShader->SetVec3("u_Albedo", glm::vec3(obj.Color));
+    m_DefaultLitShader->SetFloat("u_Metallic", obj.Metallic);
+    m_DefaultLitShader->SetFloat("u_Roughness", obj.Roughness);
+    m_DefaultLitShader->SetFloat("u_AO", 1.0f);
 
     // Bind texture if available
     if (obj.TexturePtr)
     {
         obj.TexturePtr->Bind(0);
-        m_PBRShader->SetInt("u_AlbedoTexture", 0);
-        m_PBRShader->SetBool("u_UseAlbedoTexture", true);
+        m_DefaultLitShader->SetInt("u_AlbedoTexture", 0);
+        m_DefaultLitShader->SetBool("u_UseAlbedoTexture", true);
     }
     else
     {
-        m_PBRShader->SetBool("u_UseAlbedoTexture", false);
+        m_DefaultLitShader->SetBool("u_UseAlbedoTexture", false);
     }
 
     obj.MeshPtr->Bind();
-    renderer.Draw(obj.MeshPtr->GetVertexArray(), obj.MeshPtr->GetIndexBuffer(), *m_PBRShader);
+    renderer.Draw(obj.MeshPtr->GetVertexArray(), obj.MeshPtr->GetIndexBuffer(), *m_DefaultLitShader);
 }
 ```
 
@@ -624,7 +624,7 @@ The **Lighting** panel allows you to:
 
 | Symptom | Cause | Solution |
 |---------|-------|----------|
-| Nearly black output | Light intensity too low | Increase light colors (try 300.0+) |
+| Nearly black output | Light intensity too low | Increase light colors (try 30.0+) |
 | | Missing π in diffuse | Verify `albedo / PI` |
 | | Wrong attenuation | Check `1.0 / (distance * distance)` |
 

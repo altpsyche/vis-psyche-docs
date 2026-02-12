@@ -36,7 +36,7 @@ By the end of this chapter, you'll have:
 | Feature | Description |
 |---------|-------------|
 | **HDR Framebuffer** | RGB16F floating-point color attachment for unlimited range |
-| **Tone Mapping Shader** | Multiple operators: Reinhard, Exposure, ACES, Uncharted 2 |
+| **Tone Mapping Shader** | Multiple operators: Reinhard, Reinhard Extended, Exposure, ACES, Uncharted 2 |
 | **Exposure Control** | Manual exposure adjustment (f-stops) and automatic adaptation |
 | **Two-Pass Rendering** | Scene to HDR buffer, then tone map to screen |
 | **ImGui Controls** | Real-time operator selection, exposure, and gamma adjustment |
@@ -934,7 +934,7 @@ Add to the OpenGL includes section (after `Framebuffer.h`):
 
 ---
 
-## Step 4: Extend UIManager with Combo Widget
+## Step 5: Extend UIManager with Combo Widget
 
 Before we can create the HDR controls UI, we need to add a combo box (dropdown) widget to the UIManager. This is needed for selecting tone mapping operators.
 
@@ -964,7 +964,7 @@ bool UIManager::Combo(const char* label, int* currentItem, const char* const ite
 
 ---
 
-## Step 5: Extend Renderer with Depth Test Control
+## Step 6: Extend Renderer with Depth Test Control
 
 The fullscreen quad for tone mapping should render without depth testing (it's a 2D overlay). We need to add depth test control methods to the Renderer.
 
@@ -1003,7 +1003,7 @@ void Renderer::DisableDepthTest()
 
 ---
 
-## Step 6: Integrate HDR Pipeline into SandboxApp
+## Step 7: Integrate HDR Pipeline into SandboxApp
 
 Now we'll update the Sandbox application to use the HDR pipeline.
 
@@ -1025,6 +1025,7 @@ private:
     std::shared_ptr<VizEngine::FullscreenQuad> m_FullscreenQuad;
 
     // HDR Settings
+    bool m_HDREnabled = true;
     int m_ToneMappingMode = 3;      // 0=Reinhard, 1=ReinhardExt, 2=Exposure, 3=ACES, 4=Uncharted2
     float m_Exposure = 1.0f;
     float m_Gamma = 2.2f;
@@ -1053,18 +1054,18 @@ void OnCreate() override
         GL_FLOAT             // Data type
     );
 
-    // Create depth texture (can remain standard precision)
+    // Create depth-stencil texture (needed for stencil outlines from Chapter 32)
     m_HDRDepthTexture = std::make_shared<VizEngine::Texture>(
         m_WindowWidth, m_WindowHeight,
-        GL_DEPTH_COMPONENT24,   // Internal format
-        GL_DEPTH_COMPONENT,     // Format
-        GL_FLOAT                // Data type
+        GL_DEPTH24_STENCIL8,    // Internal format (depth + stencil)
+        GL_DEPTH_STENCIL,       // Format
+        GL_UNSIGNED_INT_24_8    // Data type
     );
 
     // Create HDR framebuffer and attach textures
     m_HDRFramebuffer = std::make_shared<VizEngine::Framebuffer>(m_WindowWidth, m_WindowHeight);
     m_HDRFramebuffer->AttachColorTexture(m_HDRColorTexture, 0);
-    m_HDRFramebuffer->AttachDepthTexture(m_HDRDepthTexture);
+    m_HDRFramebuffer->AttachDepthStencilTexture(m_HDRDepthTexture);
 
     // Verify framebuffer is complete
     if (!m_HDRFramebuffer->IsComplete())
@@ -1194,8 +1195,8 @@ void SetupDefaultLitShader()
 
     m_DefaultLitShader->SetBool("u_UseDirLight", true);
     m_DefaultLitShader->SetVec3("u_DirLightDirection", m_Light.GetDirection());
-    m_DefaultLitShader->SetVec3("u_DirLightColor", m_Light.Diffuse * 2.0f);
-    
+    m_DefaultLitShader->SetVec3("u_DirLightColor", m_Light.Diffuse);
+
     m_DefaultLitShader->SetMatrix4fv("u_LightSpaceMatrix", m_LightSpaceMatrix);
     
     // Shadow mapping (only enable if shadow map resource is valid)
@@ -1378,13 +1379,13 @@ void OnResize(int width, int height) override
             width, height, GL_RGB16F, GL_RGB, GL_FLOAT
         );
         m_HDRDepthTexture = std::make_shared<VizEngine::Texture>(
-            width, height, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_FLOAT
+            width, height, GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8
         );
 
         // Recreate framebuffer
         m_HDRFramebuffer = std::make_shared<VizEngine::Framebuffer>(width, height);
         m_HDRFramebuffer->AttachColorTexture(m_HDRColorTexture, 0);
-        m_HDRFramebuffer->AttachDepthTexture(m_HDRDepthTexture);
+        m_HDRFramebuffer->AttachDepthStencilTexture(m_HDRDepthTexture);
 
         if (!m_HDRFramebuffer->IsComplete())
         {

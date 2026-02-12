@@ -554,7 +554,7 @@ void OnRender() override
     
     // HDR and tone mapping
     m_ToneMappingShader->SetInt("u_HDRBuffer", 0);
-    m_ToneMappingShader->SetInt("u_ToneMappingMode", static_cast<int>(m_ToneMappingMode));
+    m_ToneMappingShader->SetInt("u_ToneMappingMode", m_ToneMappingMode);
     m_ToneMappingShader->SetFloat("u_Exposure", m_Exposure);
     m_ToneMappingShader->SetFloat("u_Gamma", m_Gamma);
     m_ToneMappingShader->SetFloat("u_WhitePoint", m_WhitePoint);
@@ -613,45 +613,24 @@ void OnImGuiRender() override
     // Bloom controls (from Chapter 40)
     if (uiManager.CollapsingHeader("Bloom"))
     {
-        uiManager.Checkbox("Enable##Bloom", &m_EnableBloom);
+        uiManager.Checkbox("Enable Bloom", &m_EnableBloom);
         uiManager.SliderFloat("Threshold", &m_BloomThreshold, 0.0f, 5.0f);
-        uiManager.SliderFloat("Knee (Soft)", &m_BloomKnee, 0.0f, 1.0f);
-        uiManager.SliderFloat("Intensity", &m_BloomIntensity, 0.0f, 1.0f);
+        uiManager.SliderFloat("Knee", &m_BloomKnee, 0.0f, 1.0f);
+        uiManager.SliderFloat("Intensity", &m_BloomIntensity, 0.0f, 0.2f);
         uiManager.SliderInt("Blur Passes", &m_BloomBlurPasses, 1, 10);
-        
-        uiManager.Separator();
-        uiManager.Text("Threshold: Minimum brightness for bloom");
-        uiManager.Text("Knee: Smooth transition around threshold");
-        uiManager.Text("Intensity: Bloom strength (0.04 typical)");
-        uiManager.Text("Blur Passes: More = softer bloom");
     }
 
     // Color Grading controls (NEW - Chapter 41)
     if (uiManager.CollapsingHeader("Color Grading"))
     {
-        uiManager.Checkbox("Enable LUT##ColorGrading", &m_EnableColorGrading);
-        if (m_EnableColorGrading)
-        {
-            uiManager.SliderFloat("LUT Contribution", &m_LUTContribution, 0.0f, 1.0f);
-        }
-        
+        uiManager.Checkbox("Enable Color Grading", &m_EnableColorGrading);
+        uiManager.SliderFloat("LUT Contribution", &m_LUTContribution, 0.0f, 1.0f);
+
         uiManager.Separator();
-        uiManager.Text("Parametric Controls:");
+        uiManager.Text("Parametric Controls");
         uiManager.SliderFloat("Saturation", &m_Saturation, 0.0f, 2.0f);
-        uiManager.SliderFloat("Contrast", &m_Contrast, 0.0f, 2.0f);
-        uiManager.SliderFloat("Brightness", &m_Brightness, -1.0f, 1.0f);
-        
-        if (uiManager.Button("Reset to Neutral"))
-        {
-            m_Saturation = 1.0f;
-            m_Contrast = 1.0f;
-            m_Brightness = 0.0f;
-        }
-        
-        uiManager.Separator();
-        uiManager.Text("Saturation: 0=grayscale, 1=normal, 2=vibrant");
-        uiManager.Text("Contrast: 0=flat, 1=normal, 2=high");
-        uiManager.Text("Brightness: -1=dark, 0=normal, +1=bright");
+        uiManager.SliderFloat("Contrast", &m_Contrast, 0.5f, 2.0f);
+        uiManager.SliderFloat("Brightness", &m_Brightness, -0.5f, 0.5f);
     }
 
     uiManager.EndWindow();
