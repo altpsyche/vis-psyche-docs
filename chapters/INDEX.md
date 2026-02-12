@@ -56,14 +56,20 @@ A step-by-step guide to building a 3D rendering engine from scratch using C++ an
 - [Chapter 30: Cubemaps and HDR](30_CubemapsAndHDR.md)
 - [Chapter 31: Skybox Rendering](31_SkyboxRendering.md)
 
-### Part X: Physically Based Rendering
-- [Chapter 32: PBR Theory](32_PBRTheory.md)
-- [Chapter 33: PBR Implementation](33_PBRImplementation.md)
-- [Chapter 34: Image-Based Lighting](34_ImageBasedLighting.md)
-- [Chapter 35: HDR Pipeline](35_HDRPipeline.md)
-- [Chapter 36: Bloom](36_Bloom.md)
-- [Chapter 37: Color Grading](37_ColorGrading.md)
-- [Chapter 38: Material System](38_MaterialSystem.md)
+### Part X: OpenGL Essentials
+- [Chapter 32: Depth & Stencil Testing](32_DepthStencilTesting.md)
+- [Chapter 33: Blending & Transparency](33_BlendingTransparency.md)
+- [Chapter 34: Normal Mapping](34_NormalMapping.md)
+- [Chapter 35: Instancing](35_Instancing.md)
+
+### Part XI: Physically Based Rendering
+- [Chapter 36: PBR Theory](36_PBRTheory.md)
+- [Chapter 37: PBR Implementation](37_PBRImplementation.md)
+- [Chapter 38: Image-Based Lighting](38_ImageBasedLighting.md)
+- [Chapter 39: HDR Pipeline](39_HDRPipeline.md)
+- [Chapter 40: Bloom](40_Bloom.md)
+- [Chapter 41: Color Grading](41_ColorGrading.md)
+- [Chapter 42: Material System](42_MaterialSystem.md)
 
 ### Appendices
 - [Appendix A: Code Reference](A_Reference.md)
