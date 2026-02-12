@@ -278,11 +278,11 @@ namespace VizEngine
         spdlog::set_pattern("%^[%T] [%n] [%l]%$ %v");
 
         // Create core logger (for engine messages)
-        s_CoreLogger = spdlog::stdout_color_mt("VizEngine");
+        s_CoreLogger = spdlog::stdout_color_mt("VizPsyche");
         s_CoreLogger->set_level(spdlog::level::trace);
 
         // Create client logger (for application messages)
-        s_ClientLogger = spdlog::stdout_color_mt("App");
+        s_ClientLogger = spdlog::stdout_color_mt("Client");
         s_ClientLogger->set_level(spdlog::level::trace);
     }
 
@@ -511,24 +511,24 @@ cmake --build build --config Debug
 Colored console output:
 
 ```
-[HH:MM:SS] [VizEngine] [info] VizEngine initialized
-[HH:MM:SS] [VizEngine] [trace] Application constructor
-[HH:MM:SS] [App] [info] Sandbox created!
-[HH:MM:SS] [App] [trace] This is a trace message
-[HH:MM:SS] [App] [warning] This is a warning
-[HH:MM:SS] [VizEngine] [info] Starting main loop...
-[HH:MM:SS] [VizEngine] [trace] GLFW initialized
-[HH:MM:SS] [VizEngine] [info] Window created: 1280x720
-[HH:MM:SS] [VizEngine] [info] OpenGL 4.6.0 NVIDIA ...
+[HH:MM:SS] [VizPsyche] [info] VizEngine initialized
+[HH:MM:SS] [VizPsyche] [trace] Application constructor
+[HH:MM:SS] [Client] [info] Sandbox created!
+[HH:MM:SS] [Client] [trace] This is a trace message
+[HH:MM:SS] [Client] [warning] This is a warning
+[HH:MM:SS] [VizPsyche] [info] Starting main loop...
+[HH:MM:SS] [VizPsyche] [trace] GLFW initialized
+[HH:MM:SS] [VizPsyche] [info] Window created: 1280x720
+[HH:MM:SS] [VizPsyche] [info] OpenGL 4.6.0 NVIDIA ...
 ```
 
 After pressing Escape:
 
 ```
-[HH:MM:SS] [VizEngine] [info] Main loop ended
-[HH:MM:SS] [VizEngine] [trace] Application destructor
-[HH:MM:SS] [App] [info] Sandbox destroyed!
-[HH:MM:SS] [VizEngine] [info] VizEngine shutdown
+[HH:MM:SS] [VizPsyche] [info] Main loop ended
+[HH:MM:SS] [VizPsyche] [trace] Application destructor
+[HH:MM:SS] [Client] [info] Sandbox destroyed!
+[HH:MM:SS] [VizPsyche] [info] VizEngine shutdown
 ```
 
 ---

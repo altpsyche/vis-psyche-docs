@@ -400,6 +400,10 @@ void Texture::Bind(unsigned int slot) const
 **Modify `Texture::Unbind()` in `Texture.cpp`:**
 
 ```cpp
+void Texture::Unbind() const
+{
+	if (m_IsCubemap)
+		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 	else
 		glBindTexture(GL_TEXTURE_2D, 0);
 }

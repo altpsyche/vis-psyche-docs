@@ -8,7 +8,7 @@ Build a flexible material abstraction layer that encapsulates shaders, parameter
 
 ## Introduction
 
-In **Chapters 37-41**, we implemented physically-based rendering, image-based lighting, HDR pipeline, bloom, and color grading. Our rendering is now production-quality—but there's a significant architectural problem hiding in `SandboxApp.cpp`.
+In **Chapters 36-41**, we implemented PBR theory, physically-based rendering, image-based lighting, HDR pipeline, bloom, and color grading. Our rendering is now production-quality—but there's a significant architectural problem hiding in `SandboxApp.cpp`.
 
 **The problem**: Every render call manually sets shader uniforms:
 
@@ -1355,8 +1355,8 @@ Add the new material files to the build:
 **Update** `VizEngine/CMakeLists.txt`:
 
 ```cmake
-# In VIZENGINE_SOURCES (Core subsection)
-    src/VizEngine/Core/MaterialParameter.h
+# In VIZENGINE_HEADERS (Renderer subsection)
+    src/VizEngine/Renderer/MaterialParameter.h
 
 # In VIZENGINE_SOURCES (Renderer subsection)
     src/VizEngine/Renderer/RenderMaterial.cpp

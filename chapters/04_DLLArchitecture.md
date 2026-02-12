@@ -302,7 +302,7 @@ public:
     ~Sandbox() {}
 };
 
-std::unique_ptr<VizEngine::Application> VizEngine::Create Application()
+std::unique_ptr<VizEngine::Application> VizEngine::CreateApplication()
 {
     return std::make_unique<Sandbox>();
 }

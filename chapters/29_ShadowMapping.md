@@ -78,7 +78,7 @@ For a directional light (like the sun), create a view matrix **looking from the 
 
 ```cpp
 glm::vec3 lightDir = glm::normalize(light.Direction);
-glm::vec3 lightPos = -lightDir * 10.0f;  // Position light "behind" scene
+glm::vec3 lightPos = -lightDir * 15.0f;  // Position light "behind" scene
 glm::mat4 lightView = glm::lookAt(
     lightPos,                   // Light position
     glm::vec3(0.0f),           // Look at origin (scene center)
@@ -94,11 +94,11 @@ glm::mat4 lightView = glm::lookAt(
 Use **orthographic projection** (not perspective) for directional lights:
 
 ```cpp
-float orthoSize = 10.0f;  // How much of the scene to cover
+float orthoSize = 15.0f;  // How much of the scene to cover
 glm::mat4 lightProjection = glm::ortho(
     -orthoSize, orthoSize,   // left, right
     -orthoSize, orthoSize,   // bottom, top
-    0.1f, 20.0f              // near, far
+    0.1f, 30.0f              // near, far
 );
 ```
 
@@ -280,7 +280,7 @@ glm::mat4 ComputeLightSpaceMatrix(const VizEngine::DirectionalLight& light)
     glm::vec3 lightDir = light.GetDirection();  // Normalized direction
     
     // Position light "behind" the scene (directional lights are infinitely far)
-    glm::vec3 lightPos = -lightDir * 10.0f;
+    glm::vec3 lightPos = -lightDir * 15.0f;
     
     // Handle degenerate up vector (when light direction is vertical)
     glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -297,12 +297,12 @@ glm::mat4 ComputeLightSpaceMatrix(const VizEngine::DirectionalLight& light)
     
     // Step 2: Create orthographic projection
     // Coverage determines how much of the scene gets shadows
-    float orthoSize = 10.0f;  // Adjust based on scene size
-    
+    float orthoSize = 15.0f;  // Adjust based on scene size
+
     glm::mat4 lightProjection = glm::ortho(
         -orthoSize, orthoSize,   // Left, right
         -orthoSize, orthoSize,   // Bottom, top
-        0.1f, 20.0f              // Near, far planes
+        0.1f, 30.0f              // Near, far planes
     );
     
     // Step 3: Combine into light-space matrix
@@ -392,7 +392,7 @@ uniform vec3 u_ViewPos;
 // Object properties
 uniform vec4 u_ObjectColor;
 uniform sampler2D u_MainTex;
-uniform float u_Roughness;
+uniform float u_Shininess;
 
 // Shadow mapping
 uniform sampler2D u_ShadowMap;
@@ -457,8 +457,7 @@ void main()
     // Specular lighting (Blinn-Phong)
     vec3 viewDir = normalize(u_ViewPos - v_FragPos);
     vec3 halfDir = normalize(lightDir + viewDir);
-    float shininess = mix(256.0, 8.0, u_Roughness);
-    float spec = pow(max(dot(norm, halfDir), 0.0), shininess);
+    float spec = pow(max(dot(norm, halfDir), 0.0), u_Shininess);
     vec3 specular = u_LightSpecular * spec;
     
     // Calculate shadow (0.0 = lit, 1.0 = shadowed)

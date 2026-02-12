@@ -688,7 +688,7 @@ Store the application pointer and wire events.
  public:
      static Engine& Get();
      
-     void Run(Application* app, const EngineConfig& config);
+     void Run(std::unique_ptr<Application> app, const EngineConfig& config);
      void Quit();
      
      // ... existing getters ...

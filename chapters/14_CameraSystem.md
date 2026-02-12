@@ -111,7 +111,7 @@ namespace VizEngine
 namespace VizEngine
 {
     Camera::Camera(float fov, float aspectRatio, float nearPlane, float farPlane)
-        : m_Position(0.0f, 0.0f, 3.0f)
+        : m_Position(0.0f, 0.0f, 0.0f)
         , m_Pitch(0.0f)
         , m_Yaw(0.0f)
         , m_FOV(fov)
@@ -132,8 +132,7 @@ namespace VizEngine
 
     void Camera::SetRotation(float pitch, float yaw)
     {
-        // Clamp pitch to prevent flipping (about ±89 degrees in radians)
-        m_Pitch = glm::clamp(pitch, -1.5f, 1.5f);
+        m_Pitch = pitch;
         m_Yaw = yaw;
         RecalculateViewMatrix();
     }
@@ -160,9 +159,9 @@ namespace VizEngine
     glm::vec3 Camera::GetForward() const
     {
         return glm::vec3(
-            -sin(m_Yaw) * cos(m_Pitch),
+            cos(m_Pitch) * sin(m_Yaw),
             sin(m_Pitch),
-            -cos(m_Yaw) * cos(m_Pitch)
+            cos(m_Pitch) * cos(m_Yaw)
         );
     }
 
@@ -196,7 +195,7 @@ namespace VizEngine
 
     void Camera::MoveUp(float amount)
     {
-        m_Position += glm::vec3(0, 1, 0) * amount;  // World up, not camera up
+        m_Position += GetUp() * amount;
         RecalculateViewMatrix();
     }
 
@@ -262,6 +261,7 @@ glm::vec2 mouseDelta = Input::GetMouseDelta();
 float sensitivity = 0.003f;
 float newYaw = camera.GetYaw() - mouseDelta.x * sensitivity;
 float newPitch = camera.GetPitch() - mouseDelta.y * sensitivity;
+newPitch = glm::clamp(newPitch, -1.5f, 1.5f);  // Clamp at caller level
 camera.SetRotation(newPitch, newYaw);
 
 // Get matrices for rendering

@@ -121,7 +121,7 @@ public:
 		// =========================================================================
 		// Load Assets
 		// =========================================================================
-		m_DefaultLitShader = std::make_unique<VizEngine::Shader>("resources/shaders/defaultlit.shader");
+		m_DefaultLitShader = std::make_shared<VizEngine::Shader>("resources/shaders/defaultlit.shader");
 		m_DefaultTexture = std::make_shared<VizEngine::Texture>("resources/textures/uvchecker.png");
 
 		// Assign default texture to basic objects (created before this point)
@@ -336,7 +336,7 @@ private:
 	VizEngine::DirectionalLight m_Light;
 
 	// Assets
-	std::unique_ptr<VizEngine::Shader> m_DefaultLitShader;
+	std::shared_ptr<VizEngine::Shader> m_DefaultLitShader;
 	std::shared_ptr<VizEngine::Texture> m_DefaultTexture;
 	std::shared_ptr<VizEngine::Mesh> m_PyramidMesh;
 	std::shared_ptr<VizEngine::Mesh> m_CubeMesh;

@@ -215,9 +215,12 @@ namespace VizEngine
             glm::mat4 model = obj.ObjectTransform.GetModelMatrix();
             glm::mat4 mvp = camera.GetViewProjectionMatrix() * model;
 
-            // Uniforms (for unlit.shader)
+            // Uniforms
             shader.SetMatrix4fv("u_MVP", mvp);
+            shader.SetMatrix4fv("u_Model", model);
             shader.SetVec4("u_ObjectColor", obj.Color);
+            shader.SetVec4("u_Color", obj.Color);
+            shader.SetFloat("u_Roughness", obj.Roughness);
 
             // Texture
             if (obj.TexturePtr)

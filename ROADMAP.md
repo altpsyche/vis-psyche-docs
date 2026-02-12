@@ -102,18 +102,18 @@ At the end of Part VII, the engine contains:
 | 30 | Cubemaps and HDR | Environment mapping, reflections | Complete
 | 31 | Skybox Rendering | Environment mapping, reflections | Complete
 
-**Part X: OpenGL Essentials** (Not Started)
+**Part X: OpenGL Essentials** Complete
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 32 | Depth & Stencil Testing | Depth functions, stencil buffer, outlines, mirrors | Planned
-| 33 | Blending & Transparency | Alpha blending, sorting, order-independent transparency | Planned
-| 34 | Normal Mapping | Tangent space, TBN matrix, surface detail without geometry | Planned
-| 35 | Instancing | GPU instancing, instance buffers, rendering many objects | Planned
+| 32 | Depth & Stencil Testing | Depth functions, stencil buffer, outlines, mirrors | Complete
+| 33 | Blending & Transparency | Alpha blending, sorting, order-independent transparency | Complete
+| 34 | Normal Mapping | Tangent space, TBN matrix, surface detail without geometry | Complete
+| 35 | Instancing | GPU instancing, instance buffers, rendering many objects | Complete
 
 > **Why These Topics?** These foundational OpenGL techniques are prerequisites for production rendering. Stencil testing enables mirrors and outlines. Blending is essential for particles and UI. Normal mapping adds surface detail. Instancing is critical for performance.
 
-**Part XI: Physically Based Rendering** In Progress
+**Part XI: Physically Based Rendering** Complete
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|

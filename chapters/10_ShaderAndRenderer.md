@@ -403,7 +403,7 @@ namespace VizEngine
 ## Usage Example
 
 ```cpp
-Shader shader("resources/shaders/defaultlit.shader");
+Shader shader("resources/shaders/unlit.shader");
 
 // In render loop
 shader.Bind();

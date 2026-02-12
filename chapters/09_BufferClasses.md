@@ -242,9 +242,9 @@ namespace VizEngine
 {
     struct VertexBufferElement
     {
-        unsigned int Type;
-        unsigned int Count;
-        unsigned char Normalized;
+        unsigned int type;
+        unsigned int count;
+        unsigned char normalised;
 
         static unsigned int GetSizeOfType(unsigned int type)
         {
@@ -333,7 +333,7 @@ namespace VizEngine
         void Bind() const;
         void Unbind() const;
 
-        void LinkVertexBuffer(const VertexBuffer& vb, const VertexBufferLayout& layout);
+        void LinkVertexBuffer(const VertexBuffer& vb, const VertexBufferLayout& layout) const;
 
         unsigned int GetID() const { return m_vao; }
 
@@ -398,7 +398,7 @@ namespace VizEngine
         glBindVertexArray(0);
     }
 
-    void VertexArray::LinkVertexBuffer(const VertexBuffer& vb, const VertexBufferLayout& layout)
+    void VertexArray::LinkVertexBuffer(const VertexBuffer& vb, const VertexBufferLayout& layout) const
     {
         Bind();
         vb.Bind();
@@ -409,16 +409,16 @@ namespace VizEngine
         for (unsigned int i = 0; i < elements.size(); i++)
         {
             const auto& element = elements[i];
+            glEnableVertexAttribArray(i);
             glVertexAttribPointer(
                 i,
-                element.Count,
-                element.Type,
-                element.Normalized,
+                element.count,
+                element.type,
+                element.normalised,
                 layout.GetStride(),
                 reinterpret_cast<const void*>(offset)
             );
-            glEnableVertexAttribArray(i);
-            offset += element.Count * VertexBufferElement::GetSizeOfType(element.Type);
+            offset += element.count * VertexBufferElement::GetSizeOfType(element.type);
         }
     }
 
