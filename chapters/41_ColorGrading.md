@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 37: Color Grading
+# Chapter 41: Color Grading
 
 Implement LUT-based color grading and parametric color controls to achieve cinematic color palettes and establish visual identity for your scenes.
 
@@ -8,7 +8,7 @@ Implement LUT-based color grading and parametric color controls to achieve cinem
 
 ## Introduction
 
-In **Chapter 36**, we implemented the bloom effect, adding realistic glow to bright surfaces by operating in HDR space before tone mapping. Our post-processing pipeline now handles bloom extraction, Gaussian blur, and bloom compositing.
+In **Chapter 40**, we implemented the bloom effect, adding realistic glow to bright surfaces by operating in HDR space before tone mapping. Our post-processing pipeline now handles bloom extraction, Gaussian blur, and bloom compositing.
 
 **What's still missing?** The ability to establish mood and visual identity through color. Compare any AAA game screenshot—each has a distinct color palette that evokes emotion and guides the player. *The Last of Us* uses desaturated greens and browns for a post-apocalyptic feel. *Cyberpunk 2077* uses vibrant neons and deep blues. *Mad Max* uses orange/teal contrast.
 
@@ -486,13 +486,13 @@ These controls are applied **before** the LUT, allowing artists to quickly exper
 
 ### Add Members
 
-**In** `Sandbox/src/SandboxApp.cpp`, add private members (add to existing bloom members from Chapter 36):
+**In** `Sandbox/src/SandboxApp.cpp`, add private members (add to existing bloom members from Chapter 40):
 
 ```cpp
 private:
-    // ... existing members including bloom from Chapter 36 ...
+    // ... existing members including bloom from Chapter 40 ...
 
-    // Color Grading (Chapter 37)
+    // Color Grading (Chapter 41)
     std::unique_ptr<VizEngine::Texture3D> m_ColorGradingLUT;  // RAII wrapper
     bool m_EnableColorGrading = false;
     float m_LUTContribution = 1.0f;
@@ -513,10 +513,10 @@ Add to your existing `OnCreate()` method (after bloom initialization):
 ```cpp
 void OnCreate() override
 {
-    // ... existing setup code including bloom (Chapter 36) ...
+    // ... existing setup code including bloom (Chapter 40) ...
 
     // ====================================================================
-    // Color Grading Setup (Chapter 37)
+    // Color Grading Setup (Chapter 41)
     // ====================================================================
     VP_INFO("Setting up color grading...");
 
@@ -536,12 +536,12 @@ void OnCreate() override
 
 ### OnRender(): Add Color Grading Uniforms
 
-Update your existing tone mapping pass from Chapter 36 to include color grading:
+Update your existing tone mapping pass from Chapter 40 to include color grading:
 
 ```cpp
 void OnRender() override
 {
-    // ... (existing HDR rendering and bloom from Chapter 36) ...
+    // ... (existing HDR rendering and bloom from Chapter 40) ...
 
     // ====================================================================
     // Pass 3: Tone Mapping + Bloom + Color Grading to Screen
@@ -559,7 +559,7 @@ void OnRender() override
     m_ToneMappingShader->SetFloat("u_Gamma", m_Gamma);
     m_ToneMappingShader->SetFloat("u_WhitePoint", m_WhitePoint);
 
-    // Bloom (from Chapter 36)
+    // Bloom (from Chapter 40)
     m_ToneMappingShader->SetBool("u_EnableBloom", m_EnableBloom);
     m_ToneMappingShader->SetFloat("u_BloomIntensity", m_BloomIntensity);
     if (bloomTexture)
@@ -568,7 +568,7 @@ void OnRender() override
         bloomTexture->Bind(1);
     }
 
-    // Color grading (NEW - Chapter 37)
+    // Color grading (NEW - Chapter 41)
     m_ToneMappingShader->SetBool("u_EnableColorGrading", m_EnableColorGrading);
     m_ToneMappingShader->SetFloat("u_LUTContribution", m_LUTContribution);
     m_ToneMappingShader->SetFloat("u_Saturation", m_Saturation);
@@ -595,7 +595,7 @@ void OnRender() override
 
 ### OnImGuiRender(): Color Grading Controls
 
-Update your existing Post-Processing panel from Chapter 36 to add color grading:
+Update your existing Post-Processing panel from Chapter 40 to add color grading:
 
 ```cpp
 void OnImGuiRender() override
@@ -606,11 +606,11 @@ void OnImGuiRender() override
     // ... existing panels ...
 
     // ====================================================================
-    // Post-Processing Panel (Chapters 36 & 37)
+    // Post-Processing Panel (Chapters 40 & 41)
     // ====================================================================
     uiManager.StartWindow("Post-Processing");
 
-    // Bloom controls (from Chapter 36)
+    // Bloom controls (from Chapter 40)
     if (uiManager.CollapsingHeader("Bloom"))
     {
         uiManager.Checkbox("Enable##Bloom", &m_EnableBloom);
@@ -626,7 +626,7 @@ void OnImGuiRender() override
         uiManager.Text("Blur Passes: More = softer bloom");
     }
 
-    // Color Grading controls (NEW - Chapter 37)
+    // Color Grading controls (NEW - Chapter 41)
     if (uiManager.CollapsingHeader("Color Grading"))
     {
         uiManager.Checkbox("Enable LUT##ColorGrading", &m_EnableColorGrading);
@@ -739,9 +739,9 @@ void OnDestroy() override
 
 ### Callbacks to Previous Chapters
 
-> In **Chapter 35**, we built the HDR pipeline with tone mapping. Color grading extends this by operating in the LDR space after tone mapping, where values are guaranteed to be in [0,1] range—perfect for perceptual color transformations.
+> In **Chapter 39**, we built the HDR pipeline with tone mapping. Color grading extends this by operating in the LDR space after tone mapping, where values are guaranteed to be in [0,1] range—perfect for perceptual color transformations.
 
-> In **Chapter 36**, we implemented bloom which operates in HDR space (before tone mapping). Color grading complements bloom by working in LDR space (after tone mapping), demonstrating the complete post-processing pipeline architecture.
+> In **Chapter 40**, we implemented bloom which operates in HDR space (before tone mapping). Color grading complements bloom by working in LDR space (after tone mapping), demonstrating the complete post-processing pipeline architecture.
 
 > The multi-pass rendering approach from **Chapter 27** (Framebuffers) underlies both bloom and color grading, showing how custom framebuffers enable complex image-space effects.
 
@@ -749,14 +749,14 @@ void OnDestroy() override
 
 ### Forward References
 
-> The post-processing architecture established in Chapters 36-37 serves as the foundation for additional effects:
-> - **Depth of Field** (Chapter 38): Uses G-buffer depth to blur based on focus distance
-> - **Motion Blur** (Chapter 39): Samples velocity buffer to streak along movement
-> - **Screen-Space Reflections** (Chapter 40): Ray-marches against depth buffer for reflections
+> The post-processing architecture established in Chapters 40-41 serves as the foundation for additional effects:
+> - **Depth of Field**: Uses G-buffer depth to blur based on focus distance
+> - **Motion Blur**: Samples velocity buffer to streak along movement
+> - **Screen-Space Reflections** (Chapter 45): Ray-marches against depth buffer for reflections
 
 > **Color grading LUTs** can be extended with temporal interpolation for cinematic sequences. Imagine a character entering a dark cave—the LUT crossfades from warm (outdoor) to cool/desaturated (cave interior) over 2 seconds, creating a smooth mood transition.
 
-> In **Chapter 38: Material System**, materials with emissive properties will automatically integrate with bloom, while color grading ensures all materials maintain the scene's visual identity.
+> In **Chapter 42: Material System**, materials with emissive properties will automatically integrate with bloom, while color grading ensures all materials maintain the scene's visual identity.
 
 ---
 
@@ -781,7 +781,7 @@ void OnDestroy() override
 
 ## Milestone
 
-**Chapter 37 Complete - Color Grading**
+**Chapter 41 Complete - Color Grading**
 
 At this point, your engine has **complete post-processing**:
 
@@ -791,11 +791,11 @@ At this point, your engine has **complete post-processing**:
 **Modular architecture**: Each effect is independent and toggle-able  
 **Artist-friendly workflow**: Use Photoshop/DaVinci for LUT creation  
 
-Combined with Chapter 36's bloom implementation, you now have:
+Combined with Chapter 40's bloom implementation, you now have:
 
 **Visual comparison**:
-- **Before Chapters 36-37**: Functional PBR rendering but lacks cinematic polish
-- **After Chapters 36-37**: Film-like quality with depth, glow, and mood-establishing color palettes
+- **Before Chapters 40-41**: Functional PBR rendering but lacks cinematic polish
+- **After Chapters 40-41**: Film-like quality with depth, glow, and mood-establishing color palettes
 
 **Pipeline summary**:
 ```
@@ -806,10 +806,10 @@ Scene → HDR → Bloom Extract → Blur → Composite → Tone Map → Color Gr
 
 ## What's Next
 
-In **Chapter 38: Material System**, we'll build an abstraction layer for shaders and materials, preparing for component-based rendering with ECS. Materials with emissive properties will automatically integrate with the bloom system from Chapter 36, while maintaining the color grading from Chapter 37.
+In **Chapter 42: Material System**, we'll build an abstraction layer for shaders and materials, preparing for component-based rendering with ECS. Materials with emissive properties will automatically integrate with the bloom system from Chapter 40, while maintaining the color grading from Chapter 41.
 
-> **Next:** [Chapter 38: Material System](38_MaterialSystem.md)
+> **Next:** [Chapter 42: Material System](42_MaterialSystem.md)
 
-> **Previous:** [Chapter 36: Bloom](36_Bloom.md)
+> **Previous:** [Chapter 40: Bloom](40_Bloom.md)
 
 > **Index:** [Table of Contents](INDEX.md)

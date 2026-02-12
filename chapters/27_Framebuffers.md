@@ -23,10 +23,10 @@ Until now, we've rendered directly to the **default framebuffer** (the screen). 
 | Technique | Why Framebuffers? |
 |-----------|-------------------|
 | **Shadow Mapping** | Render depth from light's perspective to a texture (Chapter 29) |
-| **Post-Processing** | Render scene to texture, apply effects like bloom or blur (Part X) |
+| **Post-Processing** | Render scene to texture, apply effects like bloom or blur (Part XI) |
 | **Portals/Mirrors** | Render scene from different camera to texture |
-| **Deferred Rendering** | Multiple render targets for G-buffer (Part X) |
-| **Cubemap Rendering** | 6 renders for environment maps (Part X) |
+| **Deferred Rendering** | Multiple render targets for G-buffer (Part XII) |
+| **Cubemap Rendering** | 6 renders for environment maps (Chapter 30) |
 
 ---
 
@@ -514,7 +514,7 @@ Texture::Texture(int width, int height, unsigned int internalFormat, unsigned in
 
 ---
 
-## Step 4: Create Render-to-Texture Demo
+## Step 5: Create Render-to-Texture Demo
 
 Let's create a simple demo in Sandbox that renders the scene to a texture.
 
@@ -636,7 +636,7 @@ void OnRender() override
 
 ---
 
-## Step 5: Display Framebuffer Texture in ImGui
+## Step 6: Display Framebuffer Texture in ImGui
 
 ImGui can display textures using `ImGui::Image()`. Let's add a panel to show the offscreen render.
 
@@ -743,7 +743,7 @@ void UIManager::Image(void* textureID, float width, float height)
 
 ---
 
-## Step 6: Add Viewport Method to Renderer
+## Step 7: Add Viewport Method to Renderer
 
 Client applications can't call OpenGL functions directly (they're inside the VizEngine DLL). Add a viewport wrapper:
 

@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 32: PBR Theory
+# Chapter 36: PBR Theory
 
 Understand the physics and mathematics behind Physically Based Rendering—the foundation of modern real-time graphics.
 
@@ -32,7 +32,7 @@ In **Chapters 21-22**, we implemented Blinn-Phong lighting—a model that has se
 | **Consistency** | Same material looks correct in any scene |
 | **Industry standard** | Unreal Engine, Unity, Blender, glTF all use PBR |
 
-> **What we'll learn**: This chapter establishes the mathematical foundation. In **Chapter 33**, we'll implement it in GLSL. In **Chapter 34**, we'll add Image-Based Lighting using the cubemap from Chapter 30.
+> **What we'll learn**: This chapter establishes the mathematical foundation. In **Chapter 37**, we'll implement it in GLSL. In **Chapter 38**, we'll add Image-Based Lighting using the cubemap from Chapter 30.
 
 ---
 
@@ -291,7 +291,7 @@ The $k$ parameter differs for direct lighting vs. IBL:
 | **Direct lighting** | $k = \frac{(\text{roughness} + 1)^2}{8}$ |
 | **IBL** | $k = \frac{\text{roughness}^2}{2}$ |
 
-> **Note**: We use the direct lighting formula in this chapter. Chapter 34 (IBL) uses the IBL formula.
+> **Note**: We use the direct lighting formula in this chapter. Chapter 38 (IBL) uses the IBL formula.
 
 ### GLSL Implementation
 
@@ -483,7 +483,7 @@ $$f_{diff} = \frac{\text{albedo}}{\pi}$$
 
 ## Milestone
 
-**Chapter 32 Complete - PBR Theory**
+**Chapter 36 Complete - PBR Theory**
 
 You now understand:
 - The rendering equation and how BRDFs work
@@ -513,10 +513,10 @@ This chapter draws from authoritative sources:
 
 ## What's Next
 
-In **Chapter 33: PBR Implementation**, we'll translate this theory into a complete PBR shader, implementing all the equations we've learned in GLSL.
+In **Chapter 37: PBR Implementation**, we'll translate this theory into a complete PBR shader, implementing all the equations we've learned in GLSL.
 
-> **Next:** [Chapter 33: PBR Implementation](33_PBRImplementation.md)
+> **Next:** [Chapter 37: PBR Implementation](37_PBRImplementation.md)
 
-> **Previous:** [Chapter 31: Skybox Rendering](31_SkyboxRendering.md)
+> **Previous:** [Chapter 35: Instancing](35_Instancing.md)
 
 > **Index:** [Table of Contents](INDEX.md)

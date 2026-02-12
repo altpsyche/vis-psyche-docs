@@ -191,10 +191,10 @@ void main()
 > - Normal matrix computed **in-shader** for simplicity: `mat3(transpose(inverse(u_Model)))`
 > - Uses `u_Shininess` directly as Blinn-Phong exponent (higher = shinier)
 >
-> **Chapter 33** will replace `u_Shininess` with `u_Roughness` and `u_Metallic` for full PBR.
+> **Chapter 37** will replace `u_Shininess` with `u_Roughness` and `u_Metallic` for full PBR.
 
 > [!WARNING]
-> **Performance Note**: Computing `inverse(u_Model)` per-vertex is expensive. For learning, this in-shader approach works fine. In production, precompute the normal matrix on the CPU and pass it as a `u_NormalMatrix` uniform. **Chapter 33** implements this optimization with a `mat3 u_NormalMatrix` uniform computed as `transpose(inverse(mat3(model)))` once per object on the CPU.
+> **Performance Note**: Computing `inverse(u_Model)` per-vertex is expensive. For learning, this in-shader approach works fine. In production, precompute the normal matrix on the CPU and pass it as a `u_NormalMatrix` uniform. **Chapter 37** implements this optimization with a `mat3 u_NormalMatrix` uniform computed as `transpose(inverse(mat3(model)))` once per object on the CPU.
 
 ---
 
@@ -257,10 +257,10 @@ scene.Render(renderer, defaultLitShader, camera);
 You have:
 - `DirectionalLight` with Ambient/Diffuse/Specular
 - `defaultlit.shader` with Shininess-based specular
-- In-shader normal matrix computation (optimized in Chapter 33)
+- In-shader normal matrix computation (optimized in Chapter 37)
 
 > [!TIP]
-> In **Chapter 33**, we'll upgrade `defaultlit.shader` to use Cook-Torrance PBR, replacing the Blinn-Phong specular calculation with physically-based equations. We'll also optimize the normal matrix by precomputing it on the CPU.
+> In **Chapter 37**, we'll upgrade `defaultlit.shader` to use Cook-Torrance PBR, replacing the Blinn-Phong specular calculation with physically-based equations. We'll also optimize the normal matrix by precomputing it on the CPU.
 
 ---
 

@@ -18,7 +18,7 @@ Every 3D scene needs a background. Until now, we've rendered against a solid col
 |---------|--------|
 | **Immersion** | Outdoor scenes feel vast; indoor scenes feel enclosed |
 | **Visual context** | Establishes time of day, weather, location |
-| **Lighting reference** | Provides ambient environment (preview of IBL in Chapter 33) |
+| **Lighting reference** | Provides ambient environment (preview of IBL in Chapter 38) |
 | **Fills gaps** | No empty space where geometry ends |
 | **Professionalism** | Every modern game uses skyboxes |
 
@@ -107,7 +107,7 @@ This makes cubemaps perfect for **environment mapping**—use the view direction
 - Convert to cubemap using a shader
 - Industry standard (Unreal, Unity, Blender all use this)
 - Abundant free HDR assets (polyhaven.com, hdri-haven.com)
-- Preserves HDR data for PBR lighting (Chapters 31-36)
+- Preserves HDR data for PBR lighting (Part XI, Chapters 36-42)
 
 ### Equirectangular Projection
 
@@ -909,7 +909,7 @@ You have:
 - Understood cubemap structure (6 faces, 3D sampling)
 - Learned modern HDRI workflow (industry standard)
 
-Your cubemap texture is ready to use for **skybox rendering** (Chapter 31), **environment reflections** (Chapter 32), and **image-based lighting** (Chapter 33).
+Your cubemap texture is ready to use for **skybox rendering** (Chapter 31), **environment reflections** (Chapter 37), and **image-based lighting** (Chapter 38).
 
 ---
 

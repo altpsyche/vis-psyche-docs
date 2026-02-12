@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 38: Material System
+# Chapter 42: Material System
 
 Build a flexible material abstraction layer that encapsulates shaders, parameters, and textures, preparing for component-based rendering in the ECS architecture.
 
@@ -8,7 +8,7 @@ Build a flexible material abstraction layer that encapsulates shaders, parameter
 
 ## Introduction
 
-In **Chapters 33-37**, we implemented physically-based rendering, image-based lighting, HDR pipeline, bloom, and color grading. Our rendering is now production-quality—but there's a significant architectural problem hiding in `SandboxApp.cpp`.
+In **Chapters 37-41**, we implemented physically-based rendering, image-based lighting, HDR pipeline, bloom, and color grading. Our rendering is now production-quality—but there's a significant architectural problem hiding in `SandboxApp.cpp`.
 
 **The problem**: Every render call manually sets shader uniforms:
 
@@ -34,7 +34,7 @@ m_DefaultLitShader->SetBool("u_UseAlbedoTexture", obj.TexturePtr != nullptr);
 1. Encapsulates shader and material parameters together
 2. Provides a single `Bind()` call that sets all uniforms
 3. Supports different material types (lit, unlit, transparent)
-4. Prepares for the ECS `MeshRenderer` component (Part XI)
+4. Prepares for the ECS `MeshRenderer` component (Part XIII)
 
 ```cpp
 // After: One line
@@ -58,7 +58,7 @@ By the end of this chapter, you'll have:
 | **Bind Pattern** | Single `Bind()` call uploads all uniforms to GPU |
 | **SceneObject Integration** | Replace inline uniforms with material references |
 
-**Architectural Impact**: This chapter bridges manual rendering (Chapters 1-37) to the production ECS architecture (Chapter 39+). Materials become components that can be attached to entities.
+**Architectural Impact**: This chapter bridges manual rendering (Chapters 1-41) to the production ECS architecture (Chapter 43+). Materials become components that can be attached to entities.
 
 ---
 
@@ -1347,7 +1347,7 @@ Export the new material classes in the main header:
 ```cpp
 // Add after existing includes:
 
-// Material System (Chapter 38)
+// Material System (Chapter 42)
 #include "VizEngine/Renderer/MaterialParameter.h"
 #include "VizEngine/Renderer/RenderMaterial.h"
 #include "VizEngine/Renderer/PBRMaterial.h"
@@ -1371,7 +1371,7 @@ For an incremental migration, create materials once and reuse them:
 private:
     // ... existing members ...
 
-    // Material System (Chapter 38)
+    // Material System (Chapter 42)
     std::shared_ptr<VizEngine::PBRMaterial> m_DefaultPBRMaterial;
 ```
 
@@ -1379,7 +1379,7 @@ private:
 
 ```cpp
 // =========================================================================
-// Material System Setup (Chapter 38)
+// Material System Setup (Chapter 42)
 // =========================================================================
 VP_INFO("Setting up material system...");
 
@@ -1477,7 +1477,7 @@ void RenderSceneObjects()
 }
 
 > [!NOTE]
-> **Normal Matrix Optimization**: The normal matrix is computed as `transpose(inverse(mat3(model)))` once per object on the CPU, avoiding expensive per-vertex inverse() calls in the shader. See **Chapter 33** for details.
+> **Normal Matrix Optimization**: The normal matrix is computed as `transpose(inverse(mat3(model)))` once per object on the CPU, avoiding expensive per-vertex inverse() calls in the shader. See **Chapter 37** for details.
 ```
 
 ---
@@ -1529,9 +1529,9 @@ void RenderSceneObjects()
 
 ### Future Considerations
 
-1. **Material Instances**: Share base material, override specific parameters (Chapter 39)
-2. **Material Sorting**: Sort draw calls by material to minimize state changes (Chapter 41)
-3. **Shader Variants**: Compile-time permutations for optional features (Part XV)
+1. **Material Instances**: Share base material, override specific parameters (Chapter 43+)
+2. **Material Sorting**: Sort draw calls by material to minimize state changes (Chapter 43+)
+3. **Shader Variants**: Compile-time permutations for optional features (Part XVII)
 
 ---
 
@@ -1539,27 +1539,27 @@ void RenderSceneObjects()
 
 ### Callbacks to Previous Chapters
 
-> In **Chapter 33**, we implemented the Cook-Torrance BRDF with manual uniform setup. The Material System now encapsulates all those uniforms (`u_Albedo`, `u_Metallic`, `u_Roughness`, `u_AO`) in a type-safe interface.
+> In **Chapter 37**, we implemented the Cook-Torrance BRDF with manual uniform setup. The Material System now encapsulates all those uniforms (`u_Albedo`, `u_Metallic`, `u_Roughness`, `u_AO`) in a type-safe interface.
 
-> In **Chapter 34**, we added IBL with irradiance and prefiltered maps. The `PBRMaterial` class provides `SetIrradianceMap()` and `SetPrefilteredMap()` methods that handle cubemap binding. The lower hemisphere fallback (`SetLowerHemisphereColor()`, `SetLowerHemisphereIntensity()`) prevents black reflections on flat metallic surfaces by blending in an ambient color for downward-facing reflections.
+> In **Chapter 38**, we added IBL with irradiance and prefiltered maps. The `PBRMaterial` class provides `SetIrradianceMap()` and `SetPrefilteredMap()` methods that handle cubemap binding. The lower hemisphere fallback (`SetLowerHemisphereColor()`, `SetLowerHemisphereIntensity()`) prevents black reflections on flat metallic surfaces by blending in an ambient color for downward-facing reflections.
 
 > The shadow mapping from **Chapter 29** is integrated via `SetShadowMap()` and `SetLightSpaceMatrix()`, keeping all rendering concerns in one place.
 
 ### Forward References
 
-> **Chapter 39: Advanced Reflections** extends the lower hemisphere fallback with more sophisticated techniques: Screen Space Reflections (SSR), reflection probes for localized environments, and planar reflections for mirrors and water.
+> **Part XII (Chapters 43-46)** extends the lower hemisphere fallback with more sophisticated techniques: Deferred Shading, SSAO, Screen Space Reflections (SSR), and Reflection Probes for localized environments.
 
-> In **Chapter 40: ECS with EnTT**, we'll create a `MeshRendererComponent` that stores a `std::shared_ptr<Material>`. The renderer will iterate over entities with `MeshRendererComponent` and call `material->Bind()` for each.
+> In **Chapter 47: ECS with EnTT**, we'll create a `MeshRendererComponent` that stores a `std::shared_ptr<Material>`. The renderer will iterate over entities with `MeshRendererComponent` and call `material->Bind()` for each.
 
-> **Chapter 41: Core Components** will introduce `MaterialComponent` as a reusable building block, enabling material assignment in the scene editor.
+> **Chapter 48: Core Components** will introduce `MaterialComponent` as a reusable building block, enabling material assignment in the scene editor.
 
-> The Material System prepares for **shader variants** (Part XV) by abstracting which shader is used from how it's configured.
+> The Material System prepares for **shader variants** (Part XVII) by abstracting which shader is used from how it's configured.
 
 ---
 
 ## Milestone
 
-**Chapter 38 Complete - Material System**
+**Chapter 42 Complete - Material System**
 
 At this point, your engine has:
 
@@ -1579,18 +1579,18 @@ At this point, your engine has:
 - **Before**: 30+ lines per object for uniform setup
 - **After**: 5-10 lines with material interface
 
-The Material System is the **bridge** between manual rendering (Chapters 1-37) and component-based architecture (Chapters 40+). You now have the abstraction layer needed for a professional ECS-based renderer.
+The Material System is the **bridge** between manual rendering (Chapters 1-41) and component-based architecture (Chapter 43+). You now have the abstraction layer needed for a professional ECS-based renderer.
 
 ---
 
 ## What's Next
 
-In **Chapter 39: Advanced Reflections**, we'll implement more sophisticated reflection techniques including Screen Space Reflections (SSR), reflection probes, and planar reflections. These build on the lower hemisphere fallback to create fully realistic reflections for any surface orientation.
+In **Chapter 43: Deferred Shading**, we'll implement a deferred rendering pipeline that decouples geometry and lighting passes. This enables efficient handling of many lights and prepares for advanced screen-space effects.
 
-In **Chapter 40: ECS with EnTT**, we'll integrate the industry-standard EnTT library to create a proper Entity-Component System. Materials will become components attached to entities, and a RenderSystem will automatically render all entities with `MeshRendererComponent`.
+In **Chapter 47: ECS with EnTT**, we'll integrate the industry-standard EnTT library to create a proper Entity-Component System. Materials will become components attached to entities, and a RenderSystem will automatically render all entities with `MeshRendererComponent`.
 
-> **Next:** [Chapter 39: ECS with EnTT](39_ECSWithEnTT.md)
+> **Next:** [Chapter 43: Deferred Shading](43_DeferredShading.md)
 
-> **Previous:** [Chapter 37: Color Grading](37_ColorGrading.md)
+> **Previous:** [Chapter 41: Color Grading](41_ColorGrading.md)
 
 > **Index:** [Table of Contents](INDEX.md)

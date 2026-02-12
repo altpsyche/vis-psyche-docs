@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 33: PBR Implementation
+# Chapter 37: PBR Implementation
 
 Upgrade `defaultlit.shader` from Blinn-Phong to Cook-Torrance PBR for physically accurate material rendering.
 
@@ -8,7 +8,7 @@ Upgrade `defaultlit.shader` from Blinn-Phong to Cook-Torrance PBR for physically
 
 ## Introduction
 
-In **Chapter 32**, we explored the mathematical foundation of Physically Based Rendering: the rendering equation, microfacet theory, and the Cook-Torrance BRDF with its D, F, and G components. Now we'll upgrade our existing `defaultlit.shader` and material system to use these physically-based calculations.
+In **Chapter 36**, we explored the mathematical foundation of Physically Based Rendering: the rendering equation, microfacet theory, and the Cook-Torrance BRDF with its D, F, and G components. Now we'll upgrade our existing `defaultlit.shader` and material system to use these physically-based calculations.
 
 **What we're upgrading:**
 
@@ -353,7 +353,7 @@ void main()
     
     // ========================================================================
     // Ambient Lighting (simple constant term for now)
-    // Chapter 34 will replace this with Image-Based Lighting
+    // Chapter 38 will replace this with Image-Based Lighting
     // ========================================================================
     vec3 ambient = vec3(0.03) * albedo * u_AO;
     
@@ -363,7 +363,7 @@ void main()
     // Tone Mapping and Gamma Correction
     // ========================================================================
     
-    // Reinhard tone mapping (simple, will be improved in Chapter 35)
+    // Reinhard tone mapping (simple, will be improved in Chapter 39)
     color = color / (color + vec3(1.0));
     
     // Gamma correction (linear -> sRGB)
@@ -374,7 +374,7 @@ void main()
 ```
 
 > [!NOTE]
-> **Tone Mapping**: We include basic Reinhard tone mapping and gamma correction in this shader. Chapter 35 (HDR Pipeline) will move these to a post-processing pass for more control.
+> **Tone Mapping**: We include basic Reinhard tone mapping and gamma correction in this shader. Chapter 39 (HDR Pipeline) will move these to a post-processing pass for more control.
 
 ---
 
@@ -425,7 +425,7 @@ This is the **metallic workflow** core:
 for (int i = 0; i < u_LightCount; ++i)
 ```
 
-We iterate over all active lights, computing the BRDF contribution for each and summing the results. This matches the discrete sum approximation of the rendering equation from Chapter 32.
+We iterate over all active lights, computing the BRDF contribution for each and summing the results. This matches the discrete sum approximation of the rendering equation from Chapter 36.
 
 ### Energy Conservation
 
@@ -713,7 +713,7 @@ Validate your results against known-good PBR renderers:
 - **Test**: Load a PBR model and compare
 
 ### Common Differences
-- **Ambient**: Our simple `0.03 * albedo * AO` differs from IBL (Chapter 34)
+- **Ambient**: Our simple `0.03 * albedo * AO` differs from IBL (Chapter 38)
 - **Tone mapping**: Reinhard vs ACES vs other operators
 - **Gamma**: Ensure both you and reference use sRGB output
 
@@ -725,12 +725,12 @@ Validate your results against known-good PBR renderers:
 
 | Limitation | Solution (Future Chapter) |
 |------------|---------------------------|
-| Only albedo textures | Chapter 36: Material System (metallic/roughness/normal maps) |
-| Simple ambient | Chapter 34: Image-Based Lighting |
-| Basic tone mapping | Chapter 35: HDR Pipeline |
-| No normal mapping | Chapter 36: Material System |
+| Only albedo textures | Chapter 42: Material System (metallic/roughness/normal maps) |
+| Simple ambient | Chapter 38: Image-Based Lighting |
+| Basic tone mapping | Chapter 39: HDR Pipeline |
+| No normal mapping | Chapter 42: Material System |
 
-### Preparing for IBL (Chapter 34)
+### Preparing for IBL (Chapter 38)
 
 The skybox cubemap from Chapter 30-31 will be used for:
 - **Diffuse irradiance**: Replace ambient term with environment lighting
@@ -742,7 +742,7 @@ Our shader structure is ready—we'll add these as additional terms.
 
 ## Milestone
 
-**Chapter 33 Complete - PBR Implementation**
+**Chapter 37 Complete - PBR Implementation**
 
 You have:
 - Implemented the complete Cook-Torrance BRDF in GLSL
@@ -759,10 +759,10 @@ Your engine now supports **physically based materials** that behave correctly un
 
 ## What's Next
 
-In **Chapter 34: Image-Based Lighting**, we'll replace the simple ambient term with environment-based lighting using HDR cubemaps. This adds realistic diffuse irradiance and specular reflections from the environment itself.
+In **Chapter 38: Image-Based Lighting**, we'll replace the simple ambient term with environment-based lighting using HDR cubemaps. This adds realistic diffuse irradiance and specular reflections from the environment itself.
 
-> **Next:** [Chapter 34: Image-Based Lighting](34_ImageBasedLighting.md)
+> **Next:** [Chapter 38: Image-Based Lighting](38_ImageBasedLighting.md)
 
-> **Previous:** [Chapter 32: PBR Theory](32_PBRTheory.md)
+> **Previous:** [Chapter 36: PBR Theory](36_PBRTheory.md)
 
 > **Index:** [Table of Contents](INDEX.md)

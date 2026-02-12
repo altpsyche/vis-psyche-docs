@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 35: HDR Pipeline
+# Chapter 39: HDR Pipeline
 
 Implement a complete High Dynamic Range rendering pipeline with floating-point framebuffers, multiple tone mapping operators, and automatic exposure control.
 
@@ -8,12 +8,12 @@ Implement a complete High Dynamic Range rendering pipeline with floating-point f
 
 ## Introduction
 
-In **Chapters 33-34**, we implemented physically-based rendering with Cook-Torrance BRDF and image-based lighting. Our PBR calculations produce **High Dynamic Range (HDR)** values—colors that can exceed the traditional [0, 1] range. A bright metal surface in sunlight might have a specular value of 50.0 or higher, while a dark shadow might be 0.001.
+In **Chapters 37-38**, we implemented physically-based rendering with Cook-Torrance BRDF and image-based lighting. Our PBR calculations produce **High Dynamic Range (HDR)** values—colors that can exceed the traditional [0, 1] range. A bright metal surface in sunlight might have a specular value of 50.0 or higher, while a dark shadow might be 0.001.
 
 **The problem**: Standard displays can only show colors in the [0, 1] range. Our current shader includes basic Reinhard tone mapping (line 381 in `defaultlit.shader`):
 
 ```glsl
-// Reinhard tone mapping (simple, will be improved in Chapter 35)
+// Reinhard tone mapping (simple, will be improved in Chapter 39)
 color = color / (color + vec3(1.0));
 ```
 
@@ -74,7 +74,7 @@ Forcing all these into [0, 1] loses information. A bright specular highlight (va
 Physically-based rendering **inherently produces HDR values**:
 
 ```glsl
-// From defaultlit.shader (Chapter 33)
+// From defaultlit.shader (Chapter 37)
 vec3 radiance = u_LightColors[i] * attenuation;  // Can be >> 1.0
 vec3 specular = (D * F * G) / denominator;        // Can be >> 1.0
 Lo += (diffuse + specular) * radiance * NdotL;    // Accumulates HDR values
@@ -587,7 +587,7 @@ vec3 color = ambient + Lo;
 // Tone Mapping and Gamma Correction
 // ========================================================================
 
-// Reinhard tone mapping (simple, will be improved in Chapter 35)
+// Reinhard tone mapping (simple, will be improved in Chapter 39)
 color = color / (color + vec3(1.0));
 
 // Gamma correction (linear -> sRGB)
@@ -602,7 +602,7 @@ FragColor = vec4(color, 1.0);
 vec3 color = ambient + Lo;
 
 // ========================================================================
-// Output HDR Color (Chapter 35: Tone mapping moved to separate pass)
+// Output HDR Color (Chapter 39: Tone mapping moved to separate pass)
 // ========================================================================
 
 // Output raw linear HDR values (no tone mapping, no gamma correction)
@@ -1017,7 +1017,7 @@ Add to the private section of `SandboxApp` class:
 private:
     // ... existing members ...
 
-    // HDR Pipeline (Chapter 35)
+    // HDR Pipeline (Chapter 39)
     std::shared_ptr<VizEngine::Framebuffer> m_HDRFramebuffer;
     std::shared_ptr<VizEngine::Texture> m_HDRColorTexture;
     std::shared_ptr<VizEngine::Texture> m_HDRDepthTexture;
@@ -1041,7 +1041,7 @@ void OnCreate() override
     // ... existing setup code ...
 
     // =========================================================================
-    // HDR Pipeline Setup (Chapter 35)
+    // HDR Pipeline Setup (Chapter 39)
     // =========================================================================
     VP_INFO("Setting up HDR pipeline...");
 
@@ -1681,19 +1681,19 @@ else
 **Chapter 27 (Framebuffers)**:
 > "In Chapter 27, we created our `Framebuffer` class with support for color and depth attachments. Now we extend it to support HDR formats by using `GL_RGB16F` instead of `GL_RGBA8`."
 
-**Chapters 33-34 (PBR + IBL)**:
-> "In Chapters 33-34, our PBR and IBL systems produce HDR values—bright specular highlights, environment reflections, and accumulated light from multiple sources. Now we properly display them with tone mapping instead of clamping."
+**Chapters 37-38 (PBR + IBL)**:
+> "In Chapters 37-38, our PBR and IBL systems produce HDR values—bright specular highlights, environment reflections, and accumulated light from multiple sources. Now we properly display them with tone mapping instead of clamping."
 
 **Chapter 30 (HDR Environment Maps)**:
 > "Remember the HDR environment maps from Chapter 30? They're actually HDR—storing values beyond 1.0. Now our entire pipeline is HDR, from loading to rendering to display."
 
 ### Forward References
 
-**Chapter 36 (Material System)**:
-> "In Chapter 36, we'll create a Material System that abstracts shader parameters and manages texture bindings. The HDR pipeline will integrate seamlessly—materials will output HDR values, and the tone mapping pass will handle display."
+**Chapter 42 (Material System)**:
+> "In Chapter 42, we'll create a Material System that abstracts shader parameters and manages texture bindings. The HDR pipeline will integrate seamlessly—materials will output HDR values, and the tone mapping pass will handle display."
 
-**Chapter 37 (Post-Processing)**:
-> "In Chapter 37, we'll add bloom effect which enhances bright regions in the HDR buffer. Bloom works by extracting bright pixels (> 1.0) from the HDR buffer—impossible without the HDR pipeline we built here."
+**Chapter 40 (Bloom)**:
+> "In Chapter 40, we'll add bloom effect which enhances bright regions in the HDR buffer. Bloom works by extracting bright pixels (> 1.0) from the HDR buffer—impossible without the HDR pipeline we built here."
 
 **Future Chapters**:
 > "The HDR pipeline enables advanced post-processing like cinematic color grading, lens flares, and depth of field. All these effects benefit from the extended dynamic range."
@@ -1707,7 +1707,7 @@ else
 > "Separating tone mapping from scene rendering provides flexibility. You can change tone mapping operators, adjust exposure, or add post-processing effects without modifying the PBR shader."
 
 **HDR as Standard**:
-> "The HDR pipeline will be reused in Chapter 37 for bloom and other effects. It's not a one-off feature—it's the new standard for how we render."
+> "The HDR pipeline will be reused in Chapter 40 for bloom and other effects. It's not a one-off feature—it's the new standard for how we render."
 
 ---
 
@@ -1800,7 +1800,7 @@ glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
 ## Milestone
 
-**Chapter 35 Complete - HDR Pipeline**
+**Chapter 39 Complete - HDR Pipeline**
 
 You have:
 - Implemented floating-point HDR framebuffers (RGB16F)
@@ -1819,10 +1819,10 @@ Your engine now supports **industry-standard HDR rendering**—the same workflow
 
 ## What's Next
 
-In **Chapter 37: Bloom**, we'll add bloom effect, that leverage the HDR pipeline we built here.
+In **Chapter 40: Bloom**, we'll add bloom effect, that leverage the HDR pipeline we built here.
 
-> **Next**: [Chapter 37: Bloom](37_Bloom.md)
+> **Next**: [Chapter 40: Bloom](40_Bloom.md)
 
-> **Previous**: [Chapter 34: Image-Based Lighting](34_ImageBasedLighting.md)
+> **Previous**: [Chapter 38: Image-Based Lighting](38_ImageBasedLighting.md)
 
 > **Index**: [Table of Contents](INDEX.md)

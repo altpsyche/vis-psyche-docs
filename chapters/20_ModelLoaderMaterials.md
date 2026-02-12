@@ -70,7 +70,7 @@ for (const auto& mat : gltf.materials)
 ```
 
 > [!NOTE]
-> glTF stores PBR materials with roughness (0-1). We convert to shininess for Blinn-Phong rendering. Chapter 33 will upgrade to proper PBR using roughness directly.
+> glTF stores PBR materials with roughness (0-1). We convert to shininess for Blinn-Phong rendering. Chapter 37 will upgrade to proper PBR using roughness directly.
 
 ---
 
@@ -102,7 +102,7 @@ for (size_t i = 0; i < model->GetMeshCount(); i++)
 > [!NOTE]
 > - Use `Model::LoadFromFile()` (static factory), not constructor
 > - Use `scene.Add()`, not `scene.AddObject()`
-> - Use `obj.Shininess`, not `obj.Roughness` (that's for Chapter 33)
+> - Use `obj.Shininess`, not `obj.Roughness` (that's for Chapter 37)
 
 ---
 

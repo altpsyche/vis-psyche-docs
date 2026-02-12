@@ -526,7 +526,7 @@ uiManager.EndSection();
 | Problem | Cause | Solution |
 |---------|-------|-------------|
 | **Black/white skybox** | HDR not loaded | Use `stbi_loadf()` not `stbi_load()`, check `GL_RGB16F` format |
-| **Skybox too dark** | HDR needs exposure | This is expected; tone mapping in Chapter 34 will fix this |
+| **Skybox too dark** | HDR needs exposure | This is expected; tone mapping in Chapter 39 will fix this |
 | **Skybox moves with camera** | Translation not removed | Verify `mat4(mat3(u_View))` in shader |
 | **Skybox clipped** | Depth function wrong | Use `glDepthFunc(GL_LEQUAL)` during skybox render |
 | **Seams between faces** | Filtering not set | Set `GL_CLAMP_TO_EDGE` for S, T, **and R** wrap modes |
@@ -539,52 +539,15 @@ uiManager.EndSection();
 
 ## Best Practices
 
-### HDR Resolution Guidelines
+> For HDR resolution guidelines, cubemap face resolution, memory calculations, and asset sources, see [Chapter 30: Best Practices](30_CubemapsAndHDR.md#best-practices).
 
-| Source Resolution | Use Case | File Size |
-|-------------------|----------|-----------|
-| **2048×1024** | Good quality, fast loading | ~10-15 MB |
-| **4096×2048** | High quality, production | ~40-60 MB |
-| **8192×4096** | Overkill for real-time | ~150+ MB |
+### Skybox-Specific Tips
 
-> **Recommendation**: Start with 2K (2048×1024). Only use 4K if targeting high-end systems.
-
-### Cubemap Face Resolution
-
-| Resolution | Quality | Memory (HDR) | Use Case |
-|------------|---------|--------------|----------|
-| **512×512** | Fast | ~9 MB | Mobile, low-end PCs |
-| **1024×1024** | Balanced | ~36 MB | Desktop, most games |
-| **2048×2048** | High | ~144 MB | High-end, close-up skyboxes |
-
-> **Rule of thumb**: Use 512 for distant skyboxes, 1024 for normal use, 2048 only if skybox is prominent.
-
-### Performance Tips
-
-1. **Convert once**: Do equirect→cubemap conversion at load time, not runtime
-2. **Cache converted cubemaps**: Save converted cubemaps to disk (Chapter 40: Asset Management)
-3. **Use mipmaps**: Generate mipmaps for cubemaps with `glGenerateMimpap(GL_TEXTURE_CUBE_MAP)`
-4. **Optimize resolution**: Balance quality vs memory/performance
-
-### Memory Calculation
-
-```
-Cubemap memory = 6 × width × height × bytes_per_pixel
-
-Examples:
-- 512²  × RGB16F: 6 × 512 × 512 × 6 bytes     =  9.4 MB
-- 1024² × RGB16F: 6 × 1024 × 1024 × 6 bytes   = 37.7 MB
-- 2048² × RGB16F: 6 × 2048 × 2048 × 6 bytes   = 150.9 MB
-```
-
-### Asset Sources
-
-**Free CC0 HDRIs**:
-- [polyhaven.com/hdris](https://polyhaven.com/hdris) - Best quality, curated
-- [hdrihaven.com](https://hdrihaven.com) - Large collection
-- Both offer 1K, 2K, 4K, 8K, 16K resolutions
-
-**License**: CC0 (public domain) - free for commercial use, no attribution required
+1. **Convert once**: Do equirect→cubemap conversion at load time, not every frame
+2. **Cache converted cubemaps**: Save converted cubemaps to disk (Chapter 51: Resource Management)
+3. **Use mipmaps**: Generate mipmaps for cubemaps with `glGenerateMipmap(GL_TEXTURE_CUBE_MAP)`
+4. **Resolution rule of thumb**: Use 512 for distant skyboxes, 1024 for normal use, 2048 only if the skybox is prominent
+5. **Render last**: Rendering the skybox after scene geometry avoids overdraw on covered pixels
 
 ---
 
@@ -594,7 +557,7 @@ While this chapter focuses on skyboxes, cubemaps have another major use: **envir
 
 ### Reflection on Surfaces
 
-In **Chapter 32 (PBR Implementation)**, we'll use the same skybox cubemap to create reflections on metallic surfaces:
+In **Chapter 37 (PBR Implementation)**, we'll use the same skybox cubemap to create reflections on metallic surfaces:
 
 ```glsl
 // Calculate reflection direction
@@ -612,7 +575,7 @@ This creates realistic environment reflections "for free" using the skybox cubem
 
 ### Image-Based Lighting (IBL)
 
-In **Chapter 33 (Image-Based Lighting)**, we'll use the HDRI to compute:
+In **Chapter 38 (Image-Based Lighting)**, we'll use the HDRI to compute:
 - **Diffuse irradiance**: Ambient lighting from environment
 - **Specular pre-filtering**: Blurry reflections based on roughness
 
@@ -658,9 +621,9 @@ Your scenes now have **immersive skybox backgrounds** that establish atmosphere 
 
 ## What's Next
 
-In **Chapter 32: PBR Theory**, we'll dive into physically-based rendering, understanding energy conservation, microfacet models, and the Cook-Torrance BRDF that forms the core of modern game engines.
+In **Chapter 32: Depth & Stencil Testing**, we'll explore depth functions, stencil buffers, and techniques like object outlines and mirrors—foundational OpenGL techniques for production rendering.
 
-> **Next:** [Chapter 32: PBR Theory](32_PBRTheory.md)
+> **Next:** [Chapter 32: Depth & Stencil Testing](32_DepthStencilTesting.md)
 
 > **Previous:** [Chapter 30: Cubemaps and HDR](30_CubemapsAndHDR.md)
 

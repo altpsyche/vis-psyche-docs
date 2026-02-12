@@ -99,7 +99,7 @@ namespace VizEngine
     /**
      * Material for loaded models.
      * 
-     * Chapter 33 will expand this with Roughness, Metallic for PBR.
+     * Chapter 37 will expand this with Roughness, Metallic for PBR.
      */
     struct VizEngine_API Material
     {

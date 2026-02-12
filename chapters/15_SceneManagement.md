@@ -56,11 +56,11 @@ namespace VizEngine
 
         // Material (Option 1: Direct properties - simple, for learning)
         glm::vec4 Color = glm::vec4(1.0f);          // Per-object tint color / albedo
-        float Roughness = 0.5f;                      // 0 = smooth, 1 = rough (PBR, Chapter 33)
-        float Metallic = 0.0f;                       // 0 = dielectric, 1 = metal (PBR, Chapter 33)
+        float Roughness = 0.5f;                      // 0 = smooth, 1 = rough (PBR, Chapter 37)
+        float Metallic = 0.0f;                       // 0 = dielectric, 1 = metal (PBR, Chapter 37)
         std::shared_ptr<Texture> TexturePtr;        // Optional albedo texture
 
-        // Material (Option 2: Material reference - production approach, Chapter 38)
+        // Material (Option 2: Material reference - production approach, Chapter 42)
         // When set, this takes precedence over direct properties above
         std::shared_ptr<RenderMaterial> MaterialRef;
 
@@ -87,7 +87,7 @@ namespace VizEngine
 ```
 
 > [!NOTE]
-> **Dual Material Approach**: `SceneObject` supports both direct properties (`Color`, `Roughness`, `Metallic`) and a `MaterialRef` for the Material System (Chapter 38). This allows gradual transition from simple rendering to production architecture without breaking existing code.
+> **Dual Material Approach**: `SceneObject` supports both direct properties (`Color`, `Roughness`, `Metallic`) and a `MaterialRef` for the Material System (Chapter 42). This allows gradual transition from simple rendering to production architecture without breaking existing code.
 
 ---
 
@@ -320,7 +320,7 @@ for (auto& obj : scene)
 
 You have:
 - `SceneObject` with mesh, transform, texture, color, roughness, metallic
-- `MaterialRef` field for Material System integration (Chapter 38)
+- `MaterialRef` field for Material System integration (Chapter 42)
 - `Scene::Add()` returns reference
 - `Scene::Render()` uses `renderer.Draw(mesh->GetVertexArray(), mesh->GetIndexBuffer(), shader)`
 - Range-based for loop support

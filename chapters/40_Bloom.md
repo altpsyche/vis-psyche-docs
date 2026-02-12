@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 36: Bloom Post-Processing
+# Chapter 40: Bloom Post-Processing
 
 Implement industry-standard bloom effect using physically-based bright-pass filtering and multi-pass Gaussian blur to achieve cinematic glow around bright regions.
 
@@ -8,7 +8,7 @@ Implement industry-standard bloom effect using physically-based bright-pass filt
 
 ## Introduction
 
-In **Chapter 35**, we built a complete HDR rendering pipeline with tone mapping. Our engine now renders in HDR (RGB16F framebuffers) and maps to display space using operators like ACES Filmic. This gives us linear light values throughout the rendering pipeline and professional tone mapping at the end.
+In **Chapter 39**, we built a complete HDR rendering pipeline with tone mapping. Our engine now renders in HDR (RGB16F framebuffers) and maps to display space using operators like ACES Filmic. This gives us linear light values throughout the rendering pipeline and professional tone mapping at the end.
 
 **What's missing?** The cinematic polish that makes modern games look photorealistic. Compare a screenshot from *The Last of Us Part II* or *Cyberpunk 2077* to our current output—there's a noticeable difference in visual richness.
 
@@ -66,7 +66,7 @@ We're implementing **bloom** because:
 2. **Foundation** for the post-processing pipeline architecture
 3. **Demonstrates** multi-pass rendering with custom framebuffers
 
-**Other effects** (depth of field, motion blur, etc.) follow the same pattern and can be added incrementally. Color grading will be covered in Chapter 37.
+**Other effects** (depth of field, motion blur, etc.) follow the same pattern and can be added incrementally. Color grading will be covered in Chapter 41.
 
 ### Why Post-Processing?
 
@@ -338,14 +338,14 @@ Final Output → Screen (default framebuffer)
 - This preserves the full dynamic range of bright values
 
 > [!NOTE]
-> Color grading (covered in Chapter 37) operates in **LDR space** (after tone mapping).
+> Color grading (covered in Chapter 41) operates in **LDR space** (after tone mapping).
 
 ---
 
 ### Framebuffer Strategy
 
 **Requirements**:
-- HDR framebuffer (already exists from Chapter 35)
+- HDR framebuffer (already exists from Chapter 39)
 - Bloom extraction framebuffer (RGB16F, downsampled)
 - Two ping-pong framebuffers for blur passes (swap between horizontal/vertical)
 
@@ -919,7 +919,7 @@ void main()
 private:
     // ... existing members ...
 
-    // Bloom (Chapter 36)
+    // Bloom (Chapter 40)
     std::unique_ptr<VizEngine::Bloom> m_Bloom;
     bool m_EnableBloom = true;
     float m_BloomThreshold = 1.5f;   // Higher threshold for properly balanced scenes
@@ -940,7 +940,7 @@ void OnCreate() override
     // ... existing setup code ...
 
     // ====================================================================
-    // Bloom Setup (Chapter 36)
+    // Bloom Setup (Chapter 40)
     // ====================================================================
     VP_INFO("Setting up bloom...");
 
@@ -960,9 +960,9 @@ void OnCreate() override
 
 ### OnRender(): Add Bloom Pass
 
-**Insert the bloom pass** between HDR rendering and tone mapping from Chapter 35.
+**Insert the bloom pass** between HDR rendering and tone mapping from Chapter 39.
 
-Your `OnRender()` from Chapter 35 currently has two passes:
+Your `OnRender()` from Chapter 39 currently has two passes:
 - **Pass 1**: Render to HDR framebuffer
 - **Pass 2**: Tone mapping to screen
 
@@ -977,7 +977,7 @@ void OnRender() override
     auto& renderer = engine.GetRenderer();
 
     // =========================================================================
-    // Pass 1: Render Scene to HDR Framebuffer (from Chapter 35)
+    // Pass 1: Render Scene to HDR Framebuffer (from Chapter 39)
     // =========================================================================
     if (m_HDREnabled && m_HDRFramebuffer && m_HDRFramebuffer->IsComplete())
     {
@@ -1004,7 +1004,7 @@ void OnRender() override
     }
 
     // =========================================================================
-    // Pass 2: Generate Bloom (NEW - Chapter 36)
+    // Pass 2: Generate Bloom (NEW - Chapter 40)
     // =========================================================================
     std::shared_ptr<VizEngine::Texture> bloomTexture = nullptr;
     if (m_HDREnabled && m_EnableBloom && m_Bloom && m_HDRColorTexture)
@@ -1016,7 +1016,7 @@ void OnRender() override
     }
 
     // =========================================================================
-    // Pass 3: Tone Mapping + Bloom Composite (from Chapter 35, updated)
+    // Pass 3: Tone Mapping + Bloom Composite (from Chapter 39, updated)
     // =========================================================================
     if (m_HDREnabled && m_ToneMappingShader && m_HDRColorTexture && m_FullscreenQuad)
     {
@@ -1051,10 +1051,10 @@ void OnRender() override
 
 1. **Added Pass 2**: Bloom processing between HDR rendering and tone mapping
 2. **Updated Pass 3**: Added bloom uniform bindings to the existing tone mapping pass
-3. **Preserved structure**: Kept the HDR/LDR fallback and `SetupDefaultLitShader()` from Chapter 35
+3. **Preserved structure**: Kept the HDR/LDR fallback and `SetupDefaultLitShader()` from Chapter 39
 
 > [!NOTE]
-> If you also implemented shadow mapping (Chapter 28), it would be **Pass 1** before HDR rendering. The numbering here reflects the HDR pipeline from Chapter 35.
+> If you also implemented shadow mapping (Chapter 28), it would be **Pass 1** before HDR rendering. The numbering here reflects the HDR pipeline from Chapter 39.
 
 ---
 
@@ -1215,7 +1215,7 @@ if (m_Bloom)
 
 ## Milestone
 
-**Chapter 36 Complete - Bloom Post-Processing**
+**Chapter 40 Complete - Bloom Post-Processing**
 
 At this point, your engine has **industry-standard bloom**:
 
@@ -1233,10 +1233,10 @@ At this point, your engine has **industry-standard bloom**:
 
 ## What's Next
 
-In **Chapter 37: Color Grading**, we'll add the final piece of our post-processing pipeline: LUT-based color grading and parametric color controls (saturation, contrast, brightness). This will allow artists to establish mood and visual identity for different scenes.
+In **Chapter 41: Color Grading**, we'll add the final piece of our post-processing pipeline: LUT-based color grading and parametric color controls (saturation, contrast, brightness). This will allow artists to establish mood and visual identity for different scenes.
 
-> **Next:** [Chapter 37: Color Grading](37_ColorGrading.md)
+> **Next:** [Chapter 41: Color Grading](41_ColorGrading.md)
 
-> **Previous:** [Chapter 35: HDR Pipeline](35_HDRPipeline.md)
+> **Previous:** [Chapter 39: HDR Pipeline](39_HDRPipeline.md)
 
 > **Index:** [Table of Contents](INDEX.md)

@@ -1,6 +1,6 @@
 \newpage
 
-# Chapter 34: Image-Based Lighting
+# Chapter 38: Image-Based Lighting
 
 Complete our PBR pipeline by replacing the placeholder ambient term with environment-based diffuse and specular lighting.
 
@@ -8,7 +8,7 @@ Complete our PBR pipeline by replacing the placeholder ambient term with environ
 
 ## Introduction
 
-In **Chapter 33**, we implemented Cook-Torrance PBR for direct lighting—point lights and directional lights. But our ambient term was a simple placeholder:
+In **Chapter 37**, we implemented Cook-Torrance PBR for direct lighting—point lights and directional lights. But our ambient term was a simple placeholder:
 
 ```glsl
 vec3 ambient = vec3(0.03) * albedo * u_AO;  // Placeholder!
@@ -18,7 +18,7 @@ Real-world lighting comes from **everywhere**—the sky, reflected surfaces, dis
 
 ### Before vs After
 
-| Lighting Component | Chapter 33 | Chapter 34 |
+| Lighting Component | Chapter 37 | Chapter 38 |
 |-------------------|------------|------------|
 | **Diffuse Ambient** | Flat 3% tint | Environment irradiance |
 | **Specular Ambient** | None | Roughness-filtered reflections |
@@ -970,7 +970,7 @@ if (u_UseIBL)
 }
 else
 {
-    // Fallback to simple ambient (Chapter 33 style)
+    // Fallback to simple ambient (Chapter 37 style)
     ambient = vec3(0.03) * albedo * u_AO;
 }
 ```
@@ -1312,16 +1312,16 @@ The fallback system has three layers of protection against black reflections:
 | **Physically accurate?** | No - this is an approximation |
 | **Why do it anyway?** | Pure black metals look wrong to human eyes |
 | **Production engines?** | Use the same technique as a fallback layer |
-| **Better alternatives?** | SSR, reflection probes (Chapter 39) |
+| **Better alternatives?** | SSR, reflection probes (Part XII, Chapters 43-46) |
 
 > [!NOTE]
-> This is a common real-time rendering approximation. The "minimum metallic reflection floor" bypasses the BRDF to guarantee visibility. For production quality, layer this with Screen Space Reflections (SSR) or reflection probes, covered in **Chapter 39: Advanced Reflections**.
+> This is a common real-time rendering approximation. The "minimum metallic reflection floor" bypasses the BRDF to guarantee visibility. For production quality, layer this with Screen Space Reflections (SSR) or reflection probes, covered in **Chapter 45 (Screen-Space Reflections) and Chapter 46 (Reflection Probes)**.
 
 ---
 
 ## Milestone
 
-**Chapter 34 Complete - Image-Based Lighting**
+**Chapter 38 Complete - Image-Based Lighting**
 
 You have implemented:
 - **Diffuse irradiance map** - Hemisphere-convolved environment for diffuse ambient
@@ -1337,7 +1337,7 @@ You have implemented:
 Your engine now renders materials that respond correctly to **both** direct lighting and environment lighting—the same approach used by AAA game engines.
 
 > [!TIP]
-> The reflection fallback is an approximation technique common in real-time rendering. For production-quality reflections, see **Chapter 39: Advanced Reflections** which covers Screen Space Reflections (SSR), reflection probes, and planar reflections.
+> The reflection fallback is an approximation technique common in real-time rendering. For production-quality reflections, see **Part XII (Chapters 43-46)** which covers Screen Space Reflections (SSR), reflection probes, and planar reflections.
 
 ---
 
@@ -1354,10 +1354,10 @@ This chapter implementation is based on:
 
 ## What's Next
 
-In **Chapter 35: HDR Pipeline**, we'll move tone mapping and exposure control from the shader to a dedicated post-processing pass, enabling more sophisticated HDR effects like bloom and proper exposure adjustment.
+In **Chapter 39: HDR Pipeline**, we'll move tone mapping and exposure control from the shader to a dedicated post-processing pass, enabling more sophisticated HDR effects like bloom and proper exposure adjustment.
 
-> **Next:** [Chapter 35: HDR Pipeline](35_HDRPipeline.md)
+> **Next:** [Chapter 39: HDR Pipeline](39_HDRPipeline.md)
 
-> **Previous:** [Chapter 33: PBR Implementation](33_PBRImplementation.md)
+> **Previous:** [Chapter 37: PBR Implementation](37_PBRImplementation.md)
 
 > **Index:** [Table of Contents](INDEX.md)
