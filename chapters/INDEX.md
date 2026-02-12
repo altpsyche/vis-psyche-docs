@@ -71,6 +71,16 @@ A step-by-step guide to building a 3D rendering engine from scratch using C++ an
 - [Chapter 41: Color Grading](41_ColorGrading.md)
 - [Chapter 42: Material System](42_MaterialSystem.md)
 
+### Part XII: Multi-Path Rendering & Screen-Space Effects
+- [Chapter 43: Scene Renderer Architecture](43_SceneRendererArchitecture.md)
+- [Chapter 44: Light Management & SSBOs](44_LightManagementSSBOs.md)
+- [Chapter 45: Depth & Normal Prepass](45_DepthNormalPrepass.md)
+- [Chapter 46: Forward+ Rendering](46_ForwardPlusRendering.md)
+- [Chapter 47: Deferred Rendering](47_DeferredRendering.md)
+- [Chapter 48: SSAO](48_SSAO.md)
+- [Chapter 49: Screen-Space Reflections](49_ScreenSpaceReflections.md)
+- [Chapter 50: Render Path Comparison](50_RenderPathComparison.md)
+
 ### Appendices
 - [Appendix A: Code Reference](A_Reference.md)
 

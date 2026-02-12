@@ -58,7 +58,7 @@ By the end of this chapter, you'll have:
 | **Bind Pattern** | Single `Bind()` call uploads all uniforms to GPU |
 | **SceneObject Integration** | Replace inline uniforms with material references |
 
-**Architectural Impact**: This chapter bridges manual rendering (Chapters 1-41) to the production ECS architecture (Chapter 43+). Materials become components that can be attached to entities.
+**Architectural Impact**: This chapter bridges manual rendering (Chapters 1-41) to the composable SceneRenderer architecture (Chapter 43+). Materials encapsulate surface properties while renderers own transforms and lighting.
 
 ---
 
@@ -610,7 +610,10 @@ namespace VizEngine
 {
     /**
      * Physically-Based Rendering material for use with defaultlit.shader.
-     * Encapsulates metallic-roughness workflow parameters.
+     * Encapsulates surface properties (metallic-roughness workflow) and texture bindings.
+     *
+     * Note: Transform and camera matrices are NOT part of the material.
+     *       Renderers set those directly on the shader (per-frame/per-object concern).
      *
      * Usage:
      *   auto pbrMaterial = std::make_shared<PBRMaterial>(shader);
@@ -674,29 +677,10 @@ namespace VizEngine
         float GetLowerHemisphereIntensity() const;
 
         // =====================================================================
-        // Shadow Mapping
+        // Shadow Map Texture
         // =====================================================================
 
         void SetShadowMap(std::shared_ptr<Texture> shadowMap);
-        void SetLightSpaceMatrix(const glm::mat4& lightSpaceMatrix);
-        void SetUseShadows(bool useShadows);
-
-        // =====================================================================
-        // Transform (per-object, set before each draw)
-        // =====================================================================
-
-        void SetModelMatrix(const glm::mat4& model);
-        void SetNormalMatrix(const glm::mat3& normalMatrix);
-        void SetViewMatrix(const glm::mat4& view);
-        void SetProjectionMatrix(const glm::mat4& projection);
-        void SetViewPosition(const glm::vec3& viewPos);
-
-        /**
-         * Set all matrices at once (including normal matrix).
-         */
-        void SetTransforms(const glm::mat4& model, const glm::mat4& view,
-                          const glm::mat4& projection, const glm::vec3& viewPos,
-                          const glm::mat3& normalMatrix);
 
     protected:
         void UploadParameters() override;
@@ -710,7 +694,6 @@ namespace VizEngine
         float m_Alpha = 1.0f;
 
         bool m_UseIBL = false;
-        bool m_UseShadows = false;
         bool m_HasAlbedoTexture = false;
         bool m_HasNormalTexture = false;
 
@@ -719,6 +702,10 @@ namespace VizEngine
         float m_LowerHemisphereIntensity = 0.5f;
     };
 }
+```
+
+> [!NOTE]
+> **Why no transform methods?** Transform matrices (`u_Model`, `u_View`, `u_Projection`, `u_NormalMatrix`) are per-frame/per-object rendering concerns, not surface properties. Renderers set them directly on the shader via `shader->SetMatrix4fv()`. This separation prevents type-mismatch bugs (e.g., accidentally storing a mat4 for a mat3 uniform) and keeps the material focused on what it represents: surface appearance.
 ```
 
 ---
@@ -747,7 +734,6 @@ namespace VizEngine
         SetBool("u_UseNormalMap", false);
         SetFloat("u_Alpha", m_Alpha);
         SetBool("u_UseIBL", false);
-        SetBool("u_UseShadows", false);
 
         // Lower hemisphere defaults (prevents black reflections on flat surfaces)
         SetVec3("u_LowerHemisphereColor", m_LowerHemisphereColor);
@@ -932,7 +918,7 @@ namespace VizEngine
     }
 
     // =========================================================================
-    // Shadow Mapping
+    // Shadow Map Texture
     // =========================================================================
 
     void PBRMaterial::SetShadowMap(std::shared_ptr<Texture> shadowMap)
@@ -941,57 +927,6 @@ namespace VizEngine
         {
             SetTexture("u_ShadowMap", shadowMap, TextureSlots::ShadowMap);
         }
-    }
-
-    void PBRMaterial::SetLightSpaceMatrix(const glm::mat4& lightSpaceMatrix)
-    {
-        SetMat4("u_LightSpaceMatrix", lightSpaceMatrix);
-    }
-
-    void PBRMaterial::SetUseShadows(bool useShadows)
-    {
-        m_UseShadows = useShadows;
-        SetBool("u_UseShadows", useShadows);
-    }
-
-    // =========================================================================
-    // Transforms
-    // =========================================================================
-
-    void PBRMaterial::SetModelMatrix(const glm::mat4& model)
-    {
-        SetMat4("u_Model", model);
-    }
-
-    void PBRMaterial::SetNormalMatrix(const glm::mat3& normalMatrix)
-    {
-        SetMat3("u_NormalMatrix", normalMatrix);
-    }
-
-    void PBRMaterial::SetViewMatrix(const glm::mat4& view)
-    {
-        SetMat4("u_View", view);
-    }
-
-    void PBRMaterial::SetProjectionMatrix(const glm::mat4& projection)
-    {
-        SetMat4("u_Projection", projection);
-    }
-
-    void PBRMaterial::SetViewPosition(const glm::vec3& viewPos)
-    {
-        SetVec3("u_ViewPos", viewPos);
-    }
-
-    void PBRMaterial::SetTransforms(const glm::mat4& model, const glm::mat4& view,
-                                    const glm::mat4& projection, const glm::vec3& viewPos,
-                                    const glm::mat3& normalMatrix)
-    {
-        SetModelMatrix(model);
-        SetNormalMatrix(normalMatrix);
-        SetViewMatrix(view);
-        SetProjectionMatrix(projection);
-        SetViewPosition(viewPos);
     }
 
     // =========================================================================
@@ -1438,7 +1373,6 @@ if (m_UseIBL && m_IrradianceMap && m_PrefilteredMap && m_BRDFLut)
 if (m_ShadowMapDepth)
 {
     m_PBRMaterial->SetShadowMap(m_ShadowMapDepth);
-    m_PBRMaterial->SetUseShadows(true);
 }
 
 VP_INFO("Material system initialized");
@@ -1446,7 +1380,7 @@ VP_INFO("Material system initialized");
 
 ### Option B: Full Refactor
 
-For complete integration, replace the render loop:
+For complete integration, replace the render loop. Note the separation of concerns: the material owns surface properties and texture bindings, while transforms and camera/light uniforms are set directly on the shader.
 
 ```cpp
 void RenderSceneObjects()
@@ -1454,15 +1388,15 @@ void RenderSceneObjects()
     auto& engine = VizEngine::Engine::Get();
     auto& renderer = engine.GetRenderer();
 
-    // Set view-dependent uniforms once
-    m_PBRMaterial->SetViewMatrix(m_Camera.GetViewMatrix());
-    m_PBRMaterial->SetProjectionMatrix(m_Camera.GetProjectionMatrix());
-    m_PBRMaterial->SetViewPosition(m_Camera.GetPosition());
-    m_PBRMaterial->SetLightSpaceMatrix(m_LightSpaceMatrix);
-
-    // Set lighting uniforms (could be moved to material if lights are static)
+    // Set per-frame uniforms directly on the shader (not through material)
     auto shader = m_PBRMaterial->GetShader();
     shader->Bind();
+    shader->SetMatrix4fv("u_View", m_Camera.GetViewMatrix());
+    shader->SetMatrix4fv("u_Projection", m_Camera.GetProjectionMatrix());
+    shader->SetVec3("u_ViewPos", m_Camera.GetPosition());
+    shader->SetMatrix4fv("u_LightSpaceMatrix", m_LightSpaceMatrix);
+
+    // Lighting uniforms directly on shader
     shader->SetInt("u_LightCount", 4);
     for (int i = 0; i < 4; ++i)
     {
@@ -1478,15 +1412,7 @@ void RenderSceneObjects()
     {
         if (!obj.Active || !obj.MeshPtr) continue;
 
-        // Compute model and normal matrices (normal matrix computed on CPU for performance)
-        glm::mat4 model = obj.ObjectTransform.GetModelMatrix();
-        glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
-
-        // Per-object transforms
-        m_PBRMaterial->SetModelMatrix(model);
-        m_PBRMaterial->SetNormalMatrix(normalMatrix);
-
-        // Per-object material properties
+        // Per-object surface properties (via material)
         m_PBRMaterial->SetAlbedo(glm::vec3(obj.Color));
         m_PBRMaterial->SetAlpha(obj.Color.a);
         m_PBRMaterial->SetMetallic(obj.Metallic);
@@ -1494,21 +1420,22 @@ void RenderSceneObjects()
         m_PBRMaterial->SetAO(1.0f);
 
         if (obj.TexturePtr)
-        {
             m_PBRMaterial->SetAlbedoTexture(obj.TexturePtr);
-        }
         else
-        {
             m_PBRMaterial->SetAlbedoTexture(nullptr);
-        }
 
-        // Bind material (uploads all uniforms)
+        // Bind material (shader + textures + PBR uniform upload)
         m_PBRMaterial->Bind();
+
+        // Per-object transforms directly on shader (after Bind ensures shader is active)
+        glm::mat4 model = obj.ObjectTransform.GetModelMatrix();
+        glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
+        shader->SetMatrix4fv("u_Model", model);
+        shader->SetMatrix3fv("u_NormalMatrix", normalMatrix);
 
         // Draw
         obj.MeshPtr->Bind();
-        renderer.Draw(obj.MeshPtr->GetVertexArray(), obj.MeshPtr->GetIndexBuffer(),
-                     *m_PBRMaterial->GetShader());
+        renderer.Draw(obj.MeshPtr->GetVertexArray(), obj.MeshPtr->GetIndexBuffer(), *shader);
     }
 }
 ```
@@ -1567,7 +1494,7 @@ void RenderSceneObjects()
 
 1. **Material Instances**: Share base material, override specific parameters (Chapter 43+)
 2. **Material Sorting**: Sort draw calls by material to minimize state changes (Chapter 43+)
-3. **Shader Variants**: Compile-time permutations for optional features (Part XVII)
+3. **Shader Variants**: Compile-time permutations for optional features (Chapter 74)
 
 ---
 
@@ -1579,15 +1506,17 @@ void RenderSceneObjects()
 
 > In **Chapter 38**, we added IBL with irradiance and prefiltered maps. The `PBRMaterial` class provides `SetIrradianceMap()` and `SetPrefilteredMap()` methods that handle cubemap binding. The lower hemisphere fallback (`SetLowerHemisphereColor()`, `SetLowerHemisphereIntensity()`) prevents black reflections on flat metallic surfaces by blending in an ambient color for downward-facing reflections.
 
-> The shadow mapping from **Chapter 29** is integrated via `SetShadowMap()` and `SetLightSpaceMatrix()`, keeping all rendering concerns in one place.
+> The shadow mapping from **Chapter 29** is integrated via `SetShadowMap()` for the depth texture binding. The light-space matrix is set directly on the shader by the renderer, maintaining the material/renderer separation.
 
 ### Forward References
 
-> **Part XII (Chapters 43-46)** extends the lower hemisphere fallback with more sophisticated techniques: Deferred Shading, SSAO, Screen Space Reflections (SSR), and Reflection Probes for localized environments.
+> **Chapter 43: Scene Renderer Architecture** extracts the monolithic render loop from SandboxApp into a composable SceneRenderer with swappable render paths. The PBRMaterial is used for surface properties while renderers set transforms/camera/lights directly on the shader.
 
-> In **Chapter 47: ECS with EnTT**, we'll create a `MeshRendererComponent` that stores a `std::shared_ptr<Material>`. The renderer will iterate over entities with `MeshRendererComponent` and call `material->Bind()` for each.
+> **Part XII (Chapters 43-50)** builds on the Material System to create three swappable render paths (Forward, Forward+, Deferred) and screen-space effects (SSAO, SSR). The material/renderer separation established here ensures each render path can use PBRMaterial without storing inappropriate state.
 
-> **Chapter 48: Core Components** will introduce `MaterialComponent` as a reusable building block, enabling material assignment in the scene editor.
+> In **Chapter 51: ECS with EnTT**, we'll create a `MeshRendererComponent` that stores a `std::shared_ptr<Material>`. The renderer will iterate over entities with `MeshRendererComponent` and call `material->Bind()` for each.
+
+> **Chapter 52: Core Components** will introduce `MaterialComponent` as a reusable building block, enabling material assignment in the scene editor.
 
 > The Material System prepares for **shader variants** (Part XVII) by abstracting which shader is used from how it's configured.
 
@@ -1615,17 +1544,17 @@ At this point, your engine has:
 - **Before**: 30+ lines per object for uniform setup
 - **After**: 5-10 lines with material interface
 
-The Material System is the **bridge** between manual rendering (Chapters 1-41) and component-based architecture (Chapter 43+). You now have the abstraction layer needed for a professional ECS-based renderer.
+The Material System is the **bridge** between manual rendering (Chapters 1-41) and the composable SceneRenderer architecture (Chapter 43+). You now have the abstraction layer needed for swappable render paths and screen-space effects.
 
 ---
 
 ## What's Next
 
-In **Chapter 43: Deferred Shading**, we'll implement a deferred rendering pipeline that decouples geometry and lighting passes. This enables efficient handling of many lights and prepares for advanced screen-space effects.
+In **Chapter 43: Scene Renderer Architecture**, we'll extract the monolithic render loop from SandboxApp into a composable SceneRenderer with swappable render paths (Strategy Pattern). This is the foundation for Forward+, Deferred, and screen-space effects in Chapters 44-50.
 
-In **Chapter 47: ECS with EnTT**, we'll integrate the industry-standard EnTT library to create a proper Entity-Component System. Materials will become components attached to entities, and a RenderSystem will automatically render all entities with `MeshRendererComponent`.
+In **Chapter 51: ECS with EnTT**, we'll integrate the industry-standard EnTT library to create a proper Entity-Component System. Materials will become components attached to entities, and a RenderSystem will automatically render all entities with `MeshRendererComponent`.
 
-> **Next:** [Chapter 43: Deferred Shading](43_DeferredShading.md)
+> **Next:** [Chapter 43: Scene Renderer Architecture](43_SceneRendererArchitecture.md)
 
 > **Previous:** [Chapter 41: Color Grading](41_ColorGrading.md)
 

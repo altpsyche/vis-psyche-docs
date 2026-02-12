@@ -19,12 +19,13 @@
 
 ## Current State
 
-At the end of Part VII, the engine contains:
+At the end of Part XI, the engine contains:
 
 | Layer | Components |
 |-------|------------|
 | **Core** | Camera, Input, Light, Material, Mesh, Model, Scene, Transform |
-| **OpenGL** | Buffers, Shader, Texture, Renderer, GLFWManager |
+| **OpenGL** | Buffers, Shader, Texture, Renderer, Framebuffer, GLFWManager |
+| **Renderer** | PBRMaterial, RenderMaterial, MaterialFactory, Bloom, Skybox |
 | **GUI** | UIManager (Dear ImGui) |
 | **Assets** | glTF loader (tinygltf), stb_image |
 
@@ -44,8 +45,8 @@ At the end of Part VII, the engine contains:
 
 ## The Game: Checkpoint
 
-**Genre**: First-Person Puzzle  
-**Inspiration**: Papers Please  
+**Genre**: First-Person Puzzle
+**Inspiration**: Papers Please
 **Scope**: 5–10 minute experience
 
 **Concept**: The player is a bureaucrat in a surreal 3D checkpoint. Examine documents, inspect objects, interrogate visitors. Make decisions. Face consequences.
@@ -67,7 +68,7 @@ At the end of Part VII, the engine contains:
 | Phase | Focus | Parts | Chapters | Status |
 |-------|-------|-------|----------|--------|
 | 1. Foundation | Engine/Application separation | VIII | 23–26 | Complete
-| 2. Advanced OpenGL | OpenGL essentials, PBR, deferred, screen-space | IX–XII | 27–50 | In Progress
+| 2. Advanced OpenGL | OpenGL essentials, PBR, multi-path rendering, screen-space | IX–XII | 27–50 | In Progress
 | 3. Engine Systems | ECS, serialization, physics | XIII–XV | 51–64 | (Not Started)
 | 4. Modern Graphics | Vulkan/D3D12 concepts, NVRHI, render graph | XVI–XVIII | 65–77 | (Not Started)
 | 5. Editor | Scene editor with tooling | XIX | 78–83 | (Not Started)
@@ -125,20 +126,26 @@ At the end of Part VII, the engine contains:
 | 41 | Color Grading | 3D LUT, parametric controls, saturation/contrast | Complete
 | 42 | Material System | Material abstraction, parameter binding, shader variants | Complete
 
-**Part XII: Deferred Rendering & Screen-Space** (Not Started)
+**Part XII: Multi-Path Rendering & Screen-Space Effects** In Progress
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 43 | Deferred Shading | G-buffer, geometry pass, lighting pass, many lights | Planned
-| 44 | SSAO | Screen-space ambient occlusion, blur, depth reconstruction | Planned
-| 45 | Screen-Space Reflections | Ray marching, hierarchical tracing, fallback to IBL | Planned
-| 46 | Reflection Probes | Baked probes, probe blending, parallax correction | Planned
+| 43 | Scene Renderer Architecture | SceneRenderer, RenderPath strategy, ShadowPass, PostProcessPipeline | Complete
+| 44 | Light Management & SSBOs | Shader Storage Buffer Objects, dynamic light count, std430 layout | Planned
+| 45 | Depth & Normal Prepass | Multi-pass foundation, early-Z, depth+normal FBO | Planned
+| 46 | Forward+ Rendering | Compute shaders, tile-based light culling, memory barriers | Planned
+| 47 | Deferred Rendering | G-buffer, MRT, geometry pass, deferred lighting pass | Planned
+| 48 | SSAO | Screen-space ambient occlusion, hemisphere sampling, bilateral blur | Planned
+| 49 | Screen-Space Reflections | Ray marching, roughness-based blending, IBL fallback | Planned
+| 50 | Render Path Comparison | Split-screen comparison, GPU timer queries, performance analysis | Planned
 
-> **Why Deferred Before SSR?** SSR requires a G-buffer with world-space positions and normals. Deferred shading naturally provides this data. SSAO uses the same depth/normal information, making it a natural companion.
+> **Why Scene Renderer First?** Before implementing new rendering techniques (Forward+, Deferred, SSAO, SSR), we extract the monolithic render code from SandboxApp into a composable SceneRenderer with swappable render paths. This architecture (Strategy Pattern) ensures each new technique plugs in cleanly without duplicating pipeline code.
 
-**Deliverable**: Production-quality rendering in OpenGL with deferred shading, material abstraction, and advanced screen-space techniques.
+> **Why Three Render Paths?** Each path has distinct strengths: Forward is simple and handles transparency well, Forward+ scales to hundreds of lights via compute shader culling, Deferred provides free depth+normals for screen-space effects. Comparing all three teaches when to use each in production.
 
-> **Transition Point**: Part XII completes the rendering foundation. Deferred shading enables efficient multi-light scenarios and provides the G-buffer infrastructure for screen-space effects. Part XIII introduces ECS to organize game objects using these rendering capabilities.
+**Deliverable**: Production-quality rendering in OpenGL with three swappable render paths, screen-space ambient occlusion, screen-space reflections, and a composable post-processing pipeline.
+
+> **Transition Point**: Part XII completes the rendering foundation. The SceneRenderer architecture with swappable render paths provides the infrastructure for all future rendering features. Part XIII introduces ECS to organize game objects using these rendering capabilities.
 
 ---
 
@@ -148,22 +155,22 @@ At the end of Part VII, the engine contains:
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 47 | ECS with EnTT | Entities, components, iteration | Planned
-| 48 | Core Components | Transform, MeshRenderer, Camera, Light | Planned
-| 49 | Systems Architecture | Render system, scene renderer, hierarchy | Planned
+| 51 | ECS with EnTT | Entities, components, iteration | Planned
+| 52 | Core Components | Transform, MeshRenderer, Camera, Light | Planned
+| 53 | Systems Architecture | Render system, scene renderer, hierarchy | Planned
 
-> **Production Features**: The Material System (Ch 42) and Screen-Space Techniques (Ch 43-46) provide the rendering foundation. ECS organizes game objects to use these capabilities efficiently.
+> **Production Features**: The Material System (Ch 42) and Multi-Path Rendering (Ch 43-50) provide the rendering foundation. ECS organizes game objects to use these capabilities efficiently.
 
 **Part XIV: Engine Infrastructure** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 50 | Debug Infrastructure | Conditional compilation (`VP_DEBUG`), debug framebuffers, GPU labels | Planned
-| 51 | Resource Management | Asset manager, path resolution, hot-reload, shader caching | Planned
-| 52 | Configuration System | Config files (JSON/YAML), quality settings, runtime parameters | Planned
-| 53 | Serialization | JSON scene format, save/load, prefabs, component serialization | Planned
-| 54 | Threading Fundamentals | Job system, thread-safe containers, async asset loading | Planned
-| 55 | Error Handling & Logging | Error policies, log filtering, production builds | Planned
+| 54 | Debug Infrastructure | Conditional compilation (`VP_DEBUG`), debug framebuffers, GPU labels | Planned
+| 55 | Resource Management | Asset manager, path resolution, hot-reload, shader caching | Planned
+| 56 | Configuration System | Config files (JSON/YAML), quality settings, runtime parameters | Planned
+| 57 | Serialization | JSON scene format, save/load, prefabs, component serialization | Planned
+| 58 | Threading Fundamentals | Job system, thread-safe containers, async asset loading | Planned
+| 59 | Error Handling & Logging | Error policies, log filtering, production builds | Planned
 
 > **Production Features**: Asset Manager with hot-reload enables rapid iteration. Reference-counted resources prevent memory leaks.
 
@@ -171,11 +178,11 @@ At the end of Part VII, the engine contains:
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 56 | Physics World | Jolt setup, simulation loop, debug draw | Planned
-| 57 | Collision System | Shapes, layers, filtering, triggers | Planned
-| 58 | Queries and Raycasting | Ray/shape queries, object picking | Planned
-| 59 | Character Controller | Kinematic body, ground detection, slopes | Planned
-| 60 | Physics Debugging | Visualization, profiling, common issues | Planned
+| 60 | Physics World | Jolt setup, simulation loop, debug draw | Planned
+| 61 | Collision System | Shapes, layers, filtering, triggers | Planned
+| 62 | Queries and Raycasting | Ray/shape queries, object picking | Planned
+| 63 | Character Controller | Kinematic body, ground detection, slopes | Planned
+| 64 | Physics Debugging | Visualization, profiling, common issues | Planned
 
 **Deliverable**: Complete engine with ECS, serialization, threading, physics.
 
@@ -187,29 +194,29 @@ At the end of Part VII, the engine contains:
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 61 | GPU Architecture | Queues, command processors, async compute | Planned
-| 62 | Vulkan Concepts | Instance, device, queues, command buffers | Planned
-| 63 | D3D12 Concepts | Devices, command lists, descriptor heaps | Planned
-| 64 | Memory Management | Heaps, allocation strategies, residency | Planned
-| 65 | Synchronization | Fences, semaphores, barriers, hazards | Planned
-| 66 | Pipeline State | PSOs, root signatures, descriptor sets | Planned
+| 65 | GPU Architecture | Queues, command processors, async compute | Planned
+| 66 | Vulkan Concepts | Instance, device, queues, command buffers | Planned
+| 67 | D3D12 Concepts | Devices, command lists, descriptor heaps | Planned
+| 68 | Memory Management | Heaps, allocation strategies, residency | Planned
+| 69 | Synchronization | Fences, semaphores, barriers, hazards | Planned
+| 70 | Pipeline State | PSOs, root signatures, descriptor sets | Planned
 
 **Part XVII: NVRHI Integration** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 67 | NVRHI Architecture | How it maps to Vulkan/D3D12/OpenGL | Planned
-| 68 | Porting Buffers and Textures | Resource creation, views, memory | Planned
-| 69 | Shader Compilation | HLSL to SPIR-V, DXC, offline compilation | Planned
-| 70 | Shader Permutations | Variants, defines, caching, reflection | Planned
-| 71 | Porting Pipelines | Graphics/compute PSOs, binding layouts | Planned
+| 71 | NVRHI Architecture | How it maps to Vulkan/D3D12/OpenGL | Planned
+| 72 | Porting Buffers and Textures | Resource creation, views, memory | Planned
+| 73 | Shader Compilation | HLSL to SPIR-V, DXC, offline compilation | Planned
+| 74 | Shader Permutations | Variants, defines, caching, reflection | Planned
+| 75 | Porting Pipelines | Graphics/compute PSOs, binding layouts | Planned
 
 **Part XVIII: Frame Architecture** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 72 | Render Graph Concepts | Frame graphs, resource lifetimes, render passes | Planned
-| 73 | Implementing Render Graph | Automatic barriers, resource aliasing, pass ordering | Planned
+| 76 | Render Graph Concepts | Frame graphs, resource lifetimes, render passes | Planned
+| 77 | Implementing Render Graph | Automatic barriers, resource aliasing, pass ordering | Planned
 
 > **Production Features**: Render Graph automates resource barriers, enables async compute, and optimizes resource memory usage through aliasing.
 
@@ -223,12 +230,12 @@ At the end of Part VII, the engine contains:
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 74 | Editor Architecture | EditorApp, docking, play mode | Planned
-| 75 | Scene Hierarchy | Entity tree, selection, parenting | Planned
-| 76 | Inspector and Properties | Component editing, add/remove | Planned
-| 77 | Viewport and Gizmos | Framebuffer viewport, transform handles | Planned
-| 78 | Asset Browser | File browsing, thumbnails, drag-and-drop | Planned
-| 79 | Undo System | Command pattern, history, macros | Planned
+| 78 | Editor Architecture | EditorApp, docking, play mode | Planned
+| 79 | Scene Hierarchy | Entity tree, selection, parenting | Planned
+| 80 | Inspector and Properties | Component editing, add/remove | Planned
+| 81 | Viewport and Gizmos | Framebuffer viewport, transform handles | Planned
+| 82 | Asset Browser | File browsing, thumbnails, drag-and-drop | Planned
+| 83 | Undo System | Command pattern, history, macros | Planned
 
 **Deliverable**: Functional level editor with asset management.
 
@@ -240,19 +247,19 @@ At the end of Part VII, the engine contains:
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 80 | First-Person Controller | Movement, physics character | Planned
-| 81 | Object Interaction | Pick up, inspect, place | Planned
-| 82 | Document System | Inspection UI, stamps, decisions | Planned
-| 83 | Audio | miniaudio, ambience, 3D sound | Planned
-| 84 | Game State | State machine, transitions, persistence | Planned
+| 84 | First-Person Controller | Movement, physics character | Planned
+| 85 | Object Interaction | Pick up, inspect, place | Planned
+| 86 | Document System | Inspection UI, stamps, decisions | Planned
+| 87 | Audio | miniaudio, ambience, 3D sound | Planned
+| 88 | Game State | State machine, transitions, persistence | Planned
 
 **Part XXI: Polish and Ship** (Not Started)
 
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
-| 85 | Visual Polish | Particles, atmosphere, tuning | Planned
-| 86 | Performance | Profiling, culling, optimization | Planned
-| 87 | Distribution | Release builds, packaging | Planned
+| 89 | Visual Polish | Particles, atmosphere, tuning | Planned
+| 90 | Performance | Profiling, culling, optimization | Planned
+| 91 | Distribution | Release builds, packaging | Planned
 
 **Deliverable**: Complete, polished, multi-API game.
 
@@ -271,20 +278,20 @@ At the end of Part VII, the engine contains:
 | VII | Input and Controls | 21–22 | Complete |
 | VIII | Application Lifecycle | 23–26 | Complete |
 | IX | Advanced Techniques | 27–31 | Complete |
-| X | OpenGL Essentials | 32–35 | Planned |
-| XI | Physically Based Rendering | 36–42 | In Progress |
-| XII | Deferred Rendering & Screen-Space | 43–46 | Planned |
-| XIII | Entity-Component System | 47–49 | Planned |
-| XIV | Engine Infrastructure | 50–55 | Planned |
-| XV | Physics | 56–60 | Planned |
-| XVI | Understanding Modern APIs | 61–66 | Planned |
-| XVII | NVRHI Integration | 67–71 | Planned |
-| XVIII | Frame Architecture | 72–73 | Planned |
-| XIX | Editor | 74–79 | Planned |
-| XX | Game Systems | 80–84 | Planned |
-| XXI | Polish and Ship | 85–87 | Planned |
+| X | OpenGL Essentials | 32–35 | Complete |
+| XI | Physically Based Rendering | 36–42 | Complete |
+| XII | Multi-Path Rendering & Screen-Space Effects | 43–50 | In Progress |
+| XIII | Entity-Component System | 51–53 | Planned |
+| XIV | Engine Infrastructure | 54–59 | Planned |
+| XV | Physics | 60–64 | Planned |
+| XVI | Understanding Modern APIs | 65–70 | Planned |
+| XVII | NVRHI Integration | 71–75 | Planned |
+| XVIII | Frame Architecture | 76–77 | Planned |
+| XIX | Editor | 78–83 | Planned |
+| XX | Game Systems | 84–88 | Planned |
+| XXI | Polish and Ship | 89–91 | Planned |
 
-**Total**: 87 chapters across 21 parts
+**Total**: 91 chapters across 21 parts
 
 ---
 
@@ -294,15 +301,22 @@ VizPsyche uses a **layered architecture** that maintains educational primitives 
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  Production Layer (Ch 47+)                      │
-│  - SceneRenderer automates multi-pass rendering │
-│  - Material System manages shader parameters    │
-│  - Asset Manager with hot-reload                │
+│  Production Layer (Ch 51+)                      │
 │  - ECS organizes game objects                   │
+│  - Asset Manager with hot-reload                │
+│  - Render Graph automates pass ordering         │
 └─────────────────────────────────────────────────┘
                      ↓ (uses)
 ┌─────────────────────────────────────────────────┐
-│  Educational Layer (Ch 1-46) - Always Available │
+│  Rendering Layer (Ch 43-50)                     │
+│  - SceneRenderer orchestrates multi-pass        │
+│  - Swappable render paths (Fwd/Fwd+/Deferred)  │
+│  - Screen-space effects (SSAO, SSR)             │
+│  - Material System manages shader parameters    │
+└─────────────────────────────────────────────────┘
+                     ↓ (uses)
+┌─────────────────────────────────────────────────┐
+│  Educational Layer (Ch 1-42) - Always Available │
 │  - Direct Framebuffer, Shader, Texture access   │
 │  - Manual render passes                         │
 │  - Raw OpenGL understanding                     │
@@ -311,33 +325,38 @@ VizPsyche uses a **layered architecture** that maintains educational primitives 
 
 ### Design Principle: **Opt-In Complexity**
 
-**Chapters 1-46** (Educational):
-- Students implement techniques manually (shadow mapping, deferred shading, SSR)
+**Chapters 1-42** (Educational):
+- Students implement techniques manually (shadow mapping, PBR, bloom)
 - Direct access to primitives (framebuffers, shaders, textures)
 - Understand **how** rendering techniques work
 
-**Chapters 47+** (Production):
-- Abstractions automate what was learned manually
-- SceneRenderer renders shadows in one line
-- Material System replaces manual shader binding
-- **Students appreciate automation because they built it first**
+**Chapters 43-50** (Rendering Architecture):
+- SceneRenderer automates multi-pass rendering
+- Strategy Pattern enables swappable render paths
+- Screen-space effects build on depth/normal prepass
+- **Students appreciate architecture because they built the manual version first**
+
+**Chapters 51+** (Production):
+- ECS organizes game objects with rendering capabilities
+- Asset Manager with hot-reload enables rapid iteration
+- Render Graph automates resource barriers and pass ordering
 
 ### Transition Example:
 
 ```cpp
-// Educational approach (manual)
+// Educational approach (manual, Chapters 1-42)
 void OnRender() {
     // Shadow pass
     m_ShadowFramebuffer->Bind();
     renderer.ClearDepth();
     m_ShadowShader->Bind();
     // ... 20 lines of manual setup ...
-    
+
     // Main pass
     // ... 30 lines of lighting setup ...
 }
 
-// Production approach (automatic)
+// Rendering Architecture (Chapter 43+)
 void OnRender() {
     m_SceneRenderer->Render(m_Scene, m_Camera); // ONE LINE!
     // SceneRenderer internally does what you built
@@ -354,20 +373,22 @@ void OnRender() {
 |----------|-----------|
 | OpenGL before abstraction | Learn concretely before abstracting |
 | OpenGL Essentials before PBR | Depth/stencil, blending, normal mapping are prerequisites |
-| Deferred Shading before SSR | G-buffer provides position/normal data for screen-space effects |
+| Scene Renderer before Deferred | Architecture enables clean render path plug-in |
+| Forward+ before Deferred | Compute shaders + tile culling are simpler than full G-buffer |
+| Deferred before SSR | G-buffer provides position/normal data for screen-space effects |
 | Dedicated modern API theory | Deep understanding, not just NVRHI usage |
 | Separate shader permutations chapter | Complex system affecting entire pipeline |
 | Render graph as its own part | Modern architecture, enables async compute |
 | Asset browser in editor | Essential for content creation workflow |
 | Physics debugging chapter | Real projects need debugging tools |
-| **Material System before ECS** | **Bridge manual rendering to component-based architecture** |
+| **Material System before Scene Renderer** | **Bridge manual rendering to composable architecture** |
 
 ---
 
 ## Also need to work on Cross-platform support
  - Start with the Build System
  - Add cross-platform support for debug break.
- - Etc 
+ - Etc
 
 ## Future Considerations
 
