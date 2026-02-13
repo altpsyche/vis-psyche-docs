@@ -349,6 +349,13 @@ void SetupInstancingDemo()
 
     m_InstancedCubeMesh->GetVertexArray().LinkInstanceBuffer(*m_InstanceVBO, instanceLayout, 6);
 
+    // Add instanced mesh to the scene so it renders through the main pipeline
+    auto& instancedObj = m_Scene.Add(m_InstancedCubeMesh, "Instanced Cubes");
+    instancedObj.InstanceCount = m_InstanceCount;
+    instancedObj.Color = glm::vec4(m_InstanceColor, 1.0f);
+    instancedObj.Active = m_ShowInstancingDemo;
+    m_InstancedSceneIndex = static_cast<int>(m_Scene.Size()) - 1;
+
     VP_INFO("Instancing demo ready: {} instances ({}x{} grid)", m_InstanceCount, gridSize, gridSize);
 }
 ```
@@ -378,6 +385,7 @@ std::shared_ptr<VizEngine::Shader> m_InstancedShader;
 std::shared_ptr<VizEngine::Mesh> m_InstancedCubeMesh;
 std::unique_ptr<VizEngine::VertexBuffer> m_InstanceVBO;
 int m_InstanceCount = 0;
+int m_InstancedSceneIndex = -1;  // Index into m_Scene for the instanced object
 bool m_ShowInstancingDemo = false;
 glm::vec3 m_InstanceColor = glm::vec3(0.4f, 0.7f, 0.9f);  // Light blue
 ```
@@ -401,35 +409,32 @@ SetupInstancingDemo();
 
 ---
 
-## Step 5: Rendering the Instanced Grid in OnRender
+## Step 5: Pipeline Integration and Rendering
 
-During the main render pass (inside the HDR framebuffer), the instanced grid is drawn with a single `DrawInstanced` call when the user enables the demo.
+Because the instanced mesh is added to the `Scene` as a `SceneObject` with `InstanceCount > 0`, the `SceneRenderer` pipeline handles it automatically. In **Chapter 43**, the `ForwardRenderPath` sorts scene objects into three categories: opaque, instanced, and transparent. Instanced objects are rendered via `ForwardRenderPath::RenderInstancedObject()`, which binds the instanced shader and calls `DrawInstanced`.
+
+To wire up the instanced shader to the SceneRenderer (after creating the SceneRenderer in `OnCreate`):
 
 ```cpp
-// Sandbox/src/SandboxApp.cpp (inside OnRender, within the HDR framebuffer pass)
+// Sandbox/src/SandboxApp.cpp (in OnCreate, after SceneRenderer creation)
 
-// =========================================================================
-// Chapter 35: Instancing Demo
-// =========================================================================
-if (m_ShowInstancingDemo && m_InstancedShader && m_InstancedCubeMesh && m_InstanceVBO)
+m_SceneRenderer->SetInstancedShader(m_InstancedShader);
+```
+
+In `OnUpdate`, sync the instancing demo's UI state to the scene object:
+
+```cpp
+// Sandbox/src/SandboxApp.cpp (in OnUpdate)
+
+if (m_InstancedSceneIndex >= 0 && m_InstancedSceneIndex < static_cast<int>(m_Scene.Size()))
 {
-    m_InstancedShader->Bind();
-    m_InstancedShader->SetMatrix4fv("u_View", m_Camera.GetViewMatrix());
-    m_InstancedShader->SetMatrix4fv("u_Projection", m_Camera.GetProjectionMatrix());
-    m_InstancedShader->SetVec3("u_ViewPos", m_Camera.GetPosition());
-    m_InstancedShader->SetVec3("u_DirLightDirection", m_Light.GetDirection());
-    m_InstancedShader->SetVec3("u_DirLightColor", m_Light.Diffuse);
-    m_InstancedShader->SetVec3("u_ObjectColor", m_InstanceColor);
-
-    m_InstancedCubeMesh->Bind();
-    renderer.DrawInstanced(
-        m_InstancedCubeMesh->GetVertexArray(),
-        m_InstancedCubeMesh->GetIndexBuffer(),
-        *m_InstancedShader,
-        m_InstanceCount
-    );
+    auto& instancedObj = m_Scene[static_cast<size_t>(m_InstancedSceneIndex)];
+    instancedObj.Active = m_ShowInstancingDemo;
+    instancedObj.Color = glm::vec4(m_InstanceColor, 1.0f);
 }
 ```
+
+No standalone render block is needed in `OnRender` — the SceneRenderer handles instanced objects as part of the HDR pipeline, so they receive bloom, tone mapping, and all other post-processing effects.
 
 ### What Happens on the GPU
 

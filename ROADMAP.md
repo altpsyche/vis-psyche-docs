@@ -131,7 +131,7 @@ At the end of Part XI, the engine contains:
 | Ch | Title | Topics | Status |
 |----|-------|--------|--------|
 | 43 | Scene Renderer Architecture | SceneRenderer, RenderPath strategy, ShadowPass, PostProcessPipeline | Complete
-| 44 | Light Management & SSBOs | Shader Storage Buffer Objects, dynamic light count, std430 layout | Planned
+| 44 | Light Management & SSBOs | Shader Storage Buffer Objects, dynamic light count, std430 layout, instanced shadow depth shader | Planned
 | 45 | Depth & Normal Prepass | Multi-pass foundation, early-Z, depth+normal FBO | Planned
 | 46 | Forward+ Rendering | Compute shaders, tile-based light culling, memory barriers | Planned
 | 47 | Deferred Rendering | G-buffer, MRT, geometry pass, deferred lighting pass | Planned
