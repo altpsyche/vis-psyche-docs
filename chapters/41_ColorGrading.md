@@ -731,7 +731,7 @@ void OnDestroy() override
 > The post-processing architecture established in Chapters 40-41 serves as the foundation for additional effects:
 > - **Depth of Field**: Uses G-buffer depth to blur based on focus distance
 > - **Motion Blur**: Samples velocity buffer to streak along movement
-> - **Screen-Space Reflections** (Chapter 45): Ray-marches against depth buffer for reflections
+> - **Screen-Space Reflections** (Chapter 49): Ray-marches against depth buffer for reflections
 
 > **Color grading LUTs** can be extended with temporal interpolation for cinematic sequences. Imagine a character entering a dark cave—the LUT crossfades from warm (outdoor) to cool/desaturated (cave interior) over 2 seconds, creating a smooth mood transition.
 

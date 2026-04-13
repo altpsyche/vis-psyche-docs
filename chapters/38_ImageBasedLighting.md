@@ -1320,10 +1320,10 @@ The fallback system has three layers of protection against black reflections:
 | **Physically accurate?** | No - this is an approximation |
 | **Why do it anyway?** | Pure black metals look wrong to human eyes |
 | **Production engines?** | Use the same technique as a fallback layer |
-| **Better alternatives?** | SSR, reflection probes (Part XII, Chapters 43-46) |
+| **Better alternatives?** | SSR (Chapter 49: Screen-Space Reflections) |
 
 > [!NOTE]
-> This is a common real-time rendering approximation. The "minimum metallic reflection floor" bypasses the BRDF to guarantee visibility. For production quality, layer this with Screen Space Reflections (SSR) or reflection probes, covered in **Chapter 45 (Screen-Space Reflections) and Chapter 46 (Reflection Probes)**.
+> This is a common real-time rendering approximation. The "minimum metallic reflection floor" bypasses the BRDF to guarantee visibility. For production quality, layer this with Screen Space Reflections (SSR), covered in **Chapter 49 (Screen-Space Reflections)**.
 
 ---
 
