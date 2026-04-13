@@ -4,6 +4,9 @@
 
 Create an `Input` class with keyboard and mouse polling using typed enums for key codes.
 
+> [!NOTE]
+> **Replacing raw GLFW**: Chapter 14's camera controller used `glfwGetKey` and `glfwGetCursorPos` directly. This works, but it ties application logic to a windowing API. This chapter builds an `Input` abstraction. The final section shows how to update the Sandbox's camera controller to use `Input::IsKeyHeld` and `Input::GetMouseDelta` instead.
+
 ---
 
 ## Design

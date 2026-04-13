@@ -249,24 +249,35 @@ camera.SetPosition(glm::vec3(0.0f, 5.0f, 10.0f));
 // Rotation is in RADIANS
 camera.SetRotation(-0.3f, 0.0f);  // Slight downward pitch
 
-// In render loop - WASD movement
+// In render loop - WASD movement (using raw GLFW for now)
+// Chapter 21 replaces these glfwGetKey calls with the Input abstraction.
 float speed = 5.0f * deltaTime;
-if (Input::IsKeyHeld(KeyCode::W)) camera.MoveForward(speed);
-if (Input::IsKeyHeld(KeyCode::S)) camera.MoveForward(-speed);
-if (Input::IsKeyHeld(KeyCode::A)) camera.MoveRight(-speed);
-if (Input::IsKeyHeld(KeyCode::D)) camera.MoveRight(speed);
+if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) camera.MoveForward(speed);
+if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.MoveForward(-speed);
+if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.MoveRight(-speed);
+if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.MoveRight(speed);
 
-// Mouse look (delta in radians)
-glm::vec2 mouseDelta = Input::GetMouseDelta();
+// Mouse look — track delta manually from raw GLFW cursor position
+static double lastX = 400.0, lastY = 400.0;
+double mx, my;
+glfwGetCursorPos(window, &mx, &my);
+float dx = static_cast<float>(mx - lastX);
+float dy = static_cast<float>(my - lastY);
+lastX = mx;
+lastY = my;
+
 float sensitivity = 0.003f;
-float newYaw = camera.GetYaw() - mouseDelta.x * sensitivity;
-float newPitch = camera.GetPitch() - mouseDelta.y * sensitivity;
-newPitch = glm::clamp(newPitch, -1.5f, 1.5f);  // Clamp at caller level
+float newYaw   = camera.GetYaw()   - dx * sensitivity;
+float newPitch = camera.GetPitch() - dy * sensitivity;
+newPitch = glm::clamp(newPitch, -1.5f, 1.5f);
 camera.SetRotation(newPitch, newYaw);
 
 // Get matrices for rendering
 glm::mat4 vp = camera.GetViewProjectionMatrix();
 ```
+
+> [!NOTE]
+> **Raw GLFW here, Input system later**: This example polls GLFW directly. Chapter 21 builds an `Input` abstraction (`Input::IsKeyHeld`, `Input::GetMouseDelta`) that replaces these calls. The Sandbox's camera controller will be refactored at that point.
 
 ---
 

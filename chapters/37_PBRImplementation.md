@@ -12,24 +12,29 @@ In **Chapter 36**, we explored the mathematical foundation of Physically Based R
 
 **What we're upgrading:**
 
-| Before (Blinn-Phong) | After (Cook-Torrance) |
-|---------------------|----------------------|
-| `u_Shininess` exponent | `u_Roughness` + `u_Metallic` |
-| `obj.Shininess` field | `obj.Roughness` + `obj.Metallic` fields |
-| Arbitrary specular power | Physics-based D, F, G terms |
-| No energy conservation | Fresnel-based energy conservation |
-| Single directional light | Directional + 4 point lights |
+| Element | Before (Blinn-Phong, Ch17) | After (Cook-Torrance, Ch37) |
+|---------|---------------------------|----------------------------|
+| `u_Roughness` math | `mix(256.0, 8.0, u_Roughness)` → shininess | Direct input to GGX/Smith BRDF |
+| Normal transform | `mat3(transpose(inverse(u_Model)))` per-vertex | `u_NormalMatrix` pre-computed on CPU |
+| TBN / `u_UseNormalMap` | Inherited from Ch34 | Unchanged |
+| SceneObject fields | `Roughness` (from Ch15) | `Roughness` + `Metallic` (Metallic is new) |
+| Specular model | `pow(dot(N,H), shininess)` | Cook-Torrance BRDF (D × F × G) |
+| New uniforms | — | `u_Metallic`, `u_AO`, `u_UseIBL`, `u_UseAlbedoTexture` |
+| Energy conservation | None | Fresnel-based (kS + kD = 1) |
+| Lights | Single directional | Directional + 4 point lights |
+
+> [!NOTE]
+> The `u_Roughness` uniform name, range [0,1], and `SceneObject::Roughness` field are **unchanged** — only the shader math changes. The `u_NormalMatrix` optimization is the improvement promised in Chapter 17's WARNING note.
 
 ---
 
 ## Step 0: Update SceneObject
 
-Add PBR properties to replace Shininess:
+Add `Metallic` to `SceneObject`. `Roughness` was already introduced in Chapter 15 — no change needed there:
 
 ```cpp
-// In SceneObject.h - REPLACE Shininess with:
-float Roughness = 0.5f;   // 0 = smooth, 1 = rough
-float Metallic = 0.0f;    // 0 = dielectric, 1 = metal
+// In SceneObject.h — ADD (Roughness = 0.5f was already present from Ch15):
+float Metallic = 0.0f;    // 0 = dielectric (plastic/wood), 1 = metal
 ```
 
 ---
@@ -43,7 +48,7 @@ Upgrade the Material struct for full PBR support:
 struct VizEngine_API Material
 {
     glm::vec4 BaseColor = glm::vec4(1.0f);
-    float Roughness = 0.5f;     // Was: Shininess
+    float Roughness = 0.5f;     // From Ch20 — unchanged
     float Metallic = 0.0f;      // NEW
     
     std::shared_ptr<Texture> BaseColorTexture;
@@ -80,9 +85,10 @@ By the end of this chapter, you'll have:
 We'll upgrade our existing `defaultlit.shader` to implement Cook-Torrance PBR. The file already exists from Chapter 17—we're replacing the Blinn-Phong lighting with physically-based calculations.
 
 **Key uniform changes:**
-- Remove: `u_Shininess`
-- Add: `u_Roughness`, `u_Metallic`, `u_Albedo`, `u_AO`
+- Keep: `u_Roughness` (from Ch17 — same name, different math)
+- Add: `u_Metallic`, `u_Albedo`, `u_AO`
 - Add: Point light arrays, directional light, albedo texture
+- Add: `u_NormalMatrix` (replaces per-vertex `transpose(inverse(u_Model))` from Ch17)
 
 **Upgrade `VizEngine/src/resources/shaders/defaultlit.shader`:**
 
@@ -397,7 +403,7 @@ v_Normal = u_NormalMatrix * aNormal;
 Uses the **pre-computed normal matrix** (`u_NormalMatrix`) to correctly transform normals. This handles non-uniform scaling (e.g., stretching a sphere into an ellipsoid).
 
 > [!TIP]
-> The normal matrix is computed on the CPU as `transpose(inverse(mat3(model)))` once per object, then passed to the shader. This is **40-60% faster** than computing `inverse()` per-vertex in the shader (which Chapter 17's simpler approach did). The `PBRMaterial::SetNormalMatrix()` method handles this.
+> The normal matrix is computed on the CPU as `transpose(inverse(mat3(model)))` once per object, then passed to the shader. This is **40-60% faster** than computing `inverse()` per-vertex in the shader (which Chapter 17's simpler approach did). Pass it with `m_DefaultLitShader->SetMatrix3fv("u_NormalMatrix", normalMatrix)` as shown in the render loop above.
 
 ### Material Uniforms
 

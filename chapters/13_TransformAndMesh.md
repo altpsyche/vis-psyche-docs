@@ -213,14 +213,44 @@ namespace VizEngine
 
     std::unique_ptr<Mesh> Mesh::CreateCube()
     {
+        // 6 faces × 4 vertices = 24 vertices, each face has its own normal
+        // Index pattern per face: { base+0, base+1, base+2,  base+2, base+3, base+0 }
         std::vector<Vertex> vertices = {
-            // Front face (z = 0.5)
+            // Front face (z = +0.5, normal = (0, 0, 1))
             {{-0.5f, -0.5f,  0.5f, 1.0f}, { 0,  0,  1}, {1, 1, 1, 1}, {0, 0}},
             {{ 0.5f, -0.5f,  0.5f, 1.0f}, { 0,  0,  1}, {1, 1, 1, 1}, {1, 0}},
             {{ 0.5f,  0.5f,  0.5f, 1.0f}, { 0,  0,  1}, {1, 1, 1, 1}, {1, 1}},
             {{-0.5f,  0.5f,  0.5f, 1.0f}, { 0,  0,  1}, {1, 1, 1, 1}, {0, 1}},
-            // Back, Top, Bottom, Right, Left faces...
-            // (Similar pattern with appropriate normals)
+
+            // Back face (z = -0.5, normal = (0, 0, -1))
+            {{ 0.5f, -0.5f, -0.5f, 1.0f}, { 0,  0, -1}, {1, 1, 1, 1}, {0, 0}},
+            {{-0.5f, -0.5f, -0.5f, 1.0f}, { 0,  0, -1}, {1, 1, 1, 1}, {1, 0}},
+            {{-0.5f,  0.5f, -0.5f, 1.0f}, { 0,  0, -1}, {1, 1, 1, 1}, {1, 1}},
+            {{ 0.5f,  0.5f, -0.5f, 1.0f}, { 0,  0, -1}, {1, 1, 1, 1}, {0, 1}},
+
+            // Top face (y = +0.5, normal = (0, 1, 0))
+            {{-0.5f,  0.5f,  0.5f, 1.0f}, { 0,  1,  0}, {1, 1, 1, 1}, {0, 0}},
+            {{ 0.5f,  0.5f,  0.5f, 1.0f}, { 0,  1,  0}, {1, 1, 1, 1}, {1, 0}},
+            {{ 0.5f,  0.5f, -0.5f, 1.0f}, { 0,  1,  0}, {1, 1, 1, 1}, {1, 1}},
+            {{-0.5f,  0.5f, -0.5f, 1.0f}, { 0,  1,  0}, {1, 1, 1, 1}, {0, 1}},
+
+            // Bottom face (y = -0.5, normal = (0, -1, 0))
+            {{-0.5f, -0.5f, -0.5f, 1.0f}, { 0, -1,  0}, {1, 1, 1, 1}, {0, 0}},
+            {{ 0.5f, -0.5f, -0.5f, 1.0f}, { 0, -1,  0}, {1, 1, 1, 1}, {1, 0}},
+            {{ 0.5f, -0.5f,  0.5f, 1.0f}, { 0, -1,  0}, {1, 1, 1, 1}, {1, 1}},
+            {{-0.5f, -0.5f,  0.5f, 1.0f}, { 0, -1,  0}, {1, 1, 1, 1}, {0, 1}},
+
+            // Right face (x = +0.5, normal = (1, 0, 0))
+            {{ 0.5f, -0.5f,  0.5f, 1.0f}, { 1,  0,  0}, {1, 1, 1, 1}, {0, 0}},
+            {{ 0.5f, -0.5f, -0.5f, 1.0f}, { 1,  0,  0}, {1, 1, 1, 1}, {1, 0}},
+            {{ 0.5f,  0.5f, -0.5f, 1.0f}, { 1,  0,  0}, {1, 1, 1, 1}, {1, 1}},
+            {{ 0.5f,  0.5f,  0.5f, 1.0f}, { 1,  0,  0}, {1, 1, 1, 1}, {0, 1}},
+
+            // Left face (x = -0.5, normal = (-1, 0, 0))
+            {{-0.5f, -0.5f, -0.5f, 1.0f}, {-1,  0,  0}, {1, 1, 1, 1}, {0, 0}},
+            {{-0.5f, -0.5f,  0.5f, 1.0f}, {-1,  0,  0}, {1, 1, 1, 1}, {1, 0}},
+            {{-0.5f,  0.5f,  0.5f, 1.0f}, {-1,  0,  0}, {1, 1, 1, 1}, {1, 1}},
+            {{-0.5f,  0.5f, -0.5f, 1.0f}, {-1,  0,  0}, {1, 1, 1, 1}, {0, 1}},
         };
 
         std::vector<unsigned int> indices;
@@ -253,8 +283,51 @@ namespace VizEngine
 
     std::unique_ptr<Mesh> Mesh::CreatePyramid()
     {
-        // ... similar pattern with vec4 positions
-        return std::make_unique<Mesh>(/*vertices*/{}, /*indices*/{});
+        // Square pyramid: base at y=0, apex at y=1
+        // Base corners: (±0.5, 0, ±0.5), Apex: (0, 1, 0)
+        // Side normals: outward-facing, pre-normalized
+        // For a 1×1 base and height=1: side slope = 0.5/sqrt(1.25)
+        //   s = 0.4472 (Y component), c = 0.8944 (XZ component)
+        const float s = 0.4472f;
+        const float c = 0.8944f;
+
+        std::vector<Vertex> vertices = {
+            // Front face (facing +Z)
+            {{-0.5f, 0.0f,  0.5f, 1.0f}, { 0,  s,  c}, {1, 1, 1, 1}, {0.0f, 0.0f}},
+            {{ 0.5f, 0.0f,  0.5f, 1.0f}, { 0,  s,  c}, {1, 1, 1, 1}, {1.0f, 0.0f}},
+            {{ 0.0f, 1.0f,  0.0f, 1.0f}, { 0,  s,  c}, {1, 1, 1, 1}, {0.5f, 1.0f}},
+
+            // Back face (facing -Z)
+            {{ 0.5f, 0.0f, -0.5f, 1.0f}, { 0,  s, -c}, {1, 1, 1, 1}, {0.0f, 0.0f}},
+            {{-0.5f, 0.0f, -0.5f, 1.0f}, { 0,  s, -c}, {1, 1, 1, 1}, {1.0f, 0.0f}},
+            {{ 0.0f, 1.0f,  0.0f, 1.0f}, { 0,  s, -c}, {1, 1, 1, 1}, {0.5f, 1.0f}},
+
+            // Right face (facing +X)
+            {{ 0.5f, 0.0f,  0.5f, 1.0f}, { c,  s,  0}, {1, 1, 1, 1}, {0.0f, 0.0f}},
+            {{ 0.5f, 0.0f, -0.5f, 1.0f}, { c,  s,  0}, {1, 1, 1, 1}, {1.0f, 0.0f}},
+            {{ 0.0f, 1.0f,  0.0f, 1.0f}, { c,  s,  0}, {1, 1, 1, 1}, {0.5f, 1.0f}},
+
+            // Left face (facing -X)
+            {{-0.5f, 0.0f, -0.5f, 1.0f}, {-c,  s,  0}, {1, 1, 1, 1}, {0.0f, 0.0f}},
+            {{-0.5f, 0.0f,  0.5f, 1.0f}, {-c,  s,  0}, {1, 1, 1, 1}, {1.0f, 0.0f}},
+            {{ 0.0f, 1.0f,  0.0f, 1.0f}, {-c,  s,  0}, {1, 1, 1, 1}, {0.5f, 1.0f}},
+
+            // Base face (facing -Y, quad)
+            {{-0.5f, 0.0f, -0.5f, 1.0f}, { 0, -1,  0}, {1, 1, 1, 1}, {0.0f, 0.0f}},
+            {{ 0.5f, 0.0f, -0.5f, 1.0f}, { 0, -1,  0}, {1, 1, 1, 1}, {1.0f, 0.0f}},
+            {{ 0.5f, 0.0f,  0.5f, 1.0f}, { 0, -1,  0}, {1, 1, 1, 1}, {1.0f, 1.0f}},
+            {{-0.5f, 0.0f,  0.5f, 1.0f}, { 0, -1,  0}, {1, 1, 1, 1}, {0.0f, 1.0f}},
+        };
+
+        std::vector<unsigned int> indices = {
+            0, 1, 2,      // Front
+            3, 4, 5,      // Back
+            6, 7, 8,      // Right
+            9, 10, 11,    // Left
+            12, 13, 14,   14, 15, 12,  // Base quad
+        };
+
+        return std::make_unique<Mesh>(vertices, indices);
     }
 
 }  // namespace VizEngine

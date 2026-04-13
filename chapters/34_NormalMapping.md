@@ -545,54 +545,50 @@ The vertex shader declares two new input attributes (`aTangent`, `aBitangent`) a
 // Match existing Mesh vertex layout (see Mesh.cpp SetupMesh)
 layout(location = 0) in vec4 aPos;       // Position (vec4)
 layout(location = 1) in vec3 aNormal;    // Normal (vec3)
-layout(location = 2) in vec4 aColor;     // Color (vec4) - unused in PBR but must be declared
+layout(location = 2) in vec4 aColor;     // Color (vec4)
 layout(location = 3) in vec2 aTexCoords; // TexCoords (vec2)
 layout(location = 4) in vec3 aTangent;   // Tangent (vec3) - Chapter 34: Normal Mapping
 layout(location = 5) in vec3 aBitangent; // Bitangent (vec3) - Chapter 34: Normal Mapping
 
-out vec3 v_WorldPos;
+out vec3 v_FragPos;
 out vec3 v_Normal;
+out vec4 v_Color;
 out vec2 v_TexCoords;
-out vec4 v_FragPosLightSpace;  // Position in light space for shadow mapping
+out vec4 v_FragPosLightSpace;  // Position in light space (Chapter 29: Shadow Mapping)
 out mat3 v_TBN;                // Tangent-Bitangent-Normal matrix (Chapter 34)
 
 uniform mat4 u_Model;
-uniform mat3 u_NormalMatrix;      // Pre-computed: transpose(inverse(mat3(model)))
-uniform mat4 u_View;
-uniform mat4 u_Projection;
-uniform mat4 u_LightSpaceMatrix;  // Light's projection * view
+uniform mat4 u_MVP;
+uniform mat4 u_LightSpaceMatrix;
 
 void main()
 {
     // Transform position to world space
     vec4 worldPos = u_Model * aPos;
-    v_WorldPos = worldPos.xyz;
+    v_FragPos = worldPos.xyz;
 
-    // Transform normal to world space (use normal matrix for non-uniform scaling)
-    v_Normal = u_NormalMatrix * aNormal;
+    // Transform normal to world space using in-shader normal matrix
+    mat3 normalMatrix = mat3(transpose(inverse(u_Model)));
+    v_Normal = normalMatrix * aNormal;
 
-    // Pass through texture coordinates
+    v_Color     = aColor;
     v_TexCoords = aTexCoords;
 
     // Transform position to light space for shadow mapping
     v_FragPosLightSpace = u_LightSpaceMatrix * worldPos;
 
     // Build TBN matrix for normal mapping (Chapter 34)
-    vec3 T = normalize(u_NormalMatrix * aTangent);
-    vec3 B = normalize(u_NormalMatrix * aBitangent);
-    vec3 N = normalize(u_NormalMatrix * aNormal);
+    vec3 T = normalize(normalMatrix * aTangent);
+    vec3 B = normalize(normalMatrix * aBitangent);
+    vec3 N = normalize(normalMatrix * aNormal);
     v_TBN = mat3(T, B, N);
 
-    gl_Position = u_Projection * u_View * vec4(v_WorldPos, 1.0);
+    gl_Position = u_MVP * aPos;
 }
 ```
 
-### Why Use u_NormalMatrix?
-
-The **normal matrix** (`transpose(inverse(mat3(model)))`) correctly transforms direction vectors under non-uniform scaling. If you used the model matrix directly, a scaled object would have skewed normals (and therefore skewed tangent frames). By applying the normal matrix to T, B, and N uniformly, the TBN matrix remains valid regardless of the object's scale.
-
-> [!IMPORTANT]
-> All three TBN vectors must be transformed by the same matrix (`u_NormalMatrix`) and individually normalized after transformation. The interpolation across the triangle surface can denormalize them, but the per-fragment `normalize()` on the final result handles that.
+> [!NOTE]
+> The normal matrix (`transpose(inverse(mat3(model)))`) correctly transforms direction vectors under non-uniform scaling. Chapter 37 will optimize this by computing it once on the CPU and passing it as a `u_NormalMatrix` uniform instead of recomputing per-vertex.
 
 ---
 
@@ -601,30 +597,59 @@ The **normal matrix** (`transpose(inverse(mat3(model)))`) correctly transforms d
 The fragment shader declares the normal map sampler and a boolean toggle. When enabled, it samples the normal map, remaps from `[0,1]` to `[-1,1]`, and transforms the result to world space using the interpolated TBN matrix.
 
 ```glsl
-// VizEngine/src/resources/shaders/defaultlit.shader -- fragment shader (relevant sections)
+// VizEngine/src/resources/shaders/defaultlit.shader -- fragment shader (relevant additions)
 
+in vec3 v_FragPos;
+in vec3 v_Normal;
+in vec4 v_Color;
+in vec2 v_TexCoords;
 in mat3 v_TBN;  // Tangent-Bitangent-Normal matrix (Chapter 34)
 
-// Normal map (Chapter 34: Normal Mapping)
+// Existing uniforms from Chapter 17
+uniform vec3 u_LightDirection;
+uniform vec3 u_LightAmbient;
+uniform vec3 u_LightDiffuse;
+uniform vec3 u_LightSpecular;
+uniform vec3 u_ViewPos;
+uniform vec4 u_ObjectColor;
+uniform sampler2D u_MainTex;
+uniform float u_Roughness;
+
+// Chapter 34: Normal map
 uniform sampler2D u_NormalTexture;
 uniform bool u_UseNormalMap;
 
 void main()
 {
-    // Normalize interpolated vectors
-    vec3 N = normalize(v_Normal);
+    // Sample albedo texture
+    vec4 texColor = texture(u_MainTex, v_TexCoords);
+    vec3 baseColor = texColor.rgb * v_Color.rgb * u_ObjectColor.rgb;
 
-    // Chapter 34: Normal Mapping -- perturb normal using tangent-space map
+    // Determine surface normal: vertex normal or normal-mapped
+    vec3 N = normalize(v_Normal);
     if (u_UseNormalMap)
     {
         vec3 normalMap = texture(u_NormalTexture, v_TexCoords).rgb;
-        normalMap = normalMap * 2.0 - 1.0;  // [0,1] -> [-1,1] (tangent space)
-        N = normalize(v_TBN * normalMap);    // Transform to world space via TBN
+        normalMap = normalMap * 2.0 - 1.0;   // [0,1] -> [-1,1] tangent space
+        N = normalize(v_TBN * normalMap);     // Transform to world space via TBN
     }
 
-    vec3 V = normalize(u_ViewPos - v_WorldPos);
+    // Blinn-Phong lighting with perturbed normal
+    vec3 lightDir = normalize(-u_LightDirection);
+    vec3 viewDir  = normalize(u_ViewPos - v_FragPos);
+    vec3 halfDir  = normalize(lightDir + viewDir);
 
-    // ... rest of PBR lighting uses N as usual ...
+    vec3 ambient  = u_LightAmbient * baseColor;
+
+    float diff    = max(dot(N, lightDir), 0.0);
+    vec3 diffuse  = u_LightDiffuse * diff * baseColor;
+
+    float shininess = mix(256.0, 8.0, u_Roughness);
+    float spec    = pow(max(dot(N, halfDir), 0.0), shininess);
+    vec3 specular = u_LightSpecular * spec;
+
+    vec3 result = ambient + diffuse + specular;
+    FragColor   = vec4(result, texColor.a * u_ObjectColor.a);
 }
 ```
 
@@ -650,64 +675,59 @@ When `u_UseNormalMap` is `false`, the shader falls back to the interpolated vert
 
 ## Step 8: Material Integration
 
-The shader now has `u_NormalTexture` and `u_UseNormalMap` uniforms, but we need the material system to bind them. Three pieces connect the pipeline.
+The shader now has `u_NormalTexture` and `u_UseNormalMap` uniforms. Three pieces connect the pipeline.
 
-### Material Struct (Material.h)
+### Extend Material Struct (Material.h)
 
-The `Material` struct (used by the glTF loader) already has a `NormalTexture` field:
+Add `NormalTexture` to the `Material` struct from Chapter 20:
 
 ```cpp
 // VizEngine/src/VizEngine/Core/Material.h
-struct Material
+struct VizEngine_API Material
 {
-    // ... existing fields ...
+    std::string Name = "Unnamed";
 
-    // Textures (nullptr if not present)
-    std::shared_ptr<Texture> NormalTexture = nullptr;
+    glm::vec4 BaseColor = glm::vec4(1.0f);
+    float     Roughness = 0.5f;
 
-    // Helper
+    std::shared_ptr<Texture> BaseColorTexture = nullptr;
+    std::shared_ptr<Texture> NormalTexture    = nullptr;  // Chapter 34: Normal Mapping
+
     bool HasNormalTexture() const { return NormalTexture != nullptr; }
 };
 ```
 
 ### glTF Normal Texture Loading (Model.cpp)
 
-The glTF loader extracts the normal texture from the material definition:
+Add one line to `LoadMaterials()` to extract the normal texture index:
 
 ```cpp
-// In Model::LoadMaterials() -- VizEngine/src/VizEngine/Core/Model.cpp
+// In Model::ModelLoader::LoadMaterials() -- Model.cpp
 if (gltfMat.normalTexture.index >= 0)
 {
     material.NormalTexture = LoadTexture(gltfModel, gltfMat.normalTexture.index);
 }
 ```
 
-### PBRMaterial Binding (PBRMaterial.cpp)
+### Wiring Normal Texture in the Sandbox
 
-`PBRMaterial::SetNormalTexture()` binds the texture to the correct slot and enables the shader flag:
+In `OnRender()` (or a per-object render helper), bind the normal texture to slot 1 and set the shader flags:
 
 ```cpp
-// VizEngine/src/VizEngine/Renderer/PBRMaterial.cpp
-void PBRMaterial::SetNormalTexture(std::shared_ptr<Texture> texture)
+// For each SceneObject in OnRender():
+if (mat.NormalTexture)
 {
-    if (texture)
-    {
-        SetTexture("u_NormalTexture", texture, TextureSlots::Normal);
-        m_HasNormalTexture = true;
-        SetBool("u_UseNormalMap", true);
-    }
-    else
-    {
-        m_HasNormalTexture = false;
-        SetBool("u_UseNormalMap", false);
-    }
+    mat.NormalTexture->Bind(1);
+    m_DefaultLitShader->SetInt("u_NormalTexture", 1);
+    m_DefaultLitShader->SetBool("u_UseNormalMap", true);
+}
+else
+{
+    m_DefaultLitShader->SetBool("u_UseNormalMap", false);
 }
 ```
 
-When a normal texture is assigned, `u_UseNormalMap` is automatically set to `true` and the texture is bound to `TextureSlots::Normal` (slot 1). When cleared (passed `nullptr`), the flag is set to `false` and the shader falls back to vertex normals.
-
-> [!NOTE]
-> The PBR material constructor sets `u_UseNormalMap` to `false` by default, so normal mapping is opt-in. Models loaded from glTF that include normal textures will have them enabled automatically via `SetNormalTexture()`.
+Texture slot 0 is used by the albedo map (`u_MainTex`). Slot 1 is used by the normal map (`u_NormalTexture`). The boolean `u_UseNormalMap` lets the shader fall back to vertex normals when no normal map is available.
 
 > [!TIP]
 > You can control the "strength" of normal mapping by blending between the flat tangent-space normal `(0,0,1)` and the sampled value before transforming:
@@ -790,7 +810,8 @@ You have:
 - Updated the glTF loader to read the `TANGENT` attribute (vec4 with handedness) or fall back to automatic computation
 - Built the TBN matrix in the vertex shader from transformed tangent, bitangent, and normal vectors
 - Sampled and applied normal maps in the fragment shader using the `[0,1]` to `[-1,1]` remap and TBN transformation
-- Connected the material pipeline: `Material.NormalTexture` (glTF loader) → `PBRMaterial::SetNormalTexture()` (binding) → `u_NormalTexture` / `u_UseNormalMap` (shader)
+- Extended `Material` struct with `NormalTexture`, loaded from glTF `normalTexture.index`
+- Wired `u_NormalTexture` and `u_UseNormalMap` shader uniforms directly in the Sandbox render path
 
 Your engine now supports **per-pixel surface detail** through normal mapping. Flat geometry can exhibit the appearance of complex surface structure -- bricks, scratches, fabric weave, pores -- all without adding a single triangle. This technique is foundational to modern real-time rendering and works seamlessly with the PBR lighting pipeline from earlier chapters.
 

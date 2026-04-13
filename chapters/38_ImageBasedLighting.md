@@ -1264,21 +1264,25 @@ specularIBL = max(specularIBL, minReflection);
 > [!WARNING]
 > **This is an approximation, not physically accurate.** The minimum metallic reflection floor bypasses the BRDF integration to guarantee visible reflections on shiny metals. This is a common technique in real-time rendering where visual quality takes precedence over physical accuracy.
 
-### PBRMaterial API
+### Sandbox State
 
-Add lower hemisphere support to `PBRMaterial`:
+Store the lower hemisphere parameters as `SandboxApp` member variables — the same pattern used for other IBL tweakables at this stage:
 
 ```cpp
-// PBRMaterial.h
-void SetLowerHemisphereColor(const glm::vec3& color);
-glm::vec3 GetLowerHemisphereColor() const;
-void SetLowerHemisphereIntensity(float intensity);
-float GetLowerHemisphereIntensity() const;
-
-// Member variables
-glm::vec3 m_LowerHemisphereColor = glm::vec3(0.1f, 0.1f, 0.15f);  // Slightly blue-ish
-float m_LowerHemisphereIntensity = 0.5f;
+// SandboxApp.h
+glm::vec3 m_LowerHemisphereColor     = glm::vec3(0.1f, 0.1f, 0.15f);  // Slightly blue-ish ground
+float     m_LowerHemisphereIntensity = 0.5f;
 ```
+
+Pass them to the PBR shader in `OnRender()` before drawing:
+
+```cpp
+m_PBRShader->SetVec3("u_LowerHemisphereColor",     m_LowerHemisphereColor);
+m_PBRShader->SetFloat("u_LowerHemisphereIntensity", m_LowerHemisphereIntensity);
+```
+
+> [!NOTE]
+> **Chapter 42** introduces `PBRMaterial` and encapsulates these per-material parameters into a proper abstraction. For now, direct uniform calls keep this chapter focused on the IBL math.
 
 ### UI Controls
 

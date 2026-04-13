@@ -211,6 +211,38 @@ bool m_ShowShadowMap = false;
 > [!NOTE]
 > This chapter uses the `SetWrap()` and `SetBorderColor()` methods added in Chapter 28. Make sure you have completed that chapter first.
 
+## Step 0: Extend Renderer with Polygon Offset Helpers
+
+Shadow acne correction requires OpenGL's polygon offset feature. Add two methods to `Renderer` now — they'll be used in Step 6.
+
+**Add to `VizEngine/src/VizEngine/OpenGL/Renderer.h`** (after `ClearDepth`):
+
+```cpp
+// Shadow mapping helpers
+void EnablePolygonOffset(float factor, float units);
+void DisablePolygonOffset();
+```
+
+**Add to `VizEngine/src/VizEngine/OpenGL/Renderer.cpp`:**
+
+```cpp
+void Renderer::EnablePolygonOffset(float factor, float units)
+{
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(factor, units);
+}
+
+void Renderer::DisablePolygonOffset()
+{
+    glDisable(GL_POLYGON_OFFSET_FILL);
+}
+```
+
+> [!NOTE]
+> `glPolygonOffset(factor, units)` shifts depth values during rasterization. `factor` scales by the polygon's slope; `units` adds a constant offset. Both together prevent shadow acne on angled surfaces. `GL_POLYGON_OFFSET_FILL` applies this to filled polygons (not lines or points).
+
+---
+
 ## Step 1: Create Shadow Map Framebuffer
 
 The shadow map is a **depth-only framebuffer** (no color attachment).

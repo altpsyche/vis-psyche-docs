@@ -19,17 +19,6 @@ Add realistic lighting with the Blinn-Phong illumination model.
 
 ---
 
-## Step 0: Update SceneObject
-
-Add a `Shininess` field to `SceneObject` for specular control:
-
-```cpp
-// In SceneObject.h - add after Color field
-float Shininess = 32.0f;  // Blinn-Phong exponent (higher = shinier)
-```
-
----
-
 ## Step 1: Create Light.h
 
 **Create `VizEngine/src/VizEngine/Core/Light.h`:**
@@ -147,7 +136,7 @@ uniform vec4 u_ObjectColor;
 uniform sampler2D u_MainTex;
 
 // Material
-uniform float u_Shininess;
+uniform float u_Roughness;  // 0 = smooth/mirror-like, 1 = rough/matte
 
 void main()
 {
@@ -174,8 +163,11 @@ void main()
     vec3 viewDir = normalize(u_ViewPos - v_FragPos);
     vec3 halfDir = normalize(lightDir + viewDir);
 
-    // Shininess exponent: higher = tighter specular highlight
-    float spec = pow(max(dot(norm, halfDir), 0.0), u_Shininess);
+    // Convert roughness to Blinn-Phong shininess exponent.
+    // Rough (1.0) → soft wide highlight (low shininess).
+    // Smooth (0.0) → tight sharp highlight (high shininess).
+    float shininess = mix(256.0, 8.0, u_Roughness);
+    float spec = pow(max(dot(norm, halfDir), 0.0), shininess);
     vec3 specular = u_LightSpecular * spec;
 
     // Combine
@@ -189,9 +181,9 @@ void main()
 > **Key differences from basic Phong:**
 > - Uses `vec4 aPos` for homogeneous coordinates (matches Vertex struct)
 > - Normal matrix computed **in-shader** for simplicity: `mat3(transpose(inverse(u_Model)))`
-> - Uses `u_Shininess` directly as Blinn-Phong exponent (higher = shinier)
+> - Uses `u_Roughness` (0 = smooth, 1 = rough) — same field as on `SceneObject`. The shader converts it to a Blinn-Phong shininess exponent via `mix(256.0, 8.0, u_Roughness)`.
 >
-> **Chapter 37** will replace `u_Shininess` with `u_Roughness` and `u_Metallic` for full PBR.
+> **Chapter 37** replaces this Blinn-Phong specular calculation with Cook-Torrance PBR equations. The `u_Roughness` uniform stays — only the shader math changes.
 
 > [!WARNING]
 > **Performance Note**: Computing `inverse(u_Model)` per-vertex is expensive. For learning, this in-shader approach works fine. In production, precompute the normal matrix on the CPU and pass it as a `u_NormalMatrix` uniform. **Chapter 37** implements this optimization with a `mat3 u_NormalMatrix` uniform computed as `transpose(inverse(mat3(model)))` once per object on the CPU.
@@ -215,28 +207,25 @@ defaultLitShader.SetVec3("u_LightDiffuse", light.Diffuse);
 defaultLitShader.SetVec3("u_LightSpecular", light.Specular);
 defaultLitShader.SetVec3("u_ViewPos", camera.GetPosition());
 
-// Per-object: set shininess before rendering each object
-for (auto& obj : scene)
-{
-    defaultLitShader.SetFloat("u_Shininess", obj.Shininess);
-}
-
+// Scene::Render sets u_Roughness per object automatically
 scene.Render(renderer, defaultLitShader, camera);
 ```
 
 > [!NOTE]
-> **Scene::Render Update**: You should also update `Scene::Render()` in `Scene.cpp` to set `u_Model` (for world-space normals) and `u_Shininess` per object. The full implementation is shown in the application code.
+> **Scene::Render Update**: You should also update `Scene::Render()` in `Scene.cpp` to set `u_Model` (for world-space normals) and `u_Roughness` per object. The full implementation is shown in the application code.
 
 ---
 
-## Shininess Values
+## Roughness Values
 
-| Shininess | Appearance |
-|-----------|------------|
-| 8 | Very matte |
-| 32 | Default |
-| 128 | Glossy |
-| 256 | Mirror-like |
+| `Roughness` | Shininess (shader) | Appearance |
+|-------------|-------------------|------------|
+| 1.0 | 8 | Very matte |
+| 0.5 | 132 | Default |
+| 0.2 | 211 | Glossy |
+| 0.0 | 256 | Mirror-like |
+
+`SceneObject::Roughness` starts at `0.5f`. Adjust per object for the desired look.
 
 ---
 
@@ -246,7 +235,7 @@ scene.Render(renderer, defaultLitShader, camera);
 |---------|-------|----------|
 | Flat shading | Normals zero | Mesh must have valid normals |
 | Dark objects | No ambient | Increase `Ambient` component |
-| Harsh specular | Low shininess | Increase `Shininess` (try 64+) |
+| Harsh specular | Low roughness | Increase `Roughness` (try 0.8+) |
 
 ---
 
@@ -256,11 +245,11 @@ scene.Render(renderer, defaultLitShader, camera);
 
 You have:
 - `DirectionalLight` with Ambient/Diffuse/Specular
-- `defaultlit.shader` with Shininess-based specular
+- `defaultlit.shader` with `u_Roughness`-driven specular (roughness → shininess conversion in shader)
 - In-shader normal matrix computation (optimized in Chapter 37)
 
 > [!TIP]
-> In **Chapter 37**, we'll upgrade `defaultlit.shader` to use Cook-Torrance PBR, replacing the Blinn-Phong specular calculation with physically-based equations. We'll also optimize the normal matrix by precomputing it on the CPU.
+> In **Chapter 37**, we'll upgrade `defaultlit.shader` to use Cook-Torrance PBR, replacing the `mix(256.0, 8.0, u_Roughness)` conversion with physically-based equations. The `u_Roughness` uniform and `SceneObject::Roughness` field stay unchanged — only the shader math changes.
 
 ---
 

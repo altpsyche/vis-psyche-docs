@@ -544,7 +544,7 @@ uiManager.EndSection();
 ### Skybox-Specific Tips
 
 1. **Convert once**: Do equirect→cubemap conversion at load time, not every frame
-2. **Cache converted cubemaps**: Save converted cubemaps to disk (Chapter 51: Resource Management)
+2. **Cache converted cubemaps**: Save converted cubemaps to disk as binary or `.dds` files to avoid re-converting the HDRI on every launch
 3. **Use mipmaps**: Generate mipmaps for cubemaps with `glGenerateMipmap(GL_TEXTURE_CUBE_MAP)`
 4. **Resolution rule of thumb**: Use 512 for distant skyboxes, 1024 for normal use, 2048 only if the skybox is prominent
 5. **Render last**: Rendering the skybox after scene geometry avoids overdraw on covered pixels

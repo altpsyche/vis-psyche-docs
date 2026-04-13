@@ -96,29 +96,27 @@ This is exactly what we implement in this chapter.
 
 ## Architecture Overview
 
-Blending and transparency in VizPsyche spans four layers:
+Blending and transparency in VizPsyche spans three layers:
 
 ```
 1. Renderer (OpenGL state)
    +-- EnableBlending() / DisableBlending()
    +-- SetBlendFunc(src, dst)
    +-- SetBlendEquation(mode)
+   +-- SetDepthMask(bool)
 
 2. Shader (fragment output)
-   +-- FragColor = vec4(color, u_Alpha)    // Alpha channel from uniform
+   +-- FragColor = vec4(result, texColor.a * u_ObjectColor.a)
+       (u_ObjectColor is vec4 — alpha already lives in its w component)
 
-3. PBRMaterial (material property)
-   +-- SetAlpha(float)  ->  uploads u_Alpha uniform
-   +-- GetAlpha()
-
-4. SandboxApp (rendering strategy)
-   +-- RenderSceneObjects()
-       +-- Classify objects: opaque vs transparent (alpha < 1.0)
+3. SandboxApp (rendering strategy)
+   +-- OnRender()
+       +-- Classify objects: opaque (Color.a == 1.0) vs transparent (Color.a < 1.0)
        +-- Render opaque objects (normal depth test + write)
        +-- Sort transparent back-to-front, render with blending ON + depth write OFF
 ```
 
-Each layer has a single responsibility: the Renderer wraps OpenGL state, the shader uses the alpha value, the material manages it as a property, and the application orchestrates the two-pass rendering.
+Each layer has a single responsibility: the Renderer wraps OpenGL state, the shader uses the alpha that arrives via `u_ObjectColor`, and the application orchestrates the two-pass rendering.
 
 ---
 
@@ -186,144 +184,81 @@ Each method is a thin wrapper. `EnableBlending()` activates the blend stage in t
 
 ---
 
-## Step 2: Alpha Uniform in the Fragment Shader
+## Step 2: Alpha Already Supported in defaultlit.shader
 
-The PBR shader (`defaultlit.shader`) needs to output an alpha value so that blending works. We add a `u_Alpha` uniform and use it in the final `FragColor` output.
-
-**`VizEngine/src/resources/shaders/defaultlit.shader` (fragment shader):**
-
-In the material parameters section, declare the uniform:
+No shader changes needed. The `defaultlit.shader` from Chapter 17 already outputs a four-component color:
 
 ```glsl
-// VizEngine/src/resources/shaders/defaultlit.shader (fragment)
-
-// ============================================================================
-// Material Parameters
-// ============================================================================
-uniform vec3 u_Albedo;           // Base color (or tint if using texture)
-uniform float u_Metallic;        // 0 = dielectric, 1 = metal
-uniform float u_Roughness;       // 0 = smooth, 1 = rough
-uniform float u_AO;              // Ambient occlusion
-uniform float u_Alpha;           // Opacity (Chapter 33: Blending)
+// defaultlit.shader fragment — end of main()
+FragColor = vec4(result, texColor.a * u_ObjectColor.a);
 ```
 
-At the very end of `main()`, the alpha value is written into the fourth component of `FragColor`:
+`u_ObjectColor` is a `vec4`. Its `w` component is the alpha. When `Scene::Render` sets this uniform per-object, it passes the full `obj.Color` vec4 — so `obj.Color.a` flows through automatically.
 
-```glsl
-// VizEngine/src/resources/shaders/defaultlit.shader (end of main)
-
-    vec3 color = ambient + Lo;
-
-    // ========================================================================
-    // Output HDR Color (Chapter 39: Tone mapping moved to separate pass)
-    // ========================================================================
-
-    // Output raw linear HDR values (no tone mapping, no gamma correction)
-    // These will be processed by the tone mapping shader
-    // Alpha from u_Alpha uniform (Chapter 33: Blending & Transparency)
-    FragColor = vec4(color, u_Alpha);
-}
-```
-
-The key line is `FragColor = vec4(color, u_Alpha)`. When `u_Alpha` is `1.0` (the default), the object is fully opaque. When it is less than `1.0`, the object becomes transparent, and the blending equation uses this alpha to mix the fragment with the background.
+When `obj.Color.a` is `1.0` (the default), the object is fully opaque. When it is less than `1.0`, the blend stage mixes the fragment with the framebuffer background according to the blend function you configure.
 
 > [!NOTE]
-> The alpha value flows through the entire HDR pipeline. The HDR framebuffer stores it, and the tone mapping pass preserves it. This means blending works correctly even with HDR rendering enabled.
+> **Why no dedicated `u_Alpha` uniform?** We already have alpha in `u_ObjectColor.w`. Adding a separate uniform would be redundant. The vec4 color carries all four channels — the shader just uses all of them.
 
 ---
 
-## Step 3: PBRMaterial Alpha Support
+## Step 3: Making Objects Transparent
 
-The `PBRMaterial` class exposes `SetAlpha()` and `GetAlpha()` so that application code can control per-object opacity through the material system rather than touching shader uniforms directly.
+Transparency is controlled through `SceneObject::Color.a`. No extra infrastructure is needed — `Color` is already a `vec4`.
 
-**`VizEngine/src/VizEngine/Renderer/PBRMaterial.h`:**
-
-```cpp
-// VizEngine/src/VizEngine/Renderer/PBRMaterial.h
-
-class VizEngine_API PBRMaterial : public RenderMaterial
-{
-public:
-    // ... existing PBR properties ...
-
-    void SetAlpha(float alpha);
-    float GetAlpha() const;
-
-    // ... rest of class ...
-
-private:
-    // ... existing members ...
-    float m_Alpha = 1.0f;
-};
-```
-
-**`VizEngine/src/VizEngine/Renderer/PBRMaterial.cpp`:**
-
-In the constructor, the default alpha is uploaded:
+**Set alpha when creating an object:**
 
 ```cpp
-// VizEngine/src/VizEngine/Renderer/PBRMaterial.cpp
-
-PBRMaterial::PBRMaterial(std::shared_ptr<Shader> shader, const std::string& name)
-    : RenderMaterial(shader, name)
-{
-    // Set default PBR values
-    SetFloat("u_Metallic", m_Metallic);
-    SetFloat("u_Roughness", m_Roughness);
-    SetFloat("u_AO", m_AO);
-    SetVec3("u_Albedo", m_Albedo);
-    SetBool("u_UseAlbedoTexture", false);
-    SetBool("u_UseNormalMap", false);
-    SetFloat("u_Alpha", m_Alpha);           // Chapter 33: default fully opaque
-    SetBool("u_UseIBL", false);
-    SetBool("u_UseShadows", false);
-
-    // Lower hemisphere defaults (prevents black reflections on flat surfaces)
-    SetVec3("u_LowerHemisphereColor", m_LowerHemisphereColor);
-    SetFloat("u_LowerHemisphereIntensity", m_LowerHemisphereIntensity);
-}
+auto& glass = m_Scene.Add(m_CubeMesh, "GlassPane");
+glass.ObjectTransform.Position = glm::vec3(0.0f, 1.0f, 0.0f);
+glass.Color = glm::vec4(0.3f, 0.6f, 0.9f, 0.4f);  // Blue tint, 40% opacity
 ```
 
-The setter clamps the value to `[0.0, 1.0]` and uploads it as a uniform:
+**The ImGui color editor already includes alpha:**
 
 ```cpp
-// VizEngine/src/VizEngine/Renderer/PBRMaterial.cpp
-
-void PBRMaterial::SetAlpha(float alpha)
-{
-    m_Alpha = glm::clamp(alpha, 0.0f, 1.0f);
-    SetFloat("u_Alpha", m_Alpha);
-}
-
-float PBRMaterial::GetAlpha() const
-{
-    return m_Alpha;
-}
+// In OnImGuiRender() — already in the Sandbox from Chapter 24
+uiManager.ColorEdit4("Color", &obj.Color.x);
 ```
 
-The `glm::clamp` ensures alpha never goes negative or above 1.0, which would produce undefined blending results.
+`ColorEdit4` shows an alpha slider. Drag it below 1.0 in the UI and the object becomes transparent on the next frame — no code change needed.
+
+**The alpha flows through automatically:**
+
+```
+obj.Color.a  →  Scene::Render sets u_ObjectColor = obj.Color  →  shader outputs FragColor.a = texColor.a * u_ObjectColor.a  →  blend stage mixes with framebuffer
+```
+
+The only thing left is to separate opaque and transparent objects at render time so they're drawn in the right order.
 
 ---
 
 ## Step 4: Two-Pass Rendering in SandboxApp
 
-This is where everything comes together. The `RenderSceneObjects()` method in `SandboxApp.cpp` implements the two-pass rendering strategy: opaque objects first, then transparent objects sorted back-to-front.
+Update `OnRender()` in `SandboxApp.cpp` to split rendering into two passes. Classify objects by their `Color.a`, render opaque first, then sort and render transparent with blending.
 
-**`Sandbox/src/SandboxApp.cpp`:**
+**`Sandbox/src/SandboxApp.cpp` — replace the body of `OnRender()`:**
 
 ```cpp
-// Sandbox/src/SandboxApp.cpp
-
-// =========================================================================
-// Helper: Render all scene objects with PBR materials
-// =========================================================================
-void RenderSceneObjects()
+void OnRender() override
 {
-    auto& renderer = VizEngine::Engine::Get().GetRenderer();
+    auto& engine   = VizEngine::Engine::Get();
+    auto& renderer = engine.GetRenderer();
 
-    if (!m_PBRMaterial) return;
+    // Set light and camera uniforms
+    m_DefaultLitShader->Bind();
+    m_DefaultLitShader->SetVec3("u_LightDirection", m_Light.GetDirection());
+    m_DefaultLitShader->SetVec3("u_LightAmbient",   m_Light.Ambient);
+    m_DefaultLitShader->SetVec3("u_LightDiffuse",   m_Light.Diffuse);
+    m_DefaultLitShader->SetVec3("u_LightSpecular",  m_Light.Specular);
+    m_DefaultLitShader->SetVec3("u_ViewPos",        m_Camera.GetPosition());
 
-    // Chapter 33: Separate opaque and transparent objects
+    renderer.Clear(m_ClearColor);
+
+    // =========================================================================
+    // Chapter 33: Two-Pass Rendering
+    // Classify scene objects: opaque (Color.a == 1.0) vs transparent (Color.a < 1.0)
+    // =========================================================================
     std::vector<size_t> opaqueIndices;
     std::vector<size_t> transparentIndices;
 
@@ -338,13 +273,26 @@ void RenderSceneObjects()
             opaqueIndices.push_back(i);
     }
 
-    // Render opaque objects first
+    // Pass 1: Opaque objects — normal depth test + depth write
     for (size_t idx : opaqueIndices)
     {
-        RenderSingleObject(m_Scene[idx], renderer);
+        auto& obj  = m_Scene[idx];
+        glm::mat4 model = obj.ObjectTransform.GetModelMatrix();
+        m_DefaultLitShader->SetMatrix4fv("u_Model", model);
+        m_DefaultLitShader->SetMatrix4fv("u_MVP",   m_Camera.GetViewProjectionMatrix() * model);
+        m_DefaultLitShader->SetVec4("u_ObjectColor", obj.Color);
+        m_DefaultLitShader->SetFloat("u_Roughness",  obj.Roughness);
+
+        if (obj.TexturePtr)
+            obj.TexturePtr->Bind(0);
+        m_DefaultLitShader->SetInt("u_MainTex", 0);
+
+        renderer.Draw(obj.MeshPtr->GetVertexArray(),
+                      obj.MeshPtr->GetIndexBuffer(),
+                      *m_DefaultLitShader);
     }
 
-    // Sort transparent objects back-to-front (Chapter 33)
+    // Pass 2: Transparent objects — sort back-to-front, blend ON, depth write OFF
     if (!transparentIndices.empty())
     {
         glm::vec3 camPos = m_Camera.GetPosition();
@@ -352,66 +300,39 @@ void RenderSceneObjects()
             [this, &camPos](size_t a, size_t b) {
                 float distA = glm::length(m_Scene[a].ObjectTransform.Position - camPos);
                 float distB = glm::length(m_Scene[b].ObjectTransform.Position - camPos);
-                return distA > distB;  // Far objects first
+                return distA > distB;  // Far objects rendered first
             });
 
-        // Enable blending for transparent objects
         renderer.EnableBlending();
         renderer.SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        renderer.SetDepthMask(false);  // Don't write to depth buffer
+        renderer.SetDepthMask(false);
 
         for (size_t idx : transparentIndices)
         {
-            RenderSingleObject(m_Scene[idx], renderer);
+            auto& obj  = m_Scene[idx];
+            glm::mat4 model = obj.ObjectTransform.GetModelMatrix();
+            m_DefaultLitShader->SetMatrix4fv("u_Model", model);
+            m_DefaultLitShader->SetMatrix4fv("u_MVP",   m_Camera.GetViewProjectionMatrix() * model);
+            m_DefaultLitShader->SetVec4("u_ObjectColor", obj.Color);  // .a drives alpha
+            m_DefaultLitShader->SetFloat("u_Roughness",  obj.Roughness);
+
+            if (obj.TexturePtr)
+                obj.TexturePtr->Bind(0);
+            m_DefaultLitShader->SetInt("u_MainTex", 0);
+
+            renderer.Draw(obj.MeshPtr->GetVertexArray(),
+                          obj.MeshPtr->GetIndexBuffer(),
+                          *m_DefaultLitShader);
         }
 
-        // Restore state
+        // Restore default state
         renderer.SetDepthMask(true);
         renderer.DisableBlending();
     }
 }
 ```
 
-The `RenderSingleObject()` helper feeds the alpha from the object's color into the material:
-
-```cpp
-// Sandbox/src/SandboxApp.cpp
-
-// Helper: Render a single scene object with PBR material
-void RenderSingleObject(VizEngine::SceneObject& obj, VizEngine::Renderer& renderer)
-{
-    glm::mat4 model = obj.ObjectTransform.GetModelMatrix();
-    glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
-
-    // Use Material System (Chapter 42)
-    m_PBRMaterial->SetModelMatrix(model);
-    m_PBRMaterial->SetNormalMatrix(normalMatrix);
-    m_PBRMaterial->SetAlbedo(glm::vec3(obj.Color));
-    m_PBRMaterial->SetAlpha(obj.Color.a);  // Chapter 33: alpha transparency
-    m_PBRMaterial->SetMetallic(obj.Metallic);
-    m_PBRMaterial->SetRoughness(obj.Roughness);
-    m_PBRMaterial->SetAO(1.0f);
-
-    // Handle texture
-    if (obj.TexturePtr)
-    {
-        m_PBRMaterial->SetAlbedoTexture(obj.TexturePtr);
-    }
-    else
-    {
-        m_PBRMaterial->SetAlbedoTexture(nullptr);
-    }
-
-    // Bind material (uploads all uniforms)
-    m_PBRMaterial->Bind();
-
-    obj.MeshPtr->Bind();
-    renderer.Draw(obj.MeshPtr->GetVertexArray(), obj.MeshPtr->GetIndexBuffer(),
-                  *m_PBRMaterial->GetShader());
-}
-```
-
-The transparency is driven entirely by the alpha component of `obj.Color`. You set it through the ImGui color editor (which already edits `glm::vec4` including alpha) or programmatically.
+The alpha flows from `obj.Color.a` → `u_ObjectColor.w` → `FragColor.a` → blend stage. No extra material system required.
 
 ---
 
@@ -472,6 +393,9 @@ Three state changes are critical here:
 3. **`SetDepthMask(false)`** disables depth **writing** (but depth **testing** stays on)
 
 The depth mask is the subtle but crucial part. Depth testing remains enabled so that transparent objects are correctly occluded by opaque objects in front of them. But depth writing is disabled so that transparent objects do not occlude each other -- if Glass A is at depth 5 and Glass B is at depth 10, we want both to be visible, not have Glass A's depth reject Glass B.
+
+> [!NOTE]
+> **Two-Pass Depth Pattern**: This structure — write depth in pass 1, read-only in pass 2 — is the same principle as shadow mapping (Chapter 29). In that chapter, pass 1 renders the scene from the light's perspective to a shadow FBO (depth writes enabled), and pass 2 reads that depth texture without writing. Both techniques rely on precise depth mask state to prevent artifacts. If you've already implemented Chapter 29, this two-pass pattern should feel familiar.
 
 ### 5. State Restoration
 
@@ -584,13 +508,12 @@ The per-frame sort is `O(n log n)` where `n` is the number of transparent object
 
 You have:
 - Added `EnableBlending()`, `DisableBlending()`, `SetBlendFunc()`, and `SetBlendEquation()` to the Renderer
-- Connected the `u_Alpha` uniform in the PBR fragment shader to control per-fragment opacity
-- Exposed `SetAlpha()` / `GetAlpha()` on `PBRMaterial` with proper clamping
-- Implemented a two-pass rendering strategy that separates opaque and transparent objects
+- Understood that `defaultlit.shader` already supports alpha via `u_ObjectColor.a` — no shader changes needed
+- Split `OnRender()` into two passes: opaque first, then transparent back-to-front
 - Added back-to-front sorting for transparent objects using the painter's algorithm
 - Properly managed depth mask state to avoid transparent-on-transparent occlusion errors
 
-Any object in the scene can now be made transparent by setting its color alpha below 1.0, either through the ImGui color editor or programmatically.
+Any object in the scene can now be made transparent by setting its `Color.a` below 1.0, either through the ImGui color editor or programmatically.
 
 ---
 

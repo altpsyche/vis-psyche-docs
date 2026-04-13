@@ -409,19 +409,39 @@ SetupInstancingDemo();
 
 ---
 
-## Step 5: Pipeline Integration and Rendering
+## Step 5: Extend Scene::Render for Instanced Objects
 
-Because the instanced mesh is added to the `Scene` as a `SceneObject` with `InstanceCount > 0`, the `SceneRenderer` pipeline handles it automatically. In **Chapter 43**, the `ForwardRenderPath` sorts scene objects into three categories: opaque, instanced, and transparent. Instanced objects are rendered via `ForwardRenderPath::RenderInstancedObject()`, which binds the instanced shader and calls `DrawInstanced`.
+The instanced mesh is a `SceneObject` with `InstanceCount > 0`. Update `Scene::Render()` in `Scene.cpp` to detect this and dispatch the right draw call.
 
-To wire up the instanced shader to the SceneRenderer (after creating the SceneRenderer in `OnCreate`):
+**Add a parameter for the instanced shader to `Scene::Render()`** (or handle it as a second pass in `OnRender()`). The simplest approach is a second pass in `OnRender()` that renders instanced objects separately:
+
+**`Sandbox/src/SandboxApp.cpp` — in `OnRender()`, after `m_Scene.Render(...)`:**
 
 ```cpp
-// Sandbox/src/SandboxApp.cpp (in OnCreate, after SceneRenderer creation)
+// Chapter 35: Render instanced objects separately using the instanced shader
+if (m_ShowInstancingDemo && m_InstancedSceneIndex >= 0)
+{
+    auto& instancedObj = m_Scene[static_cast<size_t>(m_InstancedSceneIndex)];
+    if (instancedObj.Active && instancedObj.MeshPtr && instancedObj.InstanceCount > 0)
+    {
+        glm::mat4 model = instancedObj.ObjectTransform.GetModelMatrix();
+        m_InstancedShader->Bind();
+        m_InstancedShader->SetMatrix4fv("u_ViewProjection",
+                                        m_Camera.GetViewProjectionMatrix());
+        m_InstancedShader->SetVec4("u_ObjectColor",
+                                   glm::vec4(m_InstanceColor, 1.0f));
 
-m_SceneRenderer->SetInstancedShader(m_InstancedShader);
+        renderer.DrawInstanced(
+            instancedObj.MeshPtr->GetVertexArray(),
+            instancedObj.MeshPtr->GetIndexBuffer(),
+            *m_InstancedShader,
+            instancedObj.InstanceCount
+        );
+    }
+}
 ```
 
-In `OnUpdate`, sync the instancing demo's UI state to the scene object:
+In `OnUpdate`, sync UI state to the scene object:
 
 ```cpp
 // Sandbox/src/SandboxApp.cpp (in OnUpdate)
@@ -430,11 +450,12 @@ if (m_InstancedSceneIndex >= 0 && m_InstancedSceneIndex < static_cast<int>(m_Sce
 {
     auto& instancedObj = m_Scene[static_cast<size_t>(m_InstancedSceneIndex)];
     instancedObj.Active = m_ShowInstancingDemo;
-    instancedObj.Color = glm::vec4(m_InstanceColor, 1.0f);
+    instancedObj.Color  = glm::vec4(m_InstanceColor, 1.0f);
 }
 ```
 
-No standalone render block is needed in `OnRender` — the SceneRenderer handles instanced objects as part of the HDR pipeline, so they receive bloom, tone mapping, and all other post-processing effects.
+> [!NOTE]
+> The instanced draw uses its own shader (`instanced.shader`) while the normal scene objects continue using `defaultlit.shader`. This is why the instanced pass is separate from `m_Scene.Render()`. A full scene renderer architecture (introduced later) will unify this behind a single render path.
 
 ### What Happens on the GPU
 
