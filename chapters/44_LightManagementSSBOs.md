@@ -536,7 +536,7 @@ The dirty flag makes the common case (static lights, most frames) zero-overhead 
 
 ### Why a placeholder when empty?
 
-`glBindBufferBase` on an empty SSBO (size 0) is valid, but some drivers behave poorly if the shader tries to index into a zero-length buffer—even when the loop doesn't execute. Uploading a single zeroed element guarantees the buffer is always a valid, non-empty allocation. The shader's `u_PointLightCount` uniform controls loop iteration count, so the placeholder is never read.
+Uploading a single zeroed element is a belt-and-suspenders measure — the buffer is always a valid, non-empty allocation regardless of what any driver does with a zero-size SSBO. The shader's `u_PointLightCount` uniform controls loop iteration count, so the placeholder is never read.
 
 ---
 
